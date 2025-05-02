@@ -17,6 +17,7 @@ export interface Venue {
   phoneNumber?: string;
   priceLevel?: number; // 1-4 representing $ to $$$$
   category?: string[];
+  lastVisit?: Visit; // Added lastVisit for quick access to latest visit data
 }
 
 export interface DishRating {

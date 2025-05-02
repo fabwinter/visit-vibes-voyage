@@ -8,13 +8,13 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <header className="bg-white p-4 shadow-sm fixed top-0 left-0 right-0 z-40 flex items-center">
         <h1 className="text-xl font-bold text-visitvibe-primary">
           VisitVibe
         </h1>
       </header>
-      <main className="pt-16 pb-20">
+      <main className="flex-1 pt-16 pb-16 overflow-y-auto">
         {children}
       </main>
       <NavigationBar />
