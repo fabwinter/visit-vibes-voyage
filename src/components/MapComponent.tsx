@@ -1,9 +1,9 @@
-
 import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Venue } from '@/types';
 import { getRatingLevel } from '@/types';
+import { MapPinIcon } from 'lucide-react';
 
 interface MapComponentProps {
   venues: Venue[];
@@ -26,11 +26,11 @@ const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken }: MapC
     
     if (map.current) return; // Map already initialized
     
-    const initialLocation = userLocation || { lat: 40.7128, lng: -74.0060 }; // Default to NYC if no user location
+    const initialLocation = userLocation || { lat: -33.8688, lng: 151.2093 }; // Default to Sydney
     
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v11', // Changed to streets-v11 to include place names
+      style: 'mapbox://styles/mapbox/light-v11', // Changed to light-v11 for grayscale look
       center: [initialLocation.lng, initialLocation.lat],
       zoom: 12,
     });
@@ -63,15 +63,22 @@ const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken }: MapC
         else if (ratingLevel === 'bad') markerColor = '#F44336'; // Red for bad
       }
 
-      // Create a marker element
+      // Create a marker element with pin icon
       const markerElement = document.createElement('div');
       markerElement.className = 'custom-marker';
-      markerElement.style.backgroundColor = markerColor;
-      markerElement.style.width = '24px';
-      markerElement.style.height = '24px';
-      markerElement.style.borderRadius = '50%';
-      markerElement.style.border = '2px solid white';
-      markerElement.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+      markerElement.style.width = '36px';
+      markerElement.style.height = '36px';
+      markerElement.style.display = 'flex';
+      markerElement.style.justifyContent = 'center';
+      markerElement.style.alignItems = 'center';
+      
+      // Create SVG icon
+      markerElement.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="${markerColor}" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+          <circle cx="12" cy="10" r="3"></circle>
+        </svg>
+      `;
 
       // Create the marker
       const marker = new mapboxgl.Marker({ element: markerElement })
@@ -89,6 +96,7 @@ const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken }: MapC
           <div class="p-2">
             <h3 class="font-semibold">${venue.name}</h3>
             <p class="text-sm text-gray-600">${venue.address}</p>
+            ${venue.category ? `<p class="text-xs text-gray-500 mt-1">${venue.category.join(', ')}</p>` : ''}
           </div>
         `);
 

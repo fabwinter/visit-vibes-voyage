@@ -78,8 +78,8 @@ const MapView = () => {
     toast("Check-in feature coming soon!");
   };
 
-  // Simulate user location for demo purposes
-  const userLocation = venues.length > 0 ? venues[0].coordinates : undefined;
+  // Default to Sydney CBD
+  const userLocation = { lat: -33.8688, lng: 151.2093 };
   
   return (
     <div className="h-[calc(100vh-132px)] flex flex-col">
@@ -89,7 +89,7 @@ const MapView = () => {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           <Input
             type="text"
-            placeholder="Search venues..."
+            placeholder="Search Sydney venues..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-6 rounded-full"
@@ -104,7 +104,7 @@ const MapView = () => {
         />
       </div>
 
-      {/* Map area - increased height to 400vh */}
+      {/* Map area - 400vh height */}
       <div className="flex-grow h-[400vh] mx-4 mb-4 rounded-lg overflow-hidden border border-gray-200">
         <MapComponent 
           venues={finalFilteredVenues} 
@@ -116,7 +116,7 @@ const MapView = () => {
       {/* Venues list */}
       <div className="px-4 overflow-y-auto max-h-[30vh] pb-16">
         <div className="flex justify-between items-center mb-3">
-          <h2 className="text-xl font-bold">Nearby Venues</h2>
+          <h2 className="text-xl font-bold">Sydney Venues</h2>
           <span className="text-sm text-gray-500">{finalFilteredVenues.length} results</span>
         </div>
         

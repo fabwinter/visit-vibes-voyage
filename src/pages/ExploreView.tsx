@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Compass, Award, BookOpen, MapPin } from "lucide-react";
 import { mockVenues, mockVisits } from "../data/mockData";
@@ -30,53 +29,68 @@ const ExploreView = () => {
     .sort((a, b) => b.averageRating - a.averageRating)
     .slice(0, 5);
 
-  // Featured articles
+  // Featured Australian food culture articles
   const featuredArticles = [
     {
       id: "1",
-      title: "Best Coffee Spots in Town",
-      description: "Discover the hidden gems for coffee lovers in your city",
-      image: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80",
+      title: "Sydney's Best Coffee Roasters",
+      description: "Discover the artisanal coffee scene that's making Sydney a global coffee destination",
+      image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=2070&auto=format&fit=crop",
       tag: "Coffee"
     },
     {
       id: "2",
-      title: "Farm to Table Restaurants",
-      description: "Experience the freshest ingredients at these local eateries",
-      image: "https://images.unsplash.com/photo-1566740933430-9ebd9d31d010?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80",
+      title: "Farm to Table in New South Wales",
+      description: "Meet the local producers transforming Sydney's restaurant scene",
+      image: "https://images.unsplash.com/photo-1595187139760-5cedf9d51617?q=80&w=2031&auto=format&fit=crop",
       tag: "Food"
     },
     {
       id: "3",
-      title: "Hidden Brunch Spots",
-      description: "Weekend brunch locations that locals love",
-      image: "https://images.unsplash.com/photo-1550304943-4f24f54ddde9?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80",
+      title: "Ultimate Sydney Brunch Guide",
+      description: "The best spots for a long Australian brunch with friends and family",
+      image: "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?q=80&w=2070&auto=format&fit=crop",
       tag: "Brunch"
     }
   ];
 
-  // City suggestions
+  // Australian city suggestions
   const citySuggestions = [
     {
-      name: "New York",
-      image: "https://images.unsplash.com/photo-1490644658840-3f2e3f8c5625?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80",
+      name: "Sydney",
+      image: "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?q=80&w=2070&auto=format&fit=crop",
       venues: 230
     },
     {
-      name: "San Francisco",
-      image: "https://images.unsplash.com/photo-1534050359320-02900022671e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=764&q=80",
+      name: "Melbourne",
+      image: "https://images.unsplash.com/photo-1514395462725-fb4566210144?q=80&w=2071&auto=format&fit=crop",
       venues: 178
     },
     {
-      name: "Chicago",
-      image: "https://images.unsplash.com/photo-1494522358652-f30e61a60313?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80",
+      name: "Brisbane",
+      image: "https://images.unsplash.com/photo-1629428000853-e19b9441e9ef?q=80&w=2070&auto=format&fit=crop",
       venues: 156
+    },
+    {
+      name: "Perth",
+      image: "https://images.unsplash.com/photo-1567555499335-411ce0a0aa69?q=80&w=2070&auto=format&fit=crop",
+      venues: 98
+    },
+    {
+      name: "Adelaide",
+      image: "https://images.unsplash.com/photo-1597331900568-76b04467bdcd?q=80&w=2070&auto=format&fit=crop",
+      venues: 87
+    },
+    {
+      name: "Hobart",
+      image: "https://images.unsplash.com/photo-1617891770536-fe7769ed6748?q=80&w=2070&auto=format&fit=crop",
+      venues: 45
     }
   ];
 
   return (
     <div className="px-4 pt-6 pb-24">
-      <h1 className="text-2xl font-bold mb-4">Explore</h1>
+      <h1 className="text-2xl font-bold mb-4">Explore Australia</h1>
 
       {/* Tab navigation */}
       <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
@@ -258,12 +272,12 @@ const ExploreView = () => {
         </div>
       )}
 
-      {/* Cities section */}
+      {/* Cities section - Australia focused */}
       {activeTab === "cities" && (
         <div>
           <div className="flex items-center mb-4">
             <Compass className="text-visitvibe-primary mr-2" />
-            <h2 className="text-xl font-bold">Explore Cities</h2>
+            <h2 className="text-xl font-bold">Explore Australian Cities</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {citySuggestions.map((city) => (
