@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Layout from "./components/Layout";
 import MapView from "./pages/MapView";
+import ExploreView from "./pages/ExploreView";
 import VisitsView from "./pages/VisitsView";
 import RatingsView from "./pages/RatingsView";
 import ProfileView from "./pages/ProfileView";
@@ -23,6 +24,7 @@ const App = () => (
         <Layout>
           <Routes>
             <Route path="/" element={<MapView />} />
+            <Route path="/explore" element={<ExploreView />} />
             <Route path="/visits" element={<VisitsView />} />
             <Route path="/ratings" element={<RatingsView />} />
             <Route path="/profile" element={<ProfileView />} />

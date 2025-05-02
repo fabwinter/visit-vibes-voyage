@@ -104,8 +104,8 @@ const MapView = () => {
         />
       </div>
 
-      {/* Map area - increased height to 50vh from 40vh */}
-      <div className="flex-grow h-[50vh] mx-4 mb-4 rounded-lg overflow-hidden border border-gray-200">
+      {/* Map area - increased height to 400vh */}
+      <div className="flex-grow h-[400vh] mx-4 mb-4 rounded-lg overflow-hidden border border-gray-200">
         <MapComponent 
           venues={finalFilteredVenues} 
           onVenueSelect={handleVenueSelect}
@@ -113,7 +113,7 @@ const MapView = () => {
         />
       </div>
 
-      {/* Venues list - adjusted max height to accommodate larger map */}
+      {/* Venues list */}
       <div className="px-4 overflow-y-auto max-h-[30vh] pb-16">
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-xl font-bold">Nearby Venues</h2>

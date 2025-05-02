@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -14,9 +15,8 @@ interface MapComponentProps {
 const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken }: MapComponentProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  // Use the provided token as default, but still allow override via props
   const [token, setToken] = useState<string>(mapboxToken || 'pk.eyJ1IjoiZmFiaWFud2ludGVyYmluZSIsImEiOiJjbWE2OWNuNG0wbzFuMmtwb3czNHB4cGJwIn0.KdxkppXglJrOwuBnqcYBqA');
-  const [showTokenInput, setShowTokenInput] = useState<boolean>(false); // Always use the provided token
+  const [showTokenInput, setShowTokenInput] = useState<boolean>(false);
 
   useEffect(() => {
     if (!token || !mapContainer.current) return;
@@ -30,7 +30,7 @@ const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken }: MapC
     
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/light-v11',
+      style: 'mapbox://styles/mapbox/streets-v11', // Changed to streets-v11 to include place names
       center: [initialLocation.lng, initialLocation.lat],
       zoom: 12,
     });

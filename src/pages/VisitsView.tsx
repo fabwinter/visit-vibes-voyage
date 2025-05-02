@@ -2,18 +2,51 @@
 import { useState } from 'react';
 import { mockVisits, mockVenues } from '../data/mockData';
 import VisitCard from '../components/VisitCard';
-import { format } from 'date-fns';
+import VisitCalendar from '../components/VisitCalendar';
+import { format, isAfter, isBefore } from 'date-fns';
 
 const VisitsView = () => {
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState<{ from?: Date; to?: Date }>({});
 
   const getVenueName = (venueId: string) => {
     const venue = mockVenues.find(v => v.id === venueId);
     return venue ? venue.name : 'Unknown Venue';
   };
 
+  // Apply both filter and date filter
+  const filteredVisits = mockVisits.filter(visit => {
+    const visitDate = new Date(visit.timestamp);
+    let passesDateFilter = true;
+
+    if (dateFilter.from) {
+      // If we only have a "from" date, show visits on or after that date
+      passesDateFilter = isAfter(visitDate, new Date(dateFilter.from.setHours(0, 0, 0, 0))) || 
+                         visit.timestamp.startsWith(format(dateFilter.from, 'yyyy-MM-dd'));
+    }
+
+    if (dateFilter.to) {
+      // Also filter by "to" date if it exists
+      passesDateFilter = passesDateFilter && 
+                        (isBefore(visitDate, new Date(dateFilter.to.setHours(23, 59, 59, 999))) || 
+                         visit.timestamp.startsWith(format(dateFilter.to, 'yyyy-MM-dd')));
+    }
+
+    // Apply the selected filter
+    switch (selectedFilter) {
+      case 'recent':
+        return passesDateFilter && new Date(visit.timestamp) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      case 'highest rated':
+        return passesDateFilter && visit.rating.overall >= 4;
+      case 'lowest rated':
+        return passesDateFilter && visit.rating.overall <= 2;
+      default:
+        return passesDateFilter;
+    }
+  });
+
   // Group visits by month
-  const groupedVisits = mockVisits.reduce((acc, visit) => {
+  const groupedVisits = filteredVisits.reduce((acc, visit) => {
     const date = new Date(visit.timestamp);
     const monthYear = format(date, 'MMMM yyyy');
     
@@ -53,22 +86,33 @@ const VisitsView = () => {
         ))}
       </div>
 
+      {/* Visit calendar */}
+      <div className="mb-6">
+        <VisitCalendar visits={mockVisits} onDateFilterChange={setDateFilter} />
+      </div>
+
       {/* Visit timeline */}
       <div className="space-y-8">
-        {orderedMonths.map((month) => (
-          <div key={month}>
-            <h2 className="text-lg font-semibold mb-3 border-b pb-2">{month}</h2>
-            <div className="space-y-4">
-              {groupedVisits[month].map((visit) => (
-                <VisitCard
-                  key={visit.id}
-                  visit={visit}
-                  venueName={getVenueName(visit.venueId)}
-                />
-              ))}
+        {orderedMonths.length > 0 ? (
+          orderedMonths.map((month) => (
+            <div key={month}>
+              <h2 className="text-lg font-semibold mb-3 border-b pb-2">{month}</h2>
+              <div className="space-y-4">
+                {groupedVisits[month].map((visit) => (
+                  <VisitCard
+                    key={visit.id}
+                    visit={visit}
+                    venueName={getVenueName(visit.venueId)}
+                  />
+                ))}
+              </div>
             </div>
+          ))
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            No visits found for the selected filters
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

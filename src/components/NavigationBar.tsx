@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Clock, Star, User } from 'lucide-react';
+import { MapPin, Clock, Star, User, Compass } from 'lucide-react';
 
 const NavigationBar = () => {
   const [activeTab, setActiveTab] = useState<string>('map');
@@ -15,6 +15,15 @@ const NavigationBar = () => {
       >
         <MapPin className={activeTab === 'map' ? 'text-visitvibe-primary' : 'text-gray-500'} />
         <span className="text-xs mt-1">Map</span>
+      </Link>
+      
+      <Link 
+        to="/explore" 
+        className={`flex flex-col items-center p-2 ${activeTab === 'explore' ? 'text-visitvibe-primary' : 'text-gray-500'}`}
+        onClick={() => setActiveTab('explore')}
+      >
+        <Compass className={activeTab === 'explore' ? 'text-visitvibe-primary' : 'text-gray-500'} />
+        <span className="text-xs mt-1">Explore</span>
       </Link>
       
       <Link 
