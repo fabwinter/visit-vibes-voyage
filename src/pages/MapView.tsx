@@ -45,13 +45,18 @@ const MapView = () => {
   }, []);
   
   // Filter venues based on search term and filters
-  const filteredVenues = venues.filter(venue => 
-    venue.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    venue.address.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredBySearchVenues = venues.filter(venue => {
+    if (!searchTerm) return true;
+    
+    const searchTermLower = searchTerm.toLowerCase();
+    return venue.name.toLowerCase().includes(searchTermLower) ||
+           venue.address.toLowerCase().includes(searchTermLower) ||
+           venue.category?.some(cat => cat.toLowerCase().includes(searchTermLower)) ||
+           false;
+  });
   
   // Apply additional filters
-  const finalFilteredVenues = filterVenues(filteredVenues, filterOptions);
+  const finalFilteredVenues = filterVenues(filteredBySearchVenues, filterOptions);
   
   // Extract unique categories and tags
   const categories = extractCategories(venues);
@@ -99,8 +104,8 @@ const MapView = () => {
         />
       </div>
 
-      {/* Map area */}
-      <div className="flex-grow h-[40vh] mx-4 mb-4 rounded-lg overflow-hidden border border-gray-200">
+      {/* Map area - increased height to 50vh from 40vh */}
+      <div className="flex-grow h-[50vh] mx-4 mb-4 rounded-lg overflow-hidden border border-gray-200">
         <MapComponent 
           venues={finalFilteredVenues} 
           onVenueSelect={handleVenueSelect}
@@ -108,8 +113,8 @@ const MapView = () => {
         />
       </div>
 
-      {/* Venues list */}
-      <div className="px-4 overflow-y-auto max-h-[40vh] pb-16">
+      {/* Venues list - adjusted max height to accommodate larger map */}
+      <div className="px-4 overflow-y-auto max-h-[30vh] pb-16">
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-xl font-bold">Nearby Venues</h2>
           <span className="text-sm text-gray-500">{finalFilteredVenues.length} results</span>
