@@ -13,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { DateRange } from 'react-day-picker';
 
 interface VisitCalendarProps {
   visits: Visit[];
@@ -20,10 +21,7 @@ interface VisitCalendarProps {
 }
 
 const VisitCalendar = ({ visits, onDateFilterChange }: VisitCalendarProps) => {
-  const [date, setDate] = useState<{
-    from?: Date;
-    to?: Date;
-  }>({});
+  const [date, setDate] = useState<DateRange | undefined>(undefined);
 
   // Get unique dates that have visits
   const visitDates = visits.map(visit => new Date(visit.timestamp));
@@ -59,21 +57,21 @@ const VisitCalendar = ({ visits, onDateFilterChange }: VisitCalendarProps) => {
   // When date selection changes
   const onSelect = (selectedDate: Date | undefined) => {
     if (!selectedDate) {
-      setDate({});
+      setDate(undefined);
       onDateFilterChange({});
       return;
     }
     
     // If the same day is selected twice, clear the selection
-    if (date.from && isSameDay(date.from, selectedDate)) {
-      setDate({});
+    if (date?.from && isSameDay(date.from, selectedDate)) {
+      setDate(undefined);
       onDateFilterChange({});
       return;
     }
 
     // If we have a from date but not a to date, add the to date
-    if (date.from && !date.to) {
-      const newDateRange = {
+    if (date?.from && !date?.to) {
+      const newDateRange: DateRange = {
         from: date.from,
         to: selectedDate
       };
@@ -83,9 +81,11 @@ const VisitCalendar = ({ visits, onDateFilterChange }: VisitCalendarProps) => {
     }
 
     // First selection or selection after complete range
-    const newDate = { from: selectedDate };
-    setDate(newDate);
-    onDateFilterChange(newDate);
+    const newDateRange: DateRange = { from: selectedDate, to: undefined };
+    setDate(newDateRange);
+    onDateFilterChange({
+      from: selectedDate
+    });
   };
 
   // Function to highlight dates with visits
@@ -99,7 +99,7 @@ const VisitCalendar = ({ visits, onDateFilterChange }: VisitCalendarProps) => {
 
   // Function to reset date filter
   const handleReset = () => {
-    setDate({});
+    setDate(undefined);
     onDateFilterChange({});
   };
 
@@ -113,7 +113,7 @@ const VisitCalendar = ({ visits, onDateFilterChange }: VisitCalendarProps) => {
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8">
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date.from ? (
+                  {date?.from ? (
                     date.to ? (
                       <>
                         {format(date.from, "MMM d")} - {format(date.to, "MMM d")}
@@ -131,13 +131,12 @@ const VisitCalendar = ({ visits, onDateFilterChange }: VisitCalendarProps) => {
                   mode="range"
                   selected={date}
                   onSelect={(range) => {
-                    // Convert the DateRange to our format
-                    const newRange = {
+                    setDate(range);
+                    // Convert to our expected format for the parent component
+                    onDateFilterChange({
                       from: range?.from,
                       to: range?.to
-                    };
-                    setDate(newRange);
-                    onDateFilterChange(newRange);
+                    });
                   }}
                   modifiers={{ withVisits: isDayWithVisit }}
                   modifiersStyles={{
@@ -155,14 +154,14 @@ const VisitCalendar = ({ visits, onDateFilterChange }: VisitCalendarProps) => {
                 />
               </PopoverContent>
             </Popover>
-            {(date.from || date.to) && (
+            {date && (
               <Button variant="ghost" size="sm" onClick={handleReset} className="h-8">
                 Reset
               </Button>
             )}
           </div>
         </div>
-        {date.from && (
+        {date?.from && (
           <div className="text-sm text-gray-500">
             Showing visits from {format(date.from, "MMM d, yyyy")}
             {date.to && ` to ${format(date.to, "MMM d, yyyy")}`}
