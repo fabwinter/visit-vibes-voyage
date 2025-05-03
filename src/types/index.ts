@@ -66,4 +66,15 @@ export interface UserProfile {
   visits: Visit[];
   savedVenues: Venue[];
   tags: string[]; // User's custom tags
+  // New fields for profile customization
+  displayName?: string;
+  bio?: string;
+  preferences?: {
+    darkMode?: boolean;
+    notificationsEnabled?: boolean;
+    privacySettings?: {
+      shareVisits?: boolean;
+      shareLocation?: boolean;
+    }
+  };
 }

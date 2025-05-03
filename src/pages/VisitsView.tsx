@@ -43,6 +43,10 @@ const VisitsView = () => {
     return venue ? venue.name : 'Unknown Venue';
   };
 
+  const getVenueDetails = (venueId: string) => {
+    return venues.find(v => v.id === venueId);
+  };
+
   // Apply both filter and date filter
   const filteredVisits = visits.filter(visit => {
     const visitDate = new Date(visit.timestamp);
@@ -97,6 +101,11 @@ const VisitsView = () => {
     const dateB = new Date(b);
     return dateB.getTime() - dateA.getTime();
   });
+  
+  // Navigate to visit details
+  const handleVisitClick = (visitId: string) => {
+    navigate(`/visit/${visitId}`);
+  };
   
   // Share all visits
   const handleShareAllVisits = () => {
@@ -161,13 +170,24 @@ const VisitsView = () => {
             <div key={month}>
               <h2 className="text-lg font-semibold mb-3 border-b pb-2">{month}</h2>
               <div className="space-y-4">
-                {groupedVisits[month].map((visit) => (
-                  <VisitCard
-                    key={visit.id}
-                    visit={visit}
-                    venueName={getVenueName(visit.venueId)}
-                  />
-                ))}
+                {groupedVisits[month].map((visit) => {
+                  const venueName = getVenueName(visit.venueId);
+                  const venueDetails = getVenueDetails(visit.venueId);
+                  
+                  return (
+                    <div 
+                      key={visit.id}
+                      onClick={() => handleVisitClick(visit.id)}
+                      className="cursor-pointer"
+                    >
+                      <VisitCard
+                        visit={visit}
+                        venueName={venueName}
+                        venueDetails={venueDetails}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))

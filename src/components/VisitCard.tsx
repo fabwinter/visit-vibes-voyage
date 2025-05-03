@@ -1,18 +1,19 @@
 
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Clock, Camera, Share2, ArrowRight, Check, X } from 'lucide-react';
+import { Clock, Camera, Share2, ArrowRight, Check, X, Globe } from 'lucide-react';
 import StarRating from './StarRating';
-import { Visit } from '../types';
+import { Visit, Venue } from '../types';
 import { toast } from 'sonner';
 
 interface VisitCardProps {
   visit: Visit;
   venueName: string;
+  venueDetails?: Venue | null;
   className?: string;
 }
 
-const VisitCard = ({ visit, venueName, className = '' }: VisitCardProps) => {
+const VisitCard = ({ visit, venueName, venueDetails, className = '' }: VisitCardProps) => {
   const visitDate = new Date(visit.timestamp);
 
   // Handle sharing venue
@@ -41,9 +42,12 @@ const VisitCard = ({ visit, venueName, className = '' }: VisitCardProps) => {
       className={`block rounded-lg overflow-hidden shadow-md bg-white ${className}`}
     >
       <div className="relative h-48">
-        {visit.photos.length > 0 ? (
+        {/* Show venue photo if available, otherwise visit photo */}
+        {(venueDetails?.photos?.length > 0 || visit.photos.length > 0) ? (
           <img
-            src={visit.photos[0]}
+            src={(venueDetails?.photos && venueDetails.photos.length > 0) ? 
+                  venueDetails.photos[0] : 
+                  visit.photos[0]}
             alt={`Visit to ${venueName}`}
             className="w-full h-full object-cover"
             onError={(e) => {
@@ -81,6 +85,22 @@ const VisitCard = ({ visit, venueName, className = '' }: VisitCardProps) => {
       </div>
       
       <div className="p-4">
+        {/* Venue website if available */}
+        {venueDetails?.website && (
+          <div className="mb-3">
+            <a 
+              href={venueDetails.website}
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-visitvibe-primary flex items-center gap-1 hover:underline text-sm"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Globe size={14} />
+              Visit Website
+            </a>
+          </div>
+        )}
+      
         <div className="flex justify-between items-center mb-3">
           <div>
             <div className="text-sm text-gray-500">Food</div>
@@ -115,6 +135,17 @@ const VisitCard = ({ visit, venueName, className = '' }: VisitCardProps) => {
             </div>
           )}
         </div>
+        
+        {/* Venue categories if available */}
+        {venueDetails?.category && venueDetails.category.length > 0 && (
+          <div className="flex flex-wrap gap-1 my-2">
+            {venueDetails.category.slice(0, 2).map((tag) => (
+              <span key={tag} className="tag-badge text-xs">
+                {tag.replace(/_/g, ' ')}
+              </span>
+            ))}
+          </div>
+        )}
         
         {visit.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-3">

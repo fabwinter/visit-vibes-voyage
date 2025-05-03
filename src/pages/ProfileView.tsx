@@ -1,15 +1,18 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { mockUserProfile, predefinedTags } from '../data/mockData';
 import StarRating from '../components/StarRating';
-import { Star, Award, MapPin, LogOut } from 'lucide-react';
+import { Star, Award, MapPin, LogOut, Camera, Edit } from 'lucide-react';
 import { Visit, UserProfile, Venue } from '@/types';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 const ProfileView = () => {
   const [userProfile, setUserProfile] = useState<UserProfile>(mockUserProfile);
   const [visits, setVisits] = useState<Visit[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load data from localStorage
   useEffect(() => {
@@ -104,18 +107,85 @@ const ProfileView = () => {
       toast.success("Profile updated");
     }
   };
+  
+  // Handle photo upload
+  const handlePhotoUpload = () => {
+    fileInputRef.current?.click();
+  };
+  
+  // Process the uploaded photo
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image too large", { description: "Please choose an image smaller than 5MB" });
+      return;
+    }
+    
+    // Create a FileReader to read the image as a data URL
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const photoDataUrl = e.target?.result as string;
+      if (photoDataUrl) {
+        // Save to localStorage and update state
+        localStorage.setItem('userPhoto', photoDataUrl);
+        setUserProfile(prev => ({ ...prev, photo: photoDataUrl }));
+        toast.success("Profile photo updated");
+      }
+    };
+    reader.onerror = () => {
+      toast.error("Error reading file");
+    };
+    reader.readAsDataURL(file);
+  };
 
   return (
     <div className="px-4 pt-6 pb-24">
       {/* Profile header */}
       <div className="flex items-center mb-6">
-        <img 
-          src={userProfile.photo || 'https://placehold.co/100?text=User'} 
-          alt={userProfile.name} 
-          className="w-20 h-20 rounded-full object-cover border-2 border-visitvibe-primary"
-        />
+        <div className="relative">
+          <Avatar className="w-20 h-20 border-2 border-visitvibe-primary">
+            <AvatarImage 
+              src={userProfile.photo || undefined}
+              alt={userProfile.name} 
+              className="object-cover"
+            />
+            <AvatarFallback>
+              {userProfile.name.slice(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          
+          {/* Edit photo button */}
+          <button 
+            className="absolute bottom-0 right-0 bg-visitvibe-primary text-white rounded-full p-1 shadow-md"
+            onClick={handlePhotoUpload}
+          >
+            <Camera size={16} />
+          </button>
+          
+          {/* Hidden file input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden"
+            accept="image/*"
+          />
+        </div>
+        
         <div className="ml-4">
-          <h1 className="text-2xl font-bold">{userProfile.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold">{userProfile.name}</h1>
+            <button 
+              onClick={handleEditProfile}
+              className="text-visitvibe-primary"
+              aria-label="Edit profile"
+            >
+              <Edit size={16} />
+            </button>
+          </div>
           <p className="text-gray-500 text-sm">{userProfile.email}</p>
           <div className="flex items-center mt-1">
             <StarRating rating={averageRating} size="sm" />

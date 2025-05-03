@@ -4,7 +4,6 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Venue } from '@/types';
 import { getRatingLevel } from '@/types';
-import { MapPinIcon } from 'lucide-react';
 
 interface MapComponentProps {
   venues: Venue[];
@@ -13,14 +12,24 @@ interface MapComponentProps {
   mapboxToken?: string;
   selectedVenue?: string | null;
   className?: string;
+  onMapMove?: (center: { lat: number; lng: number }) => void;
 }
 
-const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken, selectedVenue, className }: MapComponentProps) => {
+const MapComponent = ({ 
+  venues, 
+  onVenueSelect, 
+  userLocation, 
+  mapboxToken, 
+  selectedVenue, 
+  className,
+  onMapMove 
+}: MapComponentProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [token, setToken] = useState<string>(mapboxToken || 'pk.eyJ1IjoiZmFiaWFud2ludGVyYmluZSIsImEiOiJjbWE2OWNuNG0wbzFuMmtwb3czNHB4cGJwIn0.KdxkppXglJrOwuBnqcYBqA');
   const [showTokenInput, setShowTokenInput] = useState<boolean>(false);
   const markers = useRef<{ [key: string]: mapboxgl.Marker }>({});
+  const moveEndTimeout = useRef<number | null>(null);
 
   useEffect(() => {
     if (!token || !mapContainer.current) return;
@@ -63,6 +72,27 @@ const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken, select
         .setLngLat([userLocation.lng, userLocation.lat])
         .addTo(map.current);
     }
+    
+    // Add map move handler for "search this area" functionality
+    if (onMapMove) {
+      map.current.on('moveend', () => {
+        if (!map.current) return;
+        
+        // Clear previous timeout to prevent multiple rapid calls
+        if (moveEndTimeout.current) {
+          window.clearTimeout(moveEndTimeout.current);
+        }
+        
+        // Set a small debounce to avoid excessive callbacks
+        moveEndTimeout.current = window.setTimeout(() => {
+          const center = map.current!.getCenter();
+          onMapMove({ 
+            lat: center.lat, 
+            lng: center.lng 
+          });
+        }, 300);
+      });
+    }
 
     // Clean up on unmount
     return () => {
@@ -70,8 +100,12 @@ const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken, select
         map.current.remove();
         map.current = null;
       }
+      
+      if (moveEndTimeout.current) {
+        window.clearTimeout(moveEndTimeout.current);
+      }
     };
-  }, [token, userLocation]);
+  }, [token, userLocation, onMapMove]);
 
   // Update markers when venues or selected venue changes
   useEffect(() => {

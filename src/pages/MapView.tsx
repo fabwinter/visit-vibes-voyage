@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { mockVenues, mockVisits } from '../data/mockData';
@@ -13,7 +12,7 @@ import { filterVenues, extractCategories, extractTags } from '../utils/filterUti
 import { toast } from "sonner";
 import { PlacesService } from '../services/PlacesService';
 import { Button } from '@/components/ui/button';
-import { Share2, MapPin } from 'lucide-react';
+import { Share2, MapPin, Search } from 'lucide-react';
 
 const MapView = () => {
   const location = useLocation();
@@ -30,7 +29,7 @@ const MapView = () => {
   const [nextPageToken, setNextPageToken] = useState<string | undefined>();
   const [usingMockData, setUsingMockData] = useState(false);
   
-  // Default to Sydney CBD
+  // Default to Sydney CBD, but this will be updated with user location
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number }>({ 
     lat: -33.8688, lng: 151.2093 
   });
@@ -39,21 +38,40 @@ const MapView = () => {
   // Check-in related states
   const [isCheckInOpen, setIsCheckInOpen] = useState(false);
   const [visits, setVisits] = useState<Visit[]>([]);
+  
+  // New state for "search this area" functionality
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
+  const [showSearchThisArea, setShowSearchThisArea] = useState(false);
 
-  // Get user's current location
+  // Get user's current location - improved for better accuracy and feedback
   useEffect(() => {
     if (navigator.geolocation) {
+      // Show loading toast
+      const loadingToastId = toast.loading("Getting your current location...");
+      
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
           setUserLocation({ lat: latitude, lng: longitude });
+          setMapCenter({ lat: latitude, lng: longitude });
           console.log("User location detected:", latitude, longitude);
+          toast.dismiss(loadingToastId);
+          toast.success("Location found", {
+            description: "Showing food venues near you"
+          });
         },
         (error) => {
           console.error("Error getting user location:", error);
-          toast("Could not access your location", {
+          toast.dismiss(loadingToastId);
+          toast.error("Could not access your location", {
             description: "Using default location. Check browser permissions."
           });
+        },
+        // Options for better geolocation
+        { 
+          enableHighAccuracy: true, 
+          timeout: 10000,
+          maximumAge: 0
         }
       );
     } else {
@@ -70,11 +88,16 @@ const MapView = () => {
     }
   }, [location.state]);
 
-  // Fetch venues and visits on initial load or when user location changes
+  // Fetch venues when user location or map center changes
   useEffect(() => {
-    fetchVenues();
+    if (mapCenter) {
+      fetchVenues(undefined, mapCenter);
+    } else if (userLocation.lat !== -33.8688 || userLocation.lng !== 151.2093) {
+      // Only fetch if we have a real user location (not the default)
+      fetchVenues();
+    }
     loadVisits();
-  }, [userLocation]);
+  }, [userLocation, mapCenter]);
   
   // Load visits from localStorage
   const loadVisits = () => {
@@ -91,14 +114,14 @@ const MapView = () => {
     }
   }, [visits]);
   
-  // Function to fetch venues from Places API
-  const fetchVenues = async (pageToken?: string) => {
+  // Function to fetch venues from Places API - enhanced to support "search this area"
+  const fetchVenues = async (pageToken?: string, searchLocation?: { lat: number; lng: number }) => {
     setIsLoading(true);
     
     try {
       console.log("Attempting to fetch venues from API...");
       const result = await PlacesService.searchNearbyVenues({
-        location: userLocation,
+        location: searchLocation || userLocation,
         radius: 5000, // 5km radius
         type: "restaurant", // Default to food venues
         pageToken: pageToken
@@ -111,7 +134,8 @@ const MapView = () => {
         setUsingMockData(true);
       } else if (result.venues.length > 0) {
         console.log(`Fetched ${result.venues.length} venues from API`);
-        // Add visit data to venues if available
+        
+        // Enhanced to properly save venues with visit data
         const venuesWithVisitData = result.venues.map(venue => {
           // Find all visits for this venue
           const venueVisits = visits.filter(visit => visit.venueId === venue.id);
@@ -151,6 +175,8 @@ const MapView = () => {
       setUsingMockData(true);
     } finally {
       setIsLoading(false);
+      // Hide the "Search This Area" button after search is complete
+      setShowSearchThisArea(false);
     }
   };
 
@@ -178,7 +204,7 @@ const MapView = () => {
     localStorage.setItem('venues', JSON.stringify(venuesWithLastVisit));
   };
   
-  // Handle place selection from autocomplete
+  // Handle place selection from autocomplete - enhanced to center map
   const handlePlaceSelect = async (venue: Venue) => {
     console.log("Selected venue:", venue);
     
@@ -186,6 +212,9 @@ const MapView = () => {
     if (venue.coordinates.lat !== 0 && venue.coordinates.lng !== 0) {
       setSelectedVenue(venue.id);
       setSelectedVenueDetails(venue);
+      
+      // Center map on the selected venue
+      setMapCenter(venue.coordinates);
       
       // Add this venue to our list if it's not there already
       setVenues(prevVenues => {
@@ -203,6 +232,9 @@ const MapView = () => {
         if (details) {
           setSelectedVenue(details.id);
           setSelectedVenueDetails(details);
+          
+          // Center map on the selected venue
+          setMapCenter(details.coordinates);
           
           // Add this venue to our list if it's not there already
           setVenues(prevVenues => {
@@ -227,7 +259,7 @@ const MapView = () => {
   const categories = extractCategories(venues);
   const tags = extractTags(venues);
   
-  // Handle venue selection from map or list
+  // Handle venue selection from map or list - enhanced for better centering
   const handleVenueSelect = async (venueId: string) => {
     setSelectedVenue(venueId);
     
@@ -237,12 +269,16 @@ const MapView = () => {
       
       if (venue) {
         setSelectedVenueDetails(venue);
+        // Center map on selected venue
+        setMapCenter(venue.coordinates);
       } else {
         // Fetch details if not in our current list
         try {
           const details = await PlacesService.getVenueDetails(venueId);
           if (details) {
             setSelectedVenueDetails(details);
+            // Center map on selected venue
+            setMapCenter(details.coordinates);
           }
         } catch (error) {
           console.error("Error fetching venue details:", error);
@@ -257,6 +293,37 @@ const MapView = () => {
     }
   };
 
+  // Handle map move to show "Search this area" button
+  const handleMapMove = (newCenter: { lat: number; lng: number }) => {
+    // Only show the button if the center has moved significantly
+    if (mapCenter) {
+      const distance = calculateDistance(mapCenter, newCenter);
+      if (distance > 1) { // If moved more than 1km
+        setShowSearchThisArea(true);
+      }
+    }
+  };
+  
+  // Calculate distance between two points in km
+  const calculateDistance = (point1: { lat: number; lng: number }, point2: { lat: number; lng: number }) => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (point2.lat - point1.lat) * Math.PI / 180;
+    const dLon = (point2.lng - point1.lng) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(point1.lat * Math.PI / 180) * Math.cos(point2.lat * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+  
+  // Handle search this area
+  const handleSearchThisArea = () => {
+    if (mapCenter) {
+      fetchVenues(undefined, mapCenter);
+    }
+  };
+  
   // Handle check-in
   const handleCheckIn = () => {
     if (selectedVenueDetails) {
@@ -299,16 +366,28 @@ const MapView = () => {
   return (
     <div className="h-[calc(100vh-132px)] flex flex-col md:flex-row">
       {/* Map - Now on the left side for better visibility */}
-      <div className="w-full md:w-1/2 lg:w-3/5 h-[350px] md:h-full md:order-1 p-4">
+      <div className="w-full md:w-1/2 lg:w-3/5 h-[350px] md:h-full md:order-1 p-4 relative">
         <div className="h-full rounded-lg overflow-hidden border border-gray-200 shadow-md">
           <MapComponent 
             venues={filteredVenues} 
             onVenueSelect={handleVenueSelect}
             userLocation={userLocation}
             selectedVenue={selectedVenue}
+            onMapMove={handleMapMove}
             className="w-full h-full"
           />
         </div>
+        
+        {/* Search this area button */}
+        {showSearchThisArea && (
+          <Button 
+            onClick={handleSearchThisArea}
+            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 bg-visitvibe-primary text-white shadow-lg flex items-center gap-2"
+          >
+            <Search className="h-4 w-4" />
+            Search this area
+          </Button>
+        )}
       </div>
       
       {/* Right side - Search, Filters and Venue List */}
@@ -421,7 +500,7 @@ const MapView = () => {
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-xl font-bold">Food Venues</h2>
             <span className="text-sm text-gray-500">
-              {isLoading ? 'Loading...' : `${filteredVenues.length} results`}
+              {isLoading ? 'Loading...' : `${filteredVenues.length} results within 5km`}
             </span>
           </div>
           
