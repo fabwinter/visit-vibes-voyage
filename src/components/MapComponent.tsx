@@ -34,7 +34,7 @@ const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken, select
     
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v12', // Changed to streets-v12 for better visibility of food venues
+      style: 'mapbox://styles/mapbox/light-v10', // Use light style for better grayscale effect
       center: [initialLocation.lng, initialLocation.lat],
       zoom: 14, // Increased zoom level for better visibility
     });
@@ -42,6 +42,21 @@ const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken, select
     // Add navigation controls
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
     
+    // Apply grayscale filter to the map
+    map.current.on('load', () => {
+      if (!map.current) return;
+      
+      // Add grayscale filter to the map
+      const mapStyle = map.current.getStyle();
+      if (mapStyle && mapStyle.layers) {
+        mapStyle.layers.forEach(layer => {
+          if (layer.id !== 'background' && map.current) {
+            map.current.setPaintProperty(layer.id, 'raster-saturation', -1);
+          }
+        });
+      }
+    });
+
     // Add user location marker if available
     if (userLocation) {
       new mapboxgl.Marker({ color: '#3BB2D0' })
@@ -77,14 +92,14 @@ const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken, select
       const lastVisit = venue.lastVisit;
       
       // Determine marker color based on rating
-      let markerColor = '#BDBDBD'; // Default gray for unrated
+      let markerColor = '#555555'; // Default gray for unrated in grayscale theme
       
       if (lastVisit?.rating?.overall) {
         const ratingLevel = getRatingLevel(lastVisit.rating.overall);
         
-        if (ratingLevel === 'good') markerColor = '#4CAF50'; // Green for good
-        else if (ratingLevel === 'mid') markerColor = '#FF9800'; // Orange for mid
-        else if (ratingLevel === 'bad') markerColor = '#F44336'; // Red for bad
+        if (ratingLevel === 'good') markerColor = '#8E9196'; // Light gray for good
+        else if (ratingLevel === 'mid') markerColor = '#555555'; // Medium gray for mid
+        else if (ratingLevel === 'bad') markerColor = '#222222'; // Dark gray for bad
       }
 
       // Create a marker element with pin icon

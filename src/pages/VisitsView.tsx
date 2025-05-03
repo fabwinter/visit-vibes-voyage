@@ -1,35 +1,60 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { mockVisits, mockVenues } from '../data/mockData';
 import VisitCard from '../components/VisitCard';
 import VisitCalendar from '../components/VisitCalendar';
 import { format, isAfter, isBefore } from 'date-fns';
+import { Visit } from '@/types';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { MapPin } from 'lucide-react';
 
 const VisitsView = () => {
+  const navigate = useNavigate();
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState<{ from?: Date; to?: Date }>({});
+  
+  // Use state for visits to allow for new check-ins
+  const [visits, setVisits] = useState<Visit[]>([]);
+  const [venues, setVenues] = useState(mockVenues);
+  
+  // Load visits from localStorage if available
+  useEffect(() => {
+    const storedVisits = localStorage.getItem('visits');
+    if (storedVisits) {
+      setVisits(JSON.parse(storedVisits));
+    } else {
+      // If no stored visits, use empty array instead of mock data
+      setVisits([]);
+    }
+  }, []);
+  
+  // Save visits to localStorage when they change
+  useEffect(() => {
+    localStorage.setItem('visits', JSON.stringify(visits));
+  }, [visits]);
 
   const getVenueName = (venueId: string) => {
-    const venue = mockVenues.find(v => v.id === venueId);
+    const venue = venues.find(v => v.id === venueId);
     return venue ? venue.name : 'Unknown Venue';
   };
 
   // Apply both filter and date filter
-  const filteredVisits = mockVisits.filter(visit => {
+  const filteredVisits = visits.filter(visit => {
     const visitDate = new Date(visit.timestamp);
     let passesDateFilter = true;
 
     if (dateFilter.from) {
       // If we only have a "from" date, show visits on or after that date
       passesDateFilter = isAfter(visitDate, new Date(dateFilter.from.setHours(0, 0, 0, 0))) || 
-                         visit.timestamp.startsWith(format(dateFilter.from, 'yyyy-MM-dd'));
+                       visit.timestamp.startsWith(format(dateFilter.from, 'yyyy-MM-dd'));
     }
 
     if (dateFilter.to) {
       // Also filter by "to" date if it exists
       passesDateFilter = passesDateFilter && 
-                        (isBefore(visitDate, new Date(dateFilter.to.setHours(23, 59, 59, 999))) || 
-                         visit.timestamp.startsWith(format(dateFilter.to, 'yyyy-MM-dd')));
+                      (isBefore(visitDate, new Date(dateFilter.to.setHours(23, 59, 59, 999))) || 
+                       visit.timestamp.startsWith(format(dateFilter.to, 'yyyy-MM-dd')));
     }
 
     // Apply the selected filter
@@ -56,7 +81,7 @@ const VisitsView = () => {
     
     acc[monthYear].push(visit);
     return acc;
-  }, {} as Record<string, typeof mockVisits>);
+  }, {} as Record<string, Visit[]>);
 
   // Order the months chronologically (most recent first)
   const orderedMonths = Object.keys(groupedVisits).sort((a, b) => {
@@ -88,7 +113,7 @@ const VisitsView = () => {
 
       {/* Visit calendar */}
       <div className="mb-6">
-        <VisitCalendar visits={mockVisits} onDateFilterChange={setDateFilter} />
+        <VisitCalendar visits={visits} onDateFilterChange={setDateFilter} />
       </div>
 
       {/* Visit timeline */}
@@ -109,8 +134,20 @@ const VisitsView = () => {
             </div>
           ))
         ) : (
-          <div className="text-center py-8 text-gray-500">
-            No visits found for the selected filters
+          <div className="text-center py-12">
+            <div className="flex flex-col items-center max-w-md mx-auto">
+              <MapPin className="w-16 h-16 text-gray-300 mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No visits yet</h3>
+              <p className="text-gray-500 mb-6 text-center">
+                You haven't checked in anywhere yet. Start by finding a place on the map and checking in.
+              </p>
+              <Button 
+                onClick={() => navigate('/')}
+                className="bg-visitvibe-primary hover:bg-visitvibe-primary/90"
+              >
+                Find Places to Visit
+              </Button>
+            </div>
           </div>
         )}
       </div>

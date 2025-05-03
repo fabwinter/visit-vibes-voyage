@@ -6,7 +6,8 @@ import VenueCard from '../components/VenueCard';
 import MapComponent from '../components/MapComponent';
 import VenueFilters, { FilterOptions } from '../components/VenueFilters';
 import PlaceSearchInput from '../components/PlaceSearchInput';
-import { Venue } from '@/types';
+import CheckInForm from '../components/CheckInForm';
+import { Venue, Visit } from '@/types';
 import { filterVenues, extractCategories, extractTags } from '../utils/filterUtils';
 import { toast } from "sonner";
 import { PlacesService } from '../services/PlacesService';
@@ -29,6 +30,10 @@ const MapView = () => {
   // Default to Sydney CBD
   const userLocation = { lat: -33.8688, lng: 151.2093 };
   const [selectedVenueDetails, setSelectedVenueDetails] = useState<Venue | null>(null);
+  
+  // Check-in related states
+  const [isCheckInOpen, setIsCheckInOpen] = useState(false);
+  const [visits, setVisits] = useState<Visit[]>(mockVisits);
 
   // Fetch venues on initial load
   useEffect(() => {
@@ -79,7 +84,7 @@ const MapView = () => {
   const prepareMockData = () => {
     const venuesWithLastVisit = mockVenues.map(venue => {
       // Find all visits for this venue
-      const venueVisits = mockVisits.filter(visit => visit.venueId === venue.id);
+      const venueVisits = visits.filter(visit => visit.venueId === venue.id);
       
       // Sort by date (newest first)
       venueVisits.sort((a, b) => 
@@ -166,9 +171,31 @@ const MapView = () => {
     }
   };
 
-  // This would be replaced with actual check-in logic
+  // Handle check-in
   const handleCheckIn = () => {
-    toast("Check-in feature coming soon!");
+    if (selectedVenueDetails) {
+      setIsCheckInOpen(true);
+    } else {
+      toast.error("Please select a venue first");
+    }
+  };
+  
+  // Process the check-in data
+  const processCheckIn = (visit: Visit) => {
+    // Add the new visit
+    setVisits(prev => [visit, ...prev]);
+    
+    // Update the venue with the new visit
+    setVenues(prev => 
+      prev.map(venue => 
+        venue.id === visit.venueId 
+          ? { ...venue, lastVisit: visit } 
+          : venue
+      )
+    );
+    
+    // Close the dialog
+    setIsCheckInOpen(false);
   };
 
   // Load more venues
@@ -234,7 +261,6 @@ const MapView = () => {
             )}
             
             <p className="text-gray-600 mb-2">
-              {/* Fix: MapComponent requires venues and onVenueSelect props */}
               📍 {selectedVenueDetails.address}
             </p>
             
@@ -337,6 +363,16 @@ const MapView = () => {
         className="fixed right-6 bottom-24 w-14 h-14"
         onClick={handleCheckIn}
       />
+
+      {/* Check-in form dialog */}
+      {selectedVenueDetails && (
+        <CheckInForm
+          venue={selectedVenueDetails}
+          isOpen={isCheckInOpen}
+          onClose={() => setIsCheckInOpen(false)}
+          onCheckIn={processCheckIn}
+        />
+      )}
     </div>
   );
 };
