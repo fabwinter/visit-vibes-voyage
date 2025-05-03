@@ -11,7 +11,7 @@ import { filterVenues, extractCategories, extractTags } from '../utils/filterUti
 import { toast } from "sonner";
 import { PlacesService } from '../services/PlacesService';
 import { Button } from '@/components/ui/button';
-import Share2 from 'lucide-react';
+import { Share2, MapPin } from 'lucide-react';
 
 const MapView = () => {
   const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
