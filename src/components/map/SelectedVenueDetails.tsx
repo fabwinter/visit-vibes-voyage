@@ -1,96 +1,115 @@
 
-import { Button } from '@/components/ui/button';
-import { Share2, MapPin } from 'lucide-react';
-import { Venue } from '@/types';
-import { toast } from 'sonner';
+import { Button } from "@/components/ui/button";
+import { Venue } from "@/types";
+import { formatDistance } from "date-fns";
+import { Phone, Globe, MapPin, Clock } from "lucide-react";
+import CheckInButton from "@/components/CheckInButton";
+import WishlistButton from "@/components/WishlistButton";
 
 interface SelectedVenueDetailsProps {
-  venue: Venue;
-  onCheckIn: () => void;
+  venue: Venue | null;
+  onClose: () => void;
+  onCheckIn: (venue: Venue) => void;
 }
 
-const SelectedVenueDetails = ({ venue, onCheckIn }: SelectedVenueDetailsProps) => {
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: venue.name,
-        text: `Check out ${venue.name} at ${venue.address}`,
-        url: window.location.href
-      })
-      .then(() => toast.success("Shared successfully"))
-      .catch(error => console.error('Error sharing', error));
-    } else {
-      toast("Sharing not supported on this browser", {
-        description: "Try copying the link directly"
-      });
-    }
-  };
+const SelectedVenueDetails: React.FC<SelectedVenueDetailsProps> = ({
+  venue,
+  onClose,
+  onCheckIn,
+}) => {
+  if (!venue) {
+    return null;
+  }
+
+  const formattedDate =
+    venue.lastVisit?.timestamp &&
+    formatDistance(new Date(venue.lastVisit.timestamp), new Date(), {
+      addSuffix: true,
+    });
 
   return (
-    <div className="my-4 p-4 bg-white rounded-lg shadow-md border border-gray-200">
-      <h2 className="text-xl font-bold mb-2">{venue.name}</h2>
-      
-      {venue.photos && venue.photos.length > 0 && (
-        <div className="mb-3 rounded-md overflow-hidden">
-          <img 
-            src={venue.photos[0]} 
-            alt={venue.name}
-            className="w-full h-48 object-cover"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=No+Image';
-            }}
-          />
+    <div className="absolute bottom-0 left-0 right-0 bg-white p-4 shadow-lg rounded-t-lg">
+      <div className="flex items-start justify-between">
+        <div>
+          <h3 className="text-xl font-bold">{venue.name}</h3>
+          <p className="text-gray-500 text-sm">{venue.address}</p>
         </div>
-      )}
-      
-      <p className="text-gray-600 mb-2 flex items-start gap-1">
-        <MapPin className="h-4 w-4 mt-1 flex-shrink-0" />
-        <span>{venue.address}</span>
-      </p>
-      
-      {venue.phoneNumber && (
-        <p className="text-gray-600 mb-2">📞 {venue.phoneNumber}</p>
-      )}
-      
-      {venue.website && (
-        <p className="text-gray-600 mb-2">
-          <a href={venue.website} target="_blank" rel="noopener noreferrer" 
-             className="text-visitvibe-primary hover:underline">
-            Website
-          </a>
-        </p>
-      )}
-      
-      {venue.hours && (
-        <p className="text-gray-600 mb-2 text-sm">{venue.hours}</p>
-      )}
-      
-      {venue.category && venue.category.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-1">
-          {venue.category.map((cat) => (
-            <span key={cat} className="tag-badge">
-              {cat.replace(/_/g, ' ')}
-            </span>
-          ))}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onClose}
+          className="text-gray-500"
+        >
+          ×
+        </Button>
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        {venue.photos && venue.photos.length > 0 && (
+          <div className="aspect-w-16 aspect-h-9 w-full">
+            <img
+              src={venue.photos[0]}
+              alt={venue.name}
+              className="object-cover w-full h-36 rounded"
+            />
+          </div>
+        )}
+
+        <div className="space-y-2">
+          {venue.phoneNumber && (
+            <div className="flex items-center space-x-2 text-sm">
+              <Phone className="h-4 w-4 text-gray-500" />
+              <a href={`tel:${venue.phoneNumber}`} className="text-blue-500">
+                {venue.phoneNumber}
+              </a>
+            </div>
+          )}
+
+          {venue.website && (
+            <div className="flex items-center space-x-2 text-sm">
+              <Globe className="h-4 w-4 text-gray-500" />
+              <a
+                href={venue.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-500"
+              >
+                Website
+              </a>
+            </div>
+          )}
+
+          {venue.address && (
+            <div className="flex items-center space-x-2 text-sm">
+              <MapPin className="h-4 w-4 text-gray-500" />
+              <span>{venue.address}</span>
+            </div>
+          )}
+
+          {venue.hours && (
+            <div className="flex items-center space-x-2 text-sm">
+              <Clock className="h-4 w-4 text-gray-500" />
+              <span>{venue.hours}</span>
+            </div>
+          )}
+
+          {venue.lastVisit && (
+            <div className="mt-3 p-2 bg-gray-50 rounded text-sm">
+              <p className="font-medium">Last visited {formattedDate}</p>
+              <p>
+                Rated:{" "}
+                <span className="font-semibold">
+                  {venue.lastVisit.rating.overall}/5
+                </span>
+              </p>
+            </div>
+          )}
         </div>
-      )}
-      
-      <div className="mt-4 flex flex-col space-y-2">
-        <Button 
-          onClick={onCheckIn} 
-          className="w-full bg-visitvibe-primary hover:bg-visitvibe-primary/90"
-        >
-          Check In
-        </Button>
-        
-        <Button 
-          variant="outline"
-          className="w-full flex items-center justify-center gap-2"
-          onClick={handleShare}
-        >
-          <Share2 className="h-4 w-4" />
-          Share Venue
-        </Button>
+      </div>
+
+      <div className="mt-4 flex justify-between">
+        <CheckInButton venue={venue} onCheckIn={onCheckIn} />
+        <WishlistButton venue={venue} />
       </div>
     </div>
   );

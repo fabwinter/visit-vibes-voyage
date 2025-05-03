@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,12 +9,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
-import { CalendarIcon, Clock, Plus, X, Share2 } from 'lucide-react';
+import { CalendarIcon, Clock, Plus, X, Share2, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from "sonner";
 import { Visit, Venue, DishRating, VisitRating } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface CheckInFormProps {
   venue: Venue;
@@ -31,7 +32,7 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
   const [partySize, setPartySize] = useState<number>(1);
   const [notes, setNotes] = useState<string>('');
   const [dishes, setDishes] = useState<DishRating[]>([
-    { id: uuidv4(), name: '', rating: 0, tags: [] }
+    { id: uuidv4(), name: '', rating: 0, tags: [], type: 'dish', price: 0 }
   ]);
   const [photos, setPhotos] = useState<string[]>([]);
   const [ratings, setRatings] = useState<VisitRating>({
@@ -42,6 +43,24 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
     overall: 0
   });
   const [wouldVisitAgain, setWouldVisitAgain] = useState<boolean>(true);
+  const [totalBill, setTotalBill] = useState<number>(0);
+  const [manualBillEntry, setManualBillEntry] = useState<boolean>(false);
+  const [manualBillAmount, setManualBillAmount] = useState<string>('');
+  
+  // Calculate total bill whenever dishes change
+  useEffect(() => {
+    if (!manualBillEntry) {
+      const calculatedTotal = dishes.reduce((sum, dish) => sum + (dish.price || 0), 0);
+      setTotalBill(calculatedTotal);
+    }
+  }, [dishes, manualBillEntry]);
+
+  // Update total bill when manual amount changes
+  useEffect(() => {
+    if (manualBillEntry) {
+      setTotalBill(parseFloat(manualBillAmount) || 0);
+    }
+  }, [manualBillAmount, manualBillEntry]);
   
   // Handle photo upload
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,13 +89,19 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
   
   // Add a new dish
   const addDish = () => {
-    setDishes([...dishes, { id: uuidv4(), name: '', rating: 0, tags: [] }]);
+    setDishes([...dishes, { id: uuidv4(), name: '', rating: 0, tags: [], type: 'dish', price: 0 }]);
   };
   
   // Update dish information
   const updateDish = (index: number, field: keyof DishRating, value: any) => {
     const newDishes = [...dishes];
     newDishes[index] = { ...newDishes[index], [field]: value };
+    
+    // Convert price to number when updating price field
+    if (field === 'price') {
+      newDishes[index].price = value !== '' ? parseFloat(value) : 0;
+    }
+    
     setDishes(newDishes);
   };
   
@@ -130,7 +155,7 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
   const handleSubmit = () => {
     // Validate required fields
     if (dishes.some(dish => !dish.name)) {
-      toast.error("Please enter a name for each dish");
+      toast.error("Please enter a name for each dish/drink");
       return;
     }
     
@@ -149,7 +174,8 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
       tags: occasion ? [occasion] : [],
       notes: notes,
       photos: photos,
-      wouldVisitAgain: wouldVisitAgain
+      wouldVisitAgain: wouldVisitAgain,
+      totalBill: totalBill
     };
     
     // Pass the visit to parent component
@@ -249,13 +275,15 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
             </div>
           </div>
           
-          {/* Dishes */}
+          {/* Dishes and Drinks */}
           <div className="flex flex-col space-y-1.5">
             <Label>What did you have?</Label>
             {dishes.map((dish, index) => (
               <div key={dish.id} className="flex flex-col gap-2 p-3 border rounded-md mt-2">
                 <div className="flex justify-between">
-                  <Label htmlFor={`dish-${index}`}>Dish {index + 1}</Label>
+                  <Label htmlFor={`dish-${index}`}>
+                    Item {index + 1}
+                  </Label>
                   <Button 
                     variant="ghost" 
                     size="sm" 
@@ -267,12 +295,43 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
                   </Button>
                 </div>
                 
-                <Input
-                  id={`dish-${index}`}
-                  placeholder="Dish name"
-                  value={dish.name}
-                  onChange={(e) => updateDish(index, 'name', e.target.value)}
-                />
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    id={`dish-${index}`}
+                    placeholder="Item name"
+                    value={dish.name}
+                    onChange={(e) => updateDish(index, 'name', e.target.value)}
+                  />
+                  
+                  <Select
+                    value={dish.type}
+                    onValueChange={(value) => updateDish(index, 'type', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="dish">Dish</SelectItem>
+                      <SelectItem value="drink">Drink</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex flex-col space-y-1.5">
+                  <Label htmlFor={`dish-price-${index}`}>Price</Label>
+                  <div className="flex items-center">
+                    <span className="text-gray-500 mr-2">$</span>
+                    <Input
+                      id={`dish-price-${index}`}
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      value={dish.price || ""}
+                      onChange={(e) => updateDish(index, 'price', e.target.value)}
+                    />
+                  </div>
+                </div>
                 
                 <div className="flex flex-col space-y-1.5">
                   <Label htmlFor={`dish-rating-${index}`}>Rating (1-5)</Label>
@@ -300,8 +359,49 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
               type="button"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Add Another Dish
+              Add Another Item
             </Button>
+          </div>
+          
+          {/* Total Bill */}
+          <div className="flex flex-col space-y-1.5 p-3 border rounded-md">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="total-bill">Total Bill</Label>
+              <div className="flex items-center">
+                <Label htmlFor="manual-bill" className="text-sm mr-2">Manual entry</Label>
+                <Switch
+                  id="manual-bill"
+                  checked={manualBillEntry}
+                  onCheckedChange={setManualBillEntry}
+                />
+              </div>
+            </div>
+            
+            {manualBillEntry ? (
+              <div className="flex items-center mt-2">
+                <span className="text-gray-500 mr-2">$</span>
+                <Input
+                  id="manual-bill-amount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  value={manualBillAmount}
+                  onChange={(e) => setManualBillAmount(e.target.value)}
+                />
+              </div>
+            ) : (
+              <div className="bg-gray-50 p-3 rounded-md mt-2">
+                <div className="flex justify-between">
+                  <span>Items total:</span>
+                  <span>${totalBill.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between font-semibold text-lg mt-2 pt-2 border-t">
+                  <span>Total Bill:</span>
+                  <span>${totalBill.toFixed(2)}</span>
+                </div>
+              </div>
+            )}
           </div>
           
           {/* Ratings */}
