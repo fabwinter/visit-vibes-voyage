@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { mockVenues, mockVisits } from '../data/mockData';
 import CheckInButton from '../components/CheckInButton';
@@ -187,6 +188,7 @@ const MapView = () => {
             onVenueSelect={handleVenueSelect}
             userLocation={userLocation}
             selectedVenue={selectedVenue}
+            className="w-full h-full"
           />
         </div>
       </div>
@@ -232,7 +234,8 @@ const MapView = () => {
             )}
             
             <p className="text-gray-600 mb-2">
-              <MapComponent className="inline-block mr-1 w-4 h-4" /> {selectedVenueDetails.address}
+              {/* Fix: MapComponent requires venues and onVenueSelect props */}
+              📍 {selectedVenueDetails.address}
             </p>
             
             {selectedVenueDetails.phoneNumber && (
