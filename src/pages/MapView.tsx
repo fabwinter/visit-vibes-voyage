@@ -45,7 +45,7 @@ const MapView = () => {
       const result = await PlacesService.searchNearbyVenues({
         location: userLocation,
         radius: 5000,
-        type: "restaurant",
+        type: "restaurant", // Default to restaurant type
         pageToken: pageToken
       });
       
@@ -107,12 +107,12 @@ const MapView = () => {
       const result = await PlacesService.searchNearbyVenues({
         location: userLocation,
         radius: 5000,
-        type: "restaurant",
-        query: searchTerm
+        type: "restaurant", // Use restaurant as the base type
+        query: searchTerm // The search term will help find specific places
       });
       
       if (result.venues.length === 0) {
-        toast("No venues found matching your search.");
+        toast("No food venues found matching your search.");
         if (usingMockData) {
           // If already using mock data, filter it
           const filteredMockVenues = mockVenues.filter(venue => 
@@ -125,6 +125,17 @@ const MapView = () => {
         setVenues(result.venues);
         setNextPageToken(result.nextPageToken);
         setUsingMockData(false);
+        
+        // If there are results and one is clearly the most relevant, select it
+        if (result.venues.length > 0) {
+          const exactMatch = result.venues.find(venue => 
+            venue.name.toLowerCase() === searchTerm.toLowerCase()
+          );
+          
+          if (exactMatch) {
+            setSelectedVenue(exactMatch.id);
+          }
+        }
       }
     } catch (error) {
       console.error("Error searching venues:", error);
@@ -184,9 +195,10 @@ const MapView = () => {
   };
   
   return (
-    <div className="h-[calc(100vh-132px)] flex flex-col">
-      {/* Search bar */}
-      <div className="px-4 pt-4">
+    <div className="h-[calc(100vh-132px)] flex flex-col md:flex-row">
+      {/* Left side - Search, Filters and Venue List */}
+      <div className="w-full md:w-1/3 md:h-full md:overflow-y-auto p-4 flex flex-col">
+        {/* Search bar */}
         <form 
           className="relative mb-4"
           onSubmit={(e) => {
@@ -197,7 +209,7 @@ const MapView = () => {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           <Input
             type="text"
-            placeholder="Search Sydney venues..."
+            placeholder="Search for restaurants, cafes..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-6 rounded-full"
@@ -216,70 +228,73 @@ const MapView = () => {
             Using mock data. API connection issue or no results returned.
           </div>
         )}
-      </div>
-
-      {/* Map area - 400vh height */}
-      <div className="flex-grow h-[400vh] mx-4 mb-4 rounded-lg overflow-hidden border border-gray-200">
-        <MapComponent 
-          venues={finalFilteredVenues} 
-          onVenueSelect={handleVenueSelect}
-          userLocation={userLocation}
-        />
-      </div>
-
-      {/* Venues list */}
-      <div className="px-4 overflow-y-auto max-h-[30vh] pb-16">
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="text-xl font-bold">Sydney Venues</h2>
-          <span className="text-sm text-gray-500">
-            {isLoading ? 'Loading...' : `${finalFilteredVenues.length} results`}
-          </span>
-        </div>
         
-        {isLoading && finalFilteredVenues.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-visitvibe-primary border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
-            <p className="mt-2 text-gray-500">Loading Sydney venues...</p>
+        {/* Venues list */}
+        <div className="mt-4">
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-xl font-bold">Food Venues</h2>
+            <span className="text-sm text-gray-500">
+              {isLoading ? 'Loading...' : `${finalFilteredVenues.length} results`}
+            </span>
           </div>
-        ) : finalFilteredVenues.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            {searchTerm || (filterOptions.rating !== 'all' || filterOptions.category !== 'all' || (filterOptions.tags?.length || 0) > 0) ? (
-              <p>No venues match your search or filters</p>
-            ) : (
-              <p>No venues found in this area</p>
-            )}
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {finalFilteredVenues.map((venue) => (
-                <div 
-                  key={venue.id} 
-                  id={`venue-${venue.id}`}
-                  className={`transition-all duration-200 ${selectedVenue === venue.id ? 'ring-2 ring-visitvibe-primary ring-offset-2' : ''}`}
-                >
-                  <VenueCard
-                    venue={venue}
-                    lastVisit={venue.lastVisit}
-                    onClick={() => handleVenueSelect(venue.id)}
-                  />
-                </div>
-              ))}
+          
+          {isLoading && finalFilteredVenues.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-visitvibe-primary border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
+              <p className="mt-2 text-gray-500">Loading food venues...</p>
             </div>
-            
-            {nextPageToken && !usingMockData && (
-              <div className="mt-6 text-center">
-                <Button 
-                  variant="outline" 
-                  onClick={handleLoadMore}
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Loading...' : 'Load More Venues'}
-                </Button>
+          ) : finalFilteredVenues.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              {searchTerm || (filterOptions.rating !== 'all' || filterOptions.category !== 'all' || (filterOptions.tags?.length || 0) > 0) ? (
+                <p>No food venues match your search or filters</p>
+              ) : (
+                <p>No food venues found in this area</p>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-4">
+                {finalFilteredVenues.map((venue) => (
+                  <div 
+                    key={venue.id} 
+                    id={`venue-${venue.id}`}
+                    className={`transition-all duration-200 ${selectedVenue === venue.id ? 'ring-2 ring-visitvibe-primary ring-offset-2' : ''}`}
+                  >
+                    <VenueCard
+                      venue={venue}
+                      lastVisit={venue.lastVisit}
+                      onClick={() => handleVenueSelect(venue.id)}
+                    />
+                  </div>
+                ))}
               </div>
-            )}
-          </>
-        )}
+              
+              {nextPageToken && !usingMockData && (
+                <div className="mt-6 text-center">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleLoadMore}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Loading...' : 'Load More Venues'}
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+      
+      {/* Right side - Map */}
+      <div className="w-full md:w-2/3 h-[400px] md:h-full p-4">
+        <div className="h-full rounded-lg overflow-hidden border border-gray-200">
+          <MapComponent 
+            venues={finalFilteredVenues} 
+            onVenueSelect={handleVenueSelect}
+            userLocation={userLocation}
+            selectedVenue={selectedVenue}
+          />
+        </div>
       </div>
 
       {/* Floating check-in button */}

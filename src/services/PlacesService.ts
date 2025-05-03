@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 import { Venue } from "../types";
 
@@ -8,6 +7,17 @@ const API_KEY = "AIzaSyAoqbocwE83Z3REe60z7dhN3Z2_aKnSJxc";
 // Use a proper CORS proxy
 // Note: For production, you should use your own proxy or Google Maps JavaScript API directly
 const PROXY_URL = "https://corsproxy.io/?";
+
+// Food-related place types
+const FOOD_PLACE_TYPES = [
+  "restaurant", 
+  "cafe", 
+  "bakery", 
+  "bar", 
+  "food",
+  "meal_takeaway",
+  "meal_delivery"
+];
 
 export interface PlacesSearchParams {
   query?: string;
@@ -49,27 +59,36 @@ export const PlacesService = {
         throw new Error(`Google Places API error: ${data.status}`);
       }
 
-      // Transform Google Places results into our Venue format
-      const venues: Venue[] = data.results ? data.results.map((place: any) => {
-        return {
-          id: place.place_id,
-          name: place.name,
-          address: place.vicinity,
-          coordinates: {
-            lat: place.geometry.location.lat,
-            lng: place.geometry.location.lng,
-          },
-          photos: place.photos 
-            ? place.photos.map((photo: any) => 
-                `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photo.photo_reference}&key=${API_KEY}`
-              )
-            : [],
-          priceLevel: place.price_level,
-          category: place.types ? place.types.filter((type: string) => 
-            !["point_of_interest", "establishment"].includes(type)
-          ) : [],
-        };
-      }) : [];
+      // Filter to only include food-related places and transform Google Places results into our Venue format
+      const venues: Venue[] = data.results ? data.results
+        .filter((place: any) => {
+          // Check if the place has at least one food-related type
+          return place.types.some((type: string) => 
+            FOOD_PLACE_TYPES.includes(type)
+          );
+        })
+        .map((place: any) => {
+          return {
+            id: place.place_id,
+            name: place.name,
+            address: place.vicinity,
+            coordinates: {
+              lat: place.geometry.location.lat,
+              lng: place.geometry.location.lng,
+            },
+            photos: place.photos 
+              ? place.photos.map((photo: any) => 
+                  `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photo.photo_reference}&key=${API_KEY}`
+                )
+              : [],
+            priceLevel: place.price_level,
+            category: place.types ? place.types.filter((type: string) => 
+              // Keep only food-related categories for display
+              FOOD_PLACE_TYPES.includes(type) || 
+              !["point_of_interest", "establishment", "food", "store"].includes(type)
+            ) : [],
+          };
+        }) : [];
 
       return { 
         venues,

@@ -108,4 +108,13 @@
   .tag-badge {
     @apply bg-visitvibe-tag/20 text-visitvibe-tag text-xs px-2 py-1 rounded-full font-medium;
   }
+  
+  /* Enhanced mapbox popups */
+  .mapboxgl-popup-content {
+    @apply shadow-lg rounded-lg p-0 overflow-hidden;
+  }
+  
+  .venue-popup-selected .mapboxgl-popup-content {
+    @apply shadow-xl border-2 border-visitvibe-primary;
+  }
 }

@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -10,13 +11,15 @@ interface MapComponentProps {
   onVenueSelect: (venueId: string) => void;
   userLocation?: { lat: number; lng: number };
   mapboxToken?: string;
+  selectedVenue?: string | null;
 }
 
-const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken }: MapComponentProps) => {
+const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken, selectedVenue }: MapComponentProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [token, setToken] = useState<string>(mapboxToken || 'pk.eyJ1IjoiZmFiaWFud2ludGVyYmluZSIsImEiOiJjbWE2OWNuNG0wbzFuMmtwb3czNHB4cGJwIn0.KdxkppXglJrOwuBnqcYBqA');
   const [showTokenInput, setShowTokenInput] = useState<boolean>(false);
+  const markers = useRef<{ [key: string]: mapboxgl.Marker }>({});
 
   useEffect(() => {
     if (!token || !mapContainer.current) return;
@@ -32,7 +35,7 @@ const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken }: MapC
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/light-v11', // Changed to light-v11 for grayscale look
       center: [initialLocation.lng, initialLocation.lat],
-      zoom: 12,
+      zoom: 13, // Increased zoom level for better visibility
     });
 
     // Add navigation controls
@@ -45,9 +48,29 @@ const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken }: MapC
         .addTo(map.current);
     }
 
+    // Clean up on unmount
+    return () => {
+      if (map.current) {
+        map.current.remove();
+        map.current = null;
+      }
+    };
+  }, [token, userLocation]);
+
+  // Update markers when venues or selected venue changes
+  useEffect(() => {
+    if (!map.current) return;
+    
+    // Clear existing markers
+    Object.values(markers.current).forEach(marker => marker.remove());
+    markers.current = {};
+    
     // Add venue markers
     venues.forEach(venue => {
       if (!map.current) return;
+      
+      // Determine if this is the selected venue
+      const isSelected = selectedVenue === venue.id;
 
       // Get the last visit for this venue to determine the marker color
       const lastVisit = venue.lastVisit;
@@ -66,15 +89,18 @@ const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken }: MapC
       // Create a marker element with pin icon
       const markerElement = document.createElement('div');
       markerElement.className = 'custom-marker';
-      markerElement.style.width = '36px';
-      markerElement.style.height = '36px';
+      markerElement.style.width = isSelected ? '44px' : '36px';
+      markerElement.style.height = isSelected ? '44px' : '36px';
       markerElement.style.display = 'flex';
       markerElement.style.justifyContent = 'center';
       markerElement.style.alignItems = 'center';
+      markerElement.style.transition = 'all 0.3s ease';
       
-      // Create SVG icon
+      // Create SVG icon - larger for selected venue
       markerElement.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="${markerColor}" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" width="${isSelected ? '36' : '24'}" height="${isSelected ? '36' : '24'}" 
+          viewBox="0 0 24 24" fill="${markerColor}" stroke="${isSelected ? 'black' : 'white'}" 
+          stroke-width="${isSelected ? '3' : '2'}" stroke-linecap="round" stroke-linejoin="round">
           <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
           <circle cx="12" cy="10" r="3"></circle>
         </svg>
@@ -85,46 +111,54 @@ const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken }: MapC
         .setLngLat([venue.coordinates.lng, venue.coordinates.lat])
         .addTo(map.current);
       
+      // Store marker reference
+      markers.current[venue.id] = marker;
+      
       // Add click listener to marker
       marker.getElement().addEventListener('click', () => {
         onVenueSelect(venue.id);
       });
 
       // Create a popup with venue info
-      const popup = new mapboxgl.Popup({ offset: 25, closeButton: false })
-        .setHTML(`
-          <div class="p-2">
-            <h3 class="font-semibold">${venue.name}</h3>
-            <p class="text-sm text-gray-600">${venue.address}</p>
-            ${venue.category ? `<p class="text-xs text-gray-500 mt-1">${venue.category.join(', ')}</p>` : ''}
-          </div>
-        `);
+      const popup = new mapboxgl.Popup({ 
+        offset: 25, 
+        closeButton: false,
+        className: isSelected ? 'venue-popup-selected' : 'venue-popup'
+      }).setHTML(`
+        <div class="p-3 max-w-xs">
+          ${venue.photos && venue.photos.length > 0 ? 
+            `<img src="${venue.photos[0]}" alt="${venue.name}" 
+            class="w-full h-32 object-cover mb-2 rounded" 
+            onerror="this.onerror=null;this.src='https://placehold.co/600x400?text=No+Image';">` : ''}
+          <h3 class="font-semibold text-base">${venue.name}</h3>
+          <p class="text-sm text-gray-600">${venue.address}</p>
+          ${venue.category ? `<p class="text-xs text-gray-500 mt-1">${venue.category.join(', ')}</p>` : ''}
+        </div>
+      `);
 
-      // Show popup on hover
-      marker.getElement().addEventListener('mouseenter', () => {
+      // Always show popup for selected venue
+      if (isSelected) {
         marker.setPopup(popup);
-        popup.addTo(map.current!);
-      });
-      
-      marker.getElement().addEventListener('mouseleave', () => {
-        popup.remove();
-      });
-    });
-
-    // Clean up on unmount
-    return () => {
-      if (map.current) {
-        map.current.remove();
-        map.current = null;
+        popup.addTo(map.current);
+      } else {
+        // Show popup on hover for non-selected venues
+        marker.getElement().addEventListener('mouseenter', () => {
+          marker.setPopup(popup);
+          popup.addTo(map.current!);
+        });
+        
+        marker.getElement().addEventListener('mouseleave', () => {
+          popup.remove();
+        });
       }
-    };
-  }, [venues, token, userLocation, onVenueSelect]);
+    });
+  }, [venues, selectedVenue, onVenueSelect]);
 
-  // Center map to a venue
-  const flyToVenue = (venueId: string) => {
-    if (!map.current) return;
+  // Center map to selected venue when it changes
+  useEffect(() => {
+    if (!map.current || !selectedVenue) return;
     
-    const venue = venues.find(v => v.id === venueId);
+    const venue = venues.find(v => v.id === selectedVenue);
     if (!venue) return;
     
     map.current.flyTo({
@@ -132,7 +166,7 @@ const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken }: MapC
       zoom: 15,
       essential: true
     });
-  };
+  }, [selectedVenue, venues]);
 
   const handleTokenSubmit = (e: React.FormEvent) => {
     e.preventDefault();
