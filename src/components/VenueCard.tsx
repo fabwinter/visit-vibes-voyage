@@ -1,6 +1,6 @@
 
 import { Link } from 'react-router-dom';
-import { MapPin } from 'lucide-react';
+import { MapPin, Utensils, Coffee } from 'lucide-react';
 import StarRating from './StarRating';
 import { Venue, Visit } from '../types';
 
@@ -8,11 +8,30 @@ interface VenueCardProps {
   venue: Venue;
   lastVisit?: Visit;
   className?: string;
-  onClick?: () => void; // Add this line to support onClick handlers
+  onClick?: () => void;
 }
 
 const VenueCard = ({ venue, lastVisit, className = '', onClick }: VenueCardProps) => {
-  // Wrap the Link component with a div that handles the onClick
+  // Function to determine venue icon based on categories
+  const getVenueIcon = () => {
+    const categories = venue.category?.map(c => c.toLowerCase()) || [];
+    
+    if (categories.some(c => c.includes('cafe') || c.includes('coffee'))) {
+      return <Coffee className="w-4 h-4 mr-1" />;
+    }
+    
+    return <Utensils className="w-4 h-4 mr-1" />;
+  };
+  
+  // Format category names for display
+  const formatCategory = (category: string) => {
+    return category
+      .replace(/_/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
   return (
     <div onClick={onClick} className="cursor-pointer">
       <Link 
@@ -27,12 +46,15 @@ const VenueCard = ({ venue, lastVisit, className = '', onClick }: VenueCardProps
       >
         <div className="relative h-40">
           <img
-            src={venue.photos[0] || 'https://placehold.co/600x400?text=No+Image'}
+            src={venue.photos?.[0] || 'https://placehold.co/600x400?text=No+Image'}
             alt={venue.name}
             className="w-full h-full object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=No+Image';
+            }}
           />
           
-          {venue.priceLevel && (
+          {venue.priceLevel !== undefined && (
             <div className="absolute top-3 right-3 bg-black bg-opacity-50 text-white px-2 py-1 rounded">
               {'$'.repeat(venue.priceLevel)}
             </div>
@@ -59,13 +81,16 @@ const VenueCard = ({ venue, lastVisit, className = '', onClick }: VenueCardProps
             </div>
           )}
           
-          {venue.category && (
+          {venue.category && venue.category.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-1">
-              {venue.category.map((cat) => (
+              {venue.category.slice(0, 3).map((cat) => (
                 <span key={cat} className="tag-badge">
-                  {cat}
+                  {formatCategory(cat)}
                 </span>
               ))}
+              {venue.category.length > 3 && (
+                <span className="text-xs text-gray-500">+{venue.category.length - 3} more</span>
+              )}
             </div>
           )}
         </div>
