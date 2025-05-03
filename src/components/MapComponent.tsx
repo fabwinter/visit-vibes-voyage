@@ -12,9 +12,10 @@ interface MapComponentProps {
   userLocation?: { lat: number; lng: number };
   mapboxToken?: string;
   selectedVenue?: string | null;
+  className?: string;
 }
 
-const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken, selectedVenue }: MapComponentProps) => {
+const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken, selectedVenue, className }: MapComponentProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [token, setToken] = useState<string>(mapboxToken || 'pk.eyJ1IjoiZmFiaWFud2ludGVyYmluZSIsImEiOiJjbWE2OWNuNG0wbzFuMmtwb3czNHB4cGJwIn0.KdxkppXglJrOwuBnqcYBqA');
@@ -33,9 +34,9 @@ const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken, select
     
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/light-v11', // Changed to light-v11 for grayscale look
+      style: 'mapbox://styles/mapbox/streets-v12', // Changed to streets-v12 for better visibility of food venues
       center: [initialLocation.lng, initialLocation.lat],
-      zoom: 13, // Increased zoom level for better visibility
+      zoom: 14, // Increased zoom level for better visibility
     });
 
     // Add navigation controls
@@ -95,6 +96,8 @@ const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken, select
       markerElement.style.justifyContent = 'center';
       markerElement.style.alignItems = 'center';
       markerElement.style.transition = 'all 0.3s ease';
+      markerElement.style.cursor = 'pointer';
+      markerElement.style.zIndex = isSelected ? '1000' : '1';
       
       // Create SVG icon - larger for selected venue
       markerElement.innerHTML = `
@@ -123,7 +126,8 @@ const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken, select
       const popup = new mapboxgl.Popup({ 
         offset: 25, 
         closeButton: false,
-        className: isSelected ? 'venue-popup-selected' : 'venue-popup'
+        className: isSelected ? 'venue-popup-selected' : 'venue-popup',
+        maxWidth: '300px'
       }).setHTML(`
         <div class="p-3 max-w-xs">
           ${venue.photos && venue.photos.length > 0 ? 
@@ -132,7 +136,7 @@ const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken, select
             onerror="this.onerror=null;this.src='https://placehold.co/600x400?text=No+Image';">` : ''}
           <h3 class="font-semibold text-base">${venue.name}</h3>
           <p class="text-sm text-gray-600">${venue.address}</p>
-          ${venue.category ? `<p class="text-xs text-gray-500 mt-1">${venue.category.join(', ')}</p>` : ''}
+          ${venue.category ? `<p class="text-xs text-gray-500 mt-1">${venue.category.join(', ').replace(/_/g, ' ')}</p>` : ''}
         </div>
       `);
 
@@ -166,6 +170,34 @@ const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken, select
       zoom: 15,
       essential: true
     });
+
+    // Add more focused zoom for selected venue
+    const marker = markers.current[venue.id];
+    if (marker) {
+      // Make sure the marker's popup is showing
+      const popupEl = document.querySelector('.venue-popup-selected');
+      if (!popupEl && map.current) {
+        const popup = new mapboxgl.Popup({ 
+          offset: 25,
+          closeButton: false,
+          className: 'venue-popup-selected',
+          maxWidth: '300px'
+        }).setHTML(`
+          <div class="p-3 max-w-xs">
+            ${venue.photos && venue.photos.length > 0 ? 
+              `<img src="${venue.photos[0]}" alt="${venue.name}" 
+              class="w-full h-32 object-cover mb-2 rounded" 
+              onerror="this.onerror=null;this.src='https://placehold.co/600x400?text=No+Image';">` : ''}
+            <h3 class="font-semibold text-base">${venue.name}</h3>
+            <p class="text-sm text-gray-600">${venue.address}</p>
+            ${venue.category ? `<p class="text-xs text-gray-500 mt-1">${venue.category.join(', ').replace(/_/g, ' ')}</p>` : ''}
+          </div>
+        `);
+        
+        marker.setPopup(popup);
+        popup.addTo(map.current);
+      }
+    }
   }, [selectedVenue, venues]);
 
   const handleTokenSubmit = (e: React.FormEvent) => {
@@ -173,8 +205,13 @@ const MapComponent = ({ venues, onVenueSelect, userLocation, mapboxToken, select
     setShowTokenInput(false);
   };
 
+  // Update styles for index.css to add shadow to selected popups
+  useEffect(() => {
+    // This is handled in index.css already
+  }, []);
+
   return (
-    <div className="relative w-full h-full">
+    <div className={`relative w-full h-full ${className}`}>
       {showTokenInput ? (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10 p-4">
           <form onSubmit={handleTokenSubmit} className="bg-white p-4 rounded-lg shadow-md w-full max-w-md">

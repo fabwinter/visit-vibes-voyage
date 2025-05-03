@@ -1,12 +1,10 @@
-
 import { useState, useEffect } from 'react';
-import { Search } from 'lucide-react';
-import { Input } from "@/components/ui/input";
 import { mockVenues, mockVisits } from '../data/mockData';
 import CheckInButton from '../components/CheckInButton';
 import VenueCard from '../components/VenueCard';
 import MapComponent from '../components/MapComponent';
 import VenueFilters, { FilterOptions } from '../components/VenueFilters';
+import PlaceSearchInput from '../components/PlaceSearchInput';
 import { Venue } from '@/types';
 import { filterVenues, extractCategories, extractTags } from '../utils/filterUtils';
 import { toast } from "sonner";
@@ -14,7 +12,6 @@ import { PlacesService } from '../services/PlacesService';
 import { Button } from '@/components/ui/button';
 
 const MapView = () => {
-  const [searchTerm, setSearchTerm] = useState('');
   const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
     rating: 'all',
@@ -30,6 +27,7 @@ const MapView = () => {
   
   // Default to Sydney CBD
   const userLocation = { lat: -33.8688, lng: 151.2093 };
+  const [selectedVenueDetails, setSelectedVenueDetails] = useState<Venue | null>(null);
 
   // Fetch venues on initial load
   useEffect(() => {
@@ -97,83 +95,68 @@ const MapView = () => {
     setVenues(venuesWithLastVisit);
   };
   
-  // Handle search submission
-  const handleSearch = async () => {
-    if (!searchTerm.trim()) return;
+  // Handle place selection from autocomplete
+  const handlePlaceSelect = async (venue: Venue) => {
+    console.log("Selected venue:", venue);
     
-    setIsLoading(true);
-    try {
-      console.log(`Searching for: ${searchTerm}`);
-      const result = await PlacesService.searchNearbyVenues({
-        location: userLocation,
-        radius: 5000,
-        type: "restaurant", // Use restaurant as the base type
-        query: searchTerm // The search term will help find specific places
-      });
-      
-      if (result.venues.length === 0) {
-        toast("No food venues found matching your search.");
-        if (usingMockData) {
-          // If already using mock data, filter it
-          const filteredMockVenues = mockVenues.filter(venue => 
-            venue.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            venue.address.toLowerCase().includes(searchTerm.toLowerCase())
-          );
-          setVenues(filteredMockVenues);
-        }
-      } else {
-        setVenues(result.venues);
-        setNextPageToken(result.nextPageToken);
-        setUsingMockData(false);
-        
-        // If there are results and one is clearly the most relevant, select it
-        if (result.venues.length > 0) {
-          const exactMatch = result.venues.find(venue => 
-            venue.name.toLowerCase() === searchTerm.toLowerCase()
-          );
+    // If we already have coordinates, update the selected venue right away
+    if (venue.coordinates.lat !== 0 && venue.coordinates.lng !== 0) {
+      setSelectedVenue(venue.id);
+      setSelectedVenueDetails(venue);
+    } 
+    // Otherwise fetch details to get coordinates
+    else {
+      try {
+        const details = await PlacesService.getVenueDetails(venue.id);
+        if (details) {
+          setSelectedVenue(details.id);
+          setSelectedVenueDetails(details);
           
-          if (exactMatch) {
-            setSelectedVenue(exactMatch.id);
-          }
+          // Add this venue to our list if it's not there already
+          setVenues(prevVenues => {
+            const exists = prevVenues.some(v => v.id === details.id);
+            if (!exists) {
+              return [details, ...prevVenues];
+            }
+            return prevVenues;
+          });
         }
+      } catch (error) {
+        console.error("Error fetching venue details:", error);
+        toast.error("Could not get details for this venue");
       }
-    } catch (error) {
-      console.error("Error searching venues:", error);
-      toast("Error searching venues. Showing mock data instead.");
-      
-      // Filter mock data by search term
-      const filteredMockVenues = mockVenues.filter(venue => 
-        venue.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        venue.address.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setVenues(filteredMockVenues);
-      setUsingMockData(true);
-    } finally {
-      setIsLoading(false);
     }
   };
   
-  // Filter venues based on search term and filters
-  const filteredBySearchVenues = venues.filter(venue => {
-    if (!searchTerm) return true;
-    
-    const searchTermLower = searchTerm.toLowerCase();
-    return venue.name.toLowerCase().includes(searchTermLower) ||
-           venue.address.toLowerCase().includes(searchTermLower) ||
-           venue.category?.some(cat => cat.toLowerCase().includes(searchTermLower)) ||
-           false;
-  });
-  
   // Apply additional filters
-  const finalFilteredVenues = filterVenues(filteredBySearchVenues, filterOptions);
+  const filteredVenues = filterVenues(venues, filterOptions);
   
   // Extract unique categories and tags
   const categories = extractCategories(venues);
   const tags = extractTags(venues);
   
-  // Handle venue selection
-  const handleVenueSelect = (venueId: string) => {
+  // Handle venue selection from map or list
+  const handleVenueSelect = async (venueId: string) => {
     setSelectedVenue(venueId);
+    
+    // Get venue details if not already selected
+    if (!selectedVenueDetails || selectedVenueDetails.id !== venueId) {
+      const venue = venues.find(v => v.id === venueId);
+      
+      if (venue) {
+        setSelectedVenueDetails(venue);
+      } else {
+        // Fetch details if not in our current list
+        try {
+          const details = await PlacesService.getVenueDetails(venueId);
+          if (details) {
+            setSelectedVenueDetails(details);
+          }
+        } catch (error) {
+          console.error("Error fetching venue details:", error);
+        }
+      }
+    }
     
     // Scroll to the selected venue card if it exists
     const venueCard = document.getElementById(`venue-${venueId}`);
@@ -196,25 +179,26 @@ const MapView = () => {
   
   return (
     <div className="h-[calc(100vh-132px)] flex flex-col md:flex-row">
-      {/* Left side - Search, Filters and Venue List */}
-      <div className="w-full md:w-1/3 md:h-full md:overflow-y-auto p-4 flex flex-col">
-        {/* Search bar */}
-        <form 
-          className="relative mb-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSearch();
-          }}
-        >
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <Input
-            type="text"
-            placeholder="Search for restaurants, cafes..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-6 rounded-full"
+      {/* Map - Now on the left side for better visibility */}
+      <div className="w-full md:w-1/2 lg:w-3/5 h-[350px] md:h-full md:order-1 p-4">
+        <div className="h-full rounded-lg overflow-hidden border border-gray-200 shadow-md">
+          <MapComponent 
+            venues={filteredVenues} 
+            onVenueSelect={handleVenueSelect}
+            userLocation={userLocation}
+            selectedVenue={selectedVenue}
           />
-        </form>
+        </div>
+      </div>
+      
+      {/* Right side - Search, Filters and Venue List */}
+      <div className="w-full md:w-1/2 lg:w-2/5 md:h-full md:overflow-y-auto p-4 md:order-2">
+        {/* Search with autocomplete */}
+        <PlaceSearchInput 
+          onSelect={handlePlaceSelect}
+          userLocation={userLocation}
+          className="mb-4"
+        />
 
         {/* Filters component */}
         <VenueFilters 
@@ -229,24 +213,84 @@ const MapView = () => {
           </div>
         )}
         
+        {/* Selected venue details if available */}
+        {selectedVenueDetails && (
+          <div className="my-4 p-4 bg-white rounded-lg shadow-md border border-gray-200">
+            <h2 className="text-xl font-bold mb-2">{selectedVenueDetails.name}</h2>
+            
+            {selectedVenueDetails.photos && selectedVenueDetails.photos.length > 0 && (
+              <div className="mb-3 rounded-md overflow-hidden">
+                <img 
+                  src={selectedVenueDetails.photos[0]} 
+                  alt={selectedVenueDetails.name}
+                  className="w-full h-48 object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=No+Image';
+                  }}
+                />
+              </div>
+            )}
+            
+            <p className="text-gray-600 mb-2">
+              <MapComponent className="inline-block mr-1 w-4 h-4" /> {selectedVenueDetails.address}
+            </p>
+            
+            {selectedVenueDetails.phoneNumber && (
+              <p className="text-gray-600 mb-2">📞 {selectedVenueDetails.phoneNumber}</p>
+            )}
+            
+            {selectedVenueDetails.website && (
+              <p className="text-gray-600 mb-2">
+                <a href={selectedVenueDetails.website} target="_blank" rel="noopener noreferrer" 
+                   className="text-visitvibe-primary hover:underline">
+                  Website
+                </a>
+              </p>
+            )}
+            
+            {selectedVenueDetails.hours && (
+              <p className="text-gray-600 mb-2 text-sm">{selectedVenueDetails.hours}</p>
+            )}
+            
+            {selectedVenueDetails.category && selectedVenueDetails.category.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1">
+                {selectedVenueDetails.category.map((cat) => (
+                  <span key={cat} className="tag-badge">
+                    {cat.replace(/_/g, ' ')}
+                  </span>
+                ))}
+              </div>
+            )}
+            
+            <div className="mt-4">
+              <Button 
+                onClick={handleCheckIn} 
+                className="w-full bg-visitvibe-primary hover:bg-visitvibe-primary/90"
+              >
+                Check In
+              </Button>
+            </div>
+          </div>
+        )}
+        
         {/* Venues list */}
         <div className="mt-4">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-xl font-bold">Food Venues</h2>
             <span className="text-sm text-gray-500">
-              {isLoading ? 'Loading...' : `${finalFilteredVenues.length} results`}
+              {isLoading ? 'Loading...' : `${filteredVenues.length} results`}
             </span>
           </div>
           
-          {isLoading && finalFilteredVenues.length === 0 ? (
+          {isLoading && filteredVenues.length === 0 ? (
             <div className="text-center py-8">
               <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-visitvibe-primary border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
               <p className="mt-2 text-gray-500">Loading food venues...</p>
             </div>
-          ) : finalFilteredVenues.length === 0 ? (
+          ) : filteredVenues.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              {searchTerm || (filterOptions.rating !== 'all' || filterOptions.category !== 'all' || (filterOptions.tags?.length || 0) > 0) ? (
-                <p>No food venues match your search or filters</p>
+              {(filterOptions.rating !== 'all' || filterOptions.category !== 'all' || (filterOptions.tags?.length || 0) > 0) ? (
+                <p>No food venues match your filters</p>
               ) : (
                 <p>No food venues found in this area</p>
               )}
@@ -254,7 +298,7 @@ const MapView = () => {
           ) : (
             <>
               <div className="grid grid-cols-1 gap-4">
-                {finalFilteredVenues.map((venue) => (
+                {filteredVenues.map((venue) => (
                   <div 
                     key={venue.id} 
                     id={`venue-${venue.id}`}
@@ -282,18 +326,6 @@ const MapView = () => {
               )}
             </>
           )}
-        </div>
-      </div>
-      
-      {/* Right side - Map */}
-      <div className="w-full md:w-2/3 h-[400px] md:h-full p-4">
-        <div className="h-full rounded-lg overflow-hidden border border-gray-200">
-          <MapComponent 
-            venues={finalFilteredVenues} 
-            onVenueSelect={handleVenueSelect}
-            userLocation={userLocation}
-            selectedVenue={selectedVenue}
-          />
         </div>
       </div>
 

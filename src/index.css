@@ -117,4 +117,31 @@
   .venue-popup-selected .mapboxgl-popup-content {
     @apply shadow-xl border-2 border-visitvibe-primary;
   }
+
+  /* Custom overrides for map appearance */
+  .mapboxgl-ctrl-logo {
+    @apply opacity-50;
+  }
+  
+  .mapboxgl-popup-tip {
+    @apply border-t-visitvibe-primary/70;
+  }
+
+  .venue-popup-selected .mapboxgl-popup-tip {
+    @apply border-visitvibe-primary;
+  }
+
+  /* Make selected venue stand out more */
+  .custom-marker {
+    @apply transition-all duration-300;
+  }
+  
+  .custom-marker:hover {
+    @apply scale-110;
+  }
+  
+  /* Command input styles */
+  [cmdk-input-wrapper] {
+    @apply relative;
+  }
 }

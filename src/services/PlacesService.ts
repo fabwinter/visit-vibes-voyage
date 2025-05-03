@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 import { Venue } from "../types";
 
@@ -8,7 +9,7 @@ const API_KEY = "AIzaSyAoqbocwE83Z3REe60z7dhN3Z2_aKnSJxc";
 // Note: For production, you should use your own proxy or Google Maps JavaScript API directly
 const PROXY_URL = "https://corsproxy.io/?";
 
-// Food-related place types
+// Strictly food-related place types
 const FOOD_PLACE_TYPES = [
   "restaurant", 
   "cafe", 
@@ -17,6 +18,18 @@ const FOOD_PLACE_TYPES = [
   "food",
   "meal_takeaway",
   "meal_delivery"
+];
+
+// Not food-related types - explicit exclusions
+const NON_FOOD_PLACE_TYPES = [
+  "lodging",
+  "hotel",
+  "travel_agency",
+  "real_estate_agency",
+  "store",
+  "gas_station",
+  "car_dealer",
+  "car_rental"
 ];
 
 export interface PlacesSearchParams {
@@ -59,13 +72,21 @@ export const PlacesService = {
         throw new Error(`Google Places API error: ${data.status}`);
       }
 
-      // Filter to only include food-related places and transform Google Places results into our Venue format
+      // More strictly filter to only include food-related places
       const venues: Venue[] = data.results ? data.results
         .filter((place: any) => {
-          // Check if the place has at least one food-related type
-          return place.types.some((type: string) => 
+          // Only include if:
+          // 1. It has at least one food-related type
+          const hasFoodType = place.types.some((type: string) => 
             FOOD_PLACE_TYPES.includes(type)
           );
+          
+          // 2. AND it doesn't have non-food types
+          const hasNonFoodType = place.types.some((type: string) => 
+            NON_FOOD_PLACE_TYPES.includes(type)
+          );
+          
+          return hasFoodType && !hasNonFoodType;
         })
         .map((place: any) => {
           return {
@@ -100,6 +121,53 @@ export const PlacesService = {
         description: error instanceof Error ? error.message : "Unknown error occurred"
       });
       return { venues: [] };
+    }
+  },
+
+  async searchPlaces(query: string, location: { lat: number; lng: number }): Promise<Venue[]> {
+    try {
+      // Create autocomplete search URL
+      let placesUrl = `https://maps.googleapis.com/maps/api/place/autocomplete/json?`;
+      placesUrl += `input=${encodeURIComponent(query)}`;
+      placesUrl += `&location=${location.lat},${location.lng}`;
+      placesUrl += `&radius=50000`;
+      placesUrl += `&types=establishment`;
+      placesUrl += `&strictbounds=true`;
+      placesUrl += `&key=${API_KEY}`;
+      
+      // Add CORS proxy
+      const url = `${PROXY_URL}${encodeURIComponent(placesUrl)}`;
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`API request failed with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
+        throw new Error(`Google Places API error: ${data.status}`);
+      }
+      
+      // Process autocomplete predictions
+      const predictions = data.predictions || [];
+      
+      // Convert predictions to a simplified venue format for display in autocomplete
+      const venues: Venue[] = predictions.map((prediction: any) => ({
+        id: prediction.place_id,
+        name: prediction.structured_formatting.main_text,
+        address: prediction.structured_formatting.secondary_text || prediction.description,
+        coordinates: { lat: 0, lng: 0 }, // Will be populated after selection
+        category: [],
+        photos: []
+      }));
+      
+      return venues;
+    } catch (error) {
+      console.error("Error searching places:", error);
+      toast.error("Failed to search places");
+      return [];
     }
   },
 
