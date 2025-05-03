@@ -1,4 +1,6 @@
+
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { mockVenues, mockVisits } from '../data/mockData';
 import CheckInButton from '../components/CheckInButton';
 import VenueCard from '../components/VenueCard';
@@ -14,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Share2, MapPin } from 'lucide-react';
 
 const MapView = () => {
+  const location = useLocation();
   const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
     rating: 'all',
@@ -28,18 +31,50 @@ const MapView = () => {
   const [usingMockData, setUsingMockData] = useState(false);
   
   // Default to Sydney CBD
-  const userLocation = { lat: -33.8688, lng: 151.2093 };
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number }>({ 
+    lat: -33.8688, lng: 151.2093 
+  });
   const [selectedVenueDetails, setSelectedVenueDetails] = useState<Venue | null>(null);
   
   // Check-in related states
   const [isCheckInOpen, setIsCheckInOpen] = useState(false);
   const [visits, setVisits] = useState<Visit[]>([]);
 
-  // Fetch venues and visits on initial load
+  // Get user's current location
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserLocation({ lat: latitude, lng: longitude });
+          console.log("User location detected:", latitude, longitude);
+        },
+        (error) => {
+          console.error("Error getting user location:", error);
+          toast("Could not access your location", {
+            description: "Using default location. Check browser permissions."
+          });
+        }
+      );
+    } else {
+      toast("Geolocation is not supported by this browser", {
+        description: "Using default location."
+      });
+    }
+  }, []);
+
+  // Check if we need to select a venue from navigation state
+  useEffect(() => {
+    if (location.state?.selectedVenueId) {
+      setSelectedVenue(location.state.selectedVenueId);
+    }
+  }, [location.state]);
+
+  // Fetch venues and visits on initial load or when user location changes
   useEffect(() => {
     fetchVenues();
     loadVisits();
-  }, []);
+  }, [userLocation]);
   
   // Load visits from localStorage
   const loadVisits = () => {
@@ -103,6 +138,9 @@ const MapView = () => {
         }
         setNextPageToken(result.nextPageToken);
         setUsingMockData(false);
+        
+        // Store venues in localStorage for other views
+        localStorage.setItem('venues', JSON.stringify(venuesWithVisitData));
       }
     } catch (error) {
       console.error("Error fetching venues:", error);
@@ -135,6 +173,9 @@ const MapView = () => {
     });
     
     setVenues(venuesWithLastVisit);
+    
+    // Store venues in localStorage for other views
+    localStorage.setItem('venues', JSON.stringify(venuesWithLastVisit));
   };
   
   // Handle place selection from autocomplete
@@ -245,6 +286,7 @@ const MapView = () => {
     
     // Close the dialog
     setIsCheckInOpen(false);
+    toast.success("Check-in successful!");
   };
 
   // Load more venues

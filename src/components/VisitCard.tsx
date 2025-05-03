@@ -46,6 +46,9 @@ const VisitCard = ({ visit, venueName, className = '' }: VisitCardProps) => {
             src={visit.photos[0]}
             alt={`Visit to ${venueName}`}
             className="w-full h-full object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=No+Image';
+            }}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gray-100">
@@ -127,6 +130,10 @@ const VisitCard = ({ visit, venueName, className = '' }: VisitCardProps) => {
             )}
           </div>
         )}
+        
+        <div className="flex justify-end mt-3">
+          <ArrowRight className="w-4 h-4 text-visitvibe-primary" />
+        </div>
       </div>
     </Link>
   );

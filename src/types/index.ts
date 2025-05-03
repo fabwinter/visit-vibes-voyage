@@ -1,3 +1,4 @@
+
 // Base types for the VisitVibe app
 
 export interface Coordinates {

@@ -11,6 +11,7 @@ import ExploreView from "./pages/ExploreView";
 import VisitsView from "./pages/VisitsView";
 import RatingsView from "./pages/RatingsView";
 import ProfileView from "./pages/ProfileView";
+import VisitDetailsView from "./pages/VisitDetailsView";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/" element={<MapView />} />
             <Route path="/explore" element={<ExploreView />} />
             <Route path="/visits" element={<VisitsView />} />
+            <Route path="/visit/:visitId" element={<VisitDetailsView />} />
             <Route path="/ratings" element={<RatingsView />} />
             <Route path="/profile" element={<ProfileView />} />
             <Route path="*" element={<NotFound />} />
