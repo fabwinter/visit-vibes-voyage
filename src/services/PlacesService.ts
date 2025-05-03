@@ -2,9 +2,8 @@
 import { toast } from "sonner";
 import { Venue } from "../types";
 
-// This would normally come from environment variables or Supabase secrets
-// For demo purposes, we'll use a placeholder that users can replace
-const API_KEY = "YOUR_GOOGLE_PLACES_API_KEY"; 
+// Using the provided Google Places API key
+const API_KEY = "AIzaSyAoqbocwE83Z3REe60z7dhN3Z2_aKnSJxc"; 
 
 export interface PlacesSearchParams {
   query?: string;
@@ -17,18 +16,9 @@ export interface PlacesSearchParams {
 export const PlacesService = {
   async searchNearbyVenues(params: PlacesSearchParams): Promise<{ venues: Venue[], nextPageToken?: string }> {
     try {
-      // Check if API key is provided
-      if (API_KEY === "YOUR_GOOGLE_PLACES_API_KEY") {
-        console.warn("Google Places API key not configured");
-        toast("Using mock data - Places API key not configured", {
-          description: "Please add your Google Places API key to fetch real data."
-        });
-        return { venues: [] };
-      }
-
+      // Build the Places API URL
       const { location = { lat: -33.8688, lng: 151.2093 }, radius = 2000, type = "restaurant", query } = params;
 
-      // Build the Places API URL
       let url = `https://cors-anywhere.herokuapp.com/https://maps.googleapis.com/maps/api/place/nearbysearch/json?`;
       url += `location=${location.lat},${location.lng}`;
       url += `&radius=${radius}`;
@@ -74,8 +64,8 @@ export const PlacesService = {
     } catch (error) {
       console.error("Error fetching venues:", error);
       toast("Failed to fetch venues", { 
-        description: error instanceof Error ? error.message : "Unknown error occurred",
-        variant: "destructive"
+        description: error instanceof Error ? error.message : "Unknown error occurred"
+        // Removed the 'variant' property which was causing TypeScript errors
       });
       return { venues: [] };
     }
@@ -83,11 +73,6 @@ export const PlacesService = {
 
   async getVenueDetails(placeId: string): Promise<Venue | null> {
     try {
-      if (API_KEY === "YOUR_GOOGLE_PLACES_API_KEY") {
-        console.warn("Google Places API key not configured");
-        return null;
-      }
-
       const url = `https://cors-anywhere.herokuapp.com/https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_address,formatted_phone_number,website,opening_hours,photos,price_level,rating,types,geometry&key=${API_KEY}`;
       
       const response = await fetch(url);
@@ -123,8 +108,8 @@ export const PlacesService = {
     } catch (error) {
       console.error("Error fetching venue details:", error);
       toast("Failed to fetch venue details", {
-        description: error instanceof Error ? error.message : "Unknown error occurred",
-        variant: "destructive"
+        description: error instanceof Error ? error.message : "Unknown error occurred"
+        // Removed the 'variant' property which was causing TypeScript errors
       });
       return null;
     }
