@@ -1,4 +1,3 @@
-
 // Base types for the VisitVibe app
 
 export interface Coordinates {
@@ -42,11 +41,12 @@ export interface Visit {
   id: string;
   venueId: string;
   timestamp: string; // ISO date string
-  dishes: DishRating[];
   rating: VisitRating;
-  tags: string[];
-  notes?: string;
+  dishes: DishRating[];
   photos: string[];
+  notes?: string;
+  tags: string[];
+  wouldVisitAgain?: boolean;
 }
 
 export type RatingLevel = "good" | "mid" | "bad";

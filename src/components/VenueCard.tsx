@@ -1,8 +1,9 @@
 
 import { Link } from 'react-router-dom';
-import { MapPin, Utensils, Coffee } from 'lucide-react';
+import { MapPin, Utensils, Coffee, Share2 } from 'lucide-react';
 import StarRating from './StarRating';
 import { Venue, Visit } from '../types';
+import { toast } from "sonner";
 
 interface VenueCardProps {
   venue: Venue;
@@ -30,6 +31,26 @@ const VenueCard = ({ venue, lastVisit, className = '', onClick }: VenueCardProps
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
+  };
+  
+  // Handle share action
+  const handleShare = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent navigation
+    e.stopPropagation(); // Prevent triggering the card click
+    
+    if (navigator.share) {
+      navigator.share({
+        title: venue.name,
+        text: `Check out ${venue.name} at ${venue.address}`,
+        url: window.location.href
+      })
+      .then(() => toast.success("Shared successfully"))
+      .catch(error => console.error('Error sharing', error));
+    } else {
+      toast("Sharing not supported on this browser", {
+        description: "Try copying the link directly"
+      });
+    }
   };
 
   return (
@@ -65,6 +86,15 @@ const VenueCard = ({ venue, lastVisit, className = '', onClick }: VenueCardProps
               Last visited: {new Date(lastVisit.timestamp).toLocaleDateString()}
             </div>
           )}
+          
+          {/* Share button */}
+          <button
+            onClick={handleShare}
+            className="absolute top-3 left-3 bg-black/50 rounded-full p-2 text-white hover:bg-black/70 transition-all"
+            aria-label="Share this venue"
+          >
+            <Share2 size={16} />
+          </button>
         </div>
         
         <div className="p-4">
@@ -78,6 +108,11 @@ const VenueCard = ({ venue, lastVisit, className = '', onClick }: VenueCardProps
           {lastVisit && (
             <div className="mt-2">
               <StarRating rating={lastVisit.rating.overall} size="md" />
+              {lastVisit.wouldVisitAgain !== undefined && (
+                <div className={`text-xs mt-1 ${lastVisit.wouldVisitAgain ? 'text-green-600' : 'text-red-600'}`}>
+                  {lastVisit.wouldVisitAgain ? 'Would visit again' : 'Would not visit again'}
+                </div>
+              )}
             </div>
           )}
           

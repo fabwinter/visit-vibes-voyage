@@ -4,10 +4,11 @@ import { mockVisits, mockVenues } from '../data/mockData';
 import VisitCard from '../components/VisitCard';
 import VisitCalendar from '../components/VisitCalendar';
 import { format, isAfter, isBefore } from 'date-fns';
-import { Visit } from '@/types';
+import { Visit, Venue } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { MapPin } from 'lucide-react';
+import { MapPin, Share2 } from 'lucide-react';
+import { toast } from "sonner";
 
 const VisitsView = () => {
   const navigate = useNavigate();
@@ -16,7 +17,7 @@ const VisitsView = () => {
   
   // Use state for visits to allow for new check-ins
   const [visits, setVisits] = useState<Visit[]>([]);
-  const [venues, setVenues] = useState(mockVenues);
+  const [venues, setVenues] = useState<Venue[]>([]);
   
   // Load visits from localStorage if available
   useEffect(() => {
@@ -24,15 +25,18 @@ const VisitsView = () => {
     if (storedVisits) {
       setVisits(JSON.parse(storedVisits));
     } else {
-      // If no stored visits, use empty array instead of mock data
+      // If no stored visits, use empty array
       setVisits([]);
     }
+    
+    // Get venues from localStorage or fallback to mock data
+    const storedVenues = localStorage.getItem('venues');
+    if (storedVenues) {
+      setVenues(JSON.parse(storedVenues));
+    } else {
+      setVenues(mockVenues);
+    }
   }, []);
-  
-  // Save visits to localStorage when they change
-  useEffect(() => {
-    localStorage.setItem('visits', JSON.stringify(visits));
-  }, [visits]);
 
   const getVenueName = (venueId: string) => {
     const venue = venues.find(v => v.id === venueId);
@@ -65,6 +69,10 @@ const VisitsView = () => {
         return passesDateFilter && visit.rating.overall >= 4;
       case 'lowest rated':
         return passesDateFilter && visit.rating.overall <= 2;
+      case 'would visit again':
+        return passesDateFilter && visit.wouldVisitAgain === true;
+      case 'would not visit again':
+        return passesDateFilter && visit.wouldVisitAgain === false;
       default:
         return passesDateFilter;
     }
@@ -89,14 +97,44 @@ const VisitsView = () => {
     const dateB = new Date(b);
     return dateB.getTime() - dateA.getTime();
   });
+  
+  // Share all visits
+  const handleShareAllVisits = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: "My Food Venue Visits",
+        text: `I've visited ${visits.length} food venues. Check out my collection!`,
+        url: window.location.href
+      })
+      .then(() => toast.success("Shared successfully"))
+      .catch(error => console.error('Error sharing', error));
+    } else {
+      toast("Sharing not supported on this browser", {
+        description: "Try copying the link directly"
+      });
+    }
+  };
 
   return (
     <div className="px-4 pt-6 pb-24">
-      <h1 className="text-2xl font-bold mb-4">Visit History</h1>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Visit History</h1>
+        {visits.length > 0 && (
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleShareAllVisits}
+            className="flex items-center gap-1"
+          >
+            <Share2 className="w-4 h-4" />
+            Share
+          </Button>
+        )}
+      </div>
 
       {/* Filter tabs */}
       <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
-        {['all', 'recent', 'highest rated', 'lowest rated'].map((filter) => (
+        {['all', 'recent', 'highest rated', 'lowest rated', 'would visit again', 'would not visit again'].map((filter) => (
           <button
             key={filter}
             className={`px-4 py-2 rounded-full whitespace-nowrap ${

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { mockVenues, mockVisits } from '../data/mockData';
 import CheckInButton from '../components/CheckInButton';
@@ -12,6 +11,7 @@ import { filterVenues, extractCategories, extractTags } from '../utils/filterUti
 import { toast } from "sonner";
 import { PlacesService } from '../services/PlacesService';
 import { Button } from '@/components/ui/button';
+import Share2 from 'lucide-react';
 
 const MapView = () => {
   const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
@@ -33,12 +33,28 @@ const MapView = () => {
   
   // Check-in related states
   const [isCheckInOpen, setIsCheckInOpen] = useState(false);
-  const [visits, setVisits] = useState<Visit[]>(mockVisits);
+  const [visits, setVisits] = useState<Visit[]>([]);
 
-  // Fetch venues on initial load
+  // Fetch venues and visits on initial load
   useEffect(() => {
     fetchVenues();
+    loadVisits();
   }, []);
+  
+  // Load visits from localStorage
+  const loadVisits = () => {
+    const storedVisits = localStorage.getItem('visits');
+    if (storedVisits) {
+      setVisits(JSON.parse(storedVisits));
+    }
+  };
+  
+  // Save visits to localStorage when they change
+  useEffect(() => {
+    if (visits.length > 0) {
+      localStorage.setItem('visits', JSON.stringify(visits));
+    }
+  }, [visits]);
   
   // Function to fetch venues from Places API
   const fetchVenues = async (pageToken?: string) => {
@@ -48,8 +64,8 @@ const MapView = () => {
       console.log("Attempting to fetch venues from API...");
       const result = await PlacesService.searchNearbyVenues({
         location: userLocation,
-        radius: 5000,
-        type: "restaurant", // Default to restaurant type
+        radius: 5000, // 5km radius
+        type: "restaurant", // Default to food venues
         pageToken: pageToken
       });
       
@@ -60,10 +76,30 @@ const MapView = () => {
         setUsingMockData(true);
       } else if (result.venues.length > 0) {
         console.log(`Fetched ${result.venues.length} venues from API`);
+        // Add visit data to venues if available
+        const venuesWithVisitData = result.venues.map(venue => {
+          // Find all visits for this venue
+          const venueVisits = visits.filter(visit => visit.venueId === venue.id);
+          
+          // Sort by date (newest first)
+          if (venueVisits.length > 0) {
+            venueVisits.sort((a, b) => 
+              new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+            );
+            
+            // Add the latest visit to the venue
+            return {
+              ...venue,
+              lastVisit: venueVisits[0]
+            };
+          }
+          return venue;
+        });
+        
         if (pageToken) {
-          setVenues(prevVenues => [...prevVenues, ...result.venues]);
+          setVenues(prevVenues => [...prevVenues, ...venuesWithVisitData]);
         } else {
-          setVenues(result.venues);
+          setVenues(venuesWithVisitData);
         }
         setNextPageToken(result.nextPageToken);
         setUsingMockData(false);
@@ -109,6 +145,15 @@ const MapView = () => {
     if (venue.coordinates.lat !== 0 && venue.coordinates.lng !== 0) {
       setSelectedVenue(venue.id);
       setSelectedVenueDetails(venue);
+      
+      // Add this venue to our list if it's not there already
+      setVenues(prevVenues => {
+        const exists = prevVenues.some(v => v.id === venue.id);
+        if (!exists) {
+          return [venue, ...prevVenues];
+        }
+        return prevVenues;
+      });
     } 
     // Otherwise fetch details to get coordinates
     else {
@@ -183,7 +228,11 @@ const MapView = () => {
   // Process the check-in data
   const processCheckIn = (visit: Visit) => {
     // Add the new visit
-    setVisits(prev => [visit, ...prev]);
+    const updatedVisits = [visit, ...visits];
+    setVisits(updatedVisits);
+    
+    // Save visits to localStorage
+    localStorage.setItem('visits', JSON.stringify(updatedVisits));
     
     // Update the venue with the new visit
     setVenues(prev => 
@@ -291,12 +340,35 @@ const MapView = () => {
               </div>
             )}
             
-            <div className="mt-4">
+            <div className="mt-4 flex flex-col space-y-2">
               <Button 
                 onClick={handleCheckIn} 
                 className="w-full bg-visitvibe-primary hover:bg-visitvibe-primary/90"
               >
                 Check In
+              </Button>
+              
+              <Button 
+                variant="outline"
+                className="w-full flex items-center justify-center gap-2"
+                onClick={() => {
+                  if (navigator.share) {
+                    navigator.share({
+                      title: selectedVenueDetails.name,
+                      text: `Check out ${selectedVenueDetails.name} at ${selectedVenueDetails.address}`,
+                      url: window.location.href
+                    })
+                    .then(() => toast.success("Shared successfully"))
+                    .catch(error => console.error('Error sharing', error));
+                  } else {
+                    toast("Sharing not supported on this browser", {
+                      description: "Try copying the link directly"
+                    });
+                  }
+                }}
+              >
+                <Share2 className="h-4 w-4" />
+                Share Venue
               </Button>
             </div>
           </div>

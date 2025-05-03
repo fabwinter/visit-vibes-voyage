@@ -1,9 +1,10 @@
 
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Clock, Camera } from 'lucide-react';
+import { Clock, Camera, Share2, ArrowRight, Check, X } from 'lucide-react';
 import StarRating from './StarRating';
 import { Visit } from '../types';
+import { toast } from 'sonner';
 
 interface VisitCardProps {
   visit: Visit;
@@ -13,6 +14,26 @@ interface VisitCardProps {
 
 const VisitCard = ({ visit, venueName, className = '' }: VisitCardProps) => {
   const visitDate = new Date(visit.timestamp);
+
+  // Handle sharing venue
+  const handleShare = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent navigation
+    e.stopPropagation(); // Prevent click from bubbling
+    
+    if (navigator.share) {
+      navigator.share({
+        title: `My visit to ${venueName}`,
+        text: `I visited ${venueName} on ${format(visitDate, 'MMM d, yyyy')} and rated it ${visit.rating.overall}/5`,
+        url: window.location.href
+      })
+      .then(() => toast.success("Shared successfully"))
+      .catch(error => console.error('Error sharing', error));
+    } else {
+      toast("Sharing not supported on this browser", {
+        description: "Try copying the link directly"
+      });
+    }
+  };
 
   return (
     <Link 
@@ -45,6 +66,15 @@ const VisitCard = ({ visit, venueName, className = '' }: VisitCardProps) => {
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
           <StarRating rating={visit.rating.overall} className="justify-end" />
         </div>
+        
+        {/* Share button */}
+        <button
+          onClick={handleShare}
+          className="absolute top-3 right-3 bg-black/50 rounded-full p-2 text-white hover:bg-black/70 transition-all"
+          aria-label="Share this visit"
+        >
+          <Share2 size={16} />
+        </button>
       </div>
       
       <div className="p-4">
@@ -61,6 +91,26 @@ const VisitCard = ({ visit, venueName, className = '' }: VisitCardProps) => {
             <div className="text-sm text-gray-500">Value</div>
             <StarRating rating={visit.rating.value} size="sm" />
           </div>
+        </div>
+        
+        {/* Would visit again indicator */}
+        <div className="flex items-center gap-1 mb-2 text-sm">
+          {visit.wouldVisitAgain !== undefined && (
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${
+              visit.wouldVisitAgain 
+                ? 'bg-green-100 text-green-700' 
+                : 'bg-red-100 text-red-700'
+            }`}>
+              {visit.wouldVisitAgain 
+                ? <Check className="w-3 h-3" /> 
+                : <X className="w-3 h-3" />
+              }
+              {visit.wouldVisitAgain 
+                ? 'Would visit again' 
+                : 'Would not visit again'
+              }
+            </div>
+          )}
         </div>
         
         {visit.tags.length > 0 && (

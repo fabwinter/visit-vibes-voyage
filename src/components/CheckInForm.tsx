@@ -9,11 +9,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
-import { CalendarIcon, Clock, Plus, X } from 'lucide-react';
+import { CalendarIcon, Clock, Plus, X, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
+import { toast } from "sonner";
 import { Visit, Venue, DishRating, VisitRating } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
+import { Switch } from '@/components/ui/switch';
 
 interface CheckInFormProps {
   venue: Venue;
@@ -40,6 +41,7 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
     value: 0,
     overall: 0
   });
+  const [wouldVisitAgain, setWouldVisitAgain] = useState<boolean>(true);
   
   // Handle photo upload
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -105,6 +107,24 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
     
     setRatings(newRatings);
   };
+
+  // Handle sharing venue
+  const handleShareVenue = () => {
+    // Open share dialog
+    if (navigator.share) {
+      navigator.share({
+        title: `Check out ${venue.name}`,
+        text: `I found this great place: ${venue.name} at ${venue.address}`,
+        url: window.location.href
+      })
+      .then(() => toast.success("Shared successfully"))
+      .catch(error => console.error('Error sharing', error));
+    } else {
+      toast("Sharing not supported on this browser", {
+        description: "Try copying the link directly"
+      });
+    }
+  };
   
   // Submit check-in
   const handleSubmit = () => {
@@ -128,7 +148,8 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
       rating: ratings,
       tags: occasion ? [occasion] : [],
       notes: notes,
-      photos: photos
+      photos: photos,
+      wouldVisitAgain: wouldVisitAgain
     };
     
     // Pass the visit to parent component
@@ -362,6 +383,16 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
             <div className="flex flex-col space-y-1.5 pt-2">
               <Label>Overall Rating: {ratings.overall}</Label>
             </div>
+            
+            {/* Would Visit Again toggle */}
+            <div className="flex items-center justify-between pt-2">
+              <Label htmlFor="visit-again">Would Visit Again</Label>
+              <Switch
+                id="visit-again"
+                checked={wouldVisitAgain}
+                onCheckedChange={setWouldVisitAgain}
+              />
+            </div>
           </div>
           
           {/* Photo Upload */}
@@ -409,6 +440,17 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
               rows={3}
             />
           </div>
+          
+          {/* Share Venue */}
+          <Button 
+            variant="outline" 
+            type="button" 
+            onClick={handleShareVenue}
+            className="flex items-center justify-center gap-2 mt-2"
+          >
+            <Share2 className="h-4 w-4" />
+            Share This Venue
+          </Button>
         </div>
         
         <DialogFooter>
