@@ -24,9 +24,9 @@ const MapView = () => {
   
   // Venues state with loading and error handling
   const [venues, setVenues] = useState<Venue[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [nextPageToken, setNextPageToken] = useState<string | undefined>();
-  const [usingMockData, setUsingMockData] = useState(true);
+  const [usingMockData, setUsingMockData] = useState(false);
   
   // Default to Sydney CBD
   const userLocation = { lat: -33.8688, lng: 151.2093 };
@@ -41,6 +41,7 @@ const MapView = () => {
     setIsLoading(true);
     
     try {
+      console.log("Attempting to fetch venues from API...");
       const result = await PlacesService.searchNearbyVenues({
         location: userLocation,
         radius: 5000,
@@ -50,9 +51,11 @@ const MapView = () => {
       
       if (result.venues.length === 0 && !pageToken) {
         // If no results and it's the initial fetch, fall back to mock data
+        console.log("No venues returned from API, falling back to mock data");
         prepareMockData();
         setUsingMockData(true);
       } else if (result.venues.length > 0) {
+        console.log(`Fetched ${result.venues.length} venues from API`);
         if (pageToken) {
           setVenues(prevVenues => [...prevVenues, ...result.venues]);
         } else {
@@ -63,6 +66,9 @@ const MapView = () => {
       }
     } catch (error) {
       console.error("Error fetching venues:", error);
+      toast("Error fetching venues. Using mock data instead.", {
+        description: error instanceof Error ? error.message : undefined
+      });
       prepareMockData();
       setUsingMockData(true);
     } finally {
@@ -97,6 +103,7 @@ const MapView = () => {
     
     setIsLoading(true);
     try {
+      console.log(`Searching for: ${searchTerm}`);
       const result = await PlacesService.searchNearbyVenues({
         location: userLocation,
         radius: 5000,
@@ -106,6 +113,14 @@ const MapView = () => {
       
       if (result.venues.length === 0) {
         toast("No venues found matching your search.");
+        if (usingMockData) {
+          // If already using mock data, filter it
+          const filteredMockVenues = mockVenues.filter(venue => 
+            venue.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            venue.address.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+          setVenues(filteredMockVenues);
+        }
       } else {
         setVenues(result.venues);
         setNextPageToken(result.nextPageToken);
@@ -114,7 +129,13 @@ const MapView = () => {
     } catch (error) {
       console.error("Error searching venues:", error);
       toast("Error searching venues. Showing mock data instead.");
-      prepareMockData();
+      
+      // Filter mock data by search term
+      const filteredMockVenues = mockVenues.filter(venue => 
+        venue.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        venue.address.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setVenues(filteredMockVenues);
       setUsingMockData(true);
     } finally {
       setIsLoading(false);
@@ -192,7 +213,7 @@ const MapView = () => {
         
         {usingMockData && (
           <div className="mb-4 p-2 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-700">
-            Using mock data. Add a Google Places API key to fetch real Sydney venues.
+            Using mock data. API connection issue or no results returned.
           </div>
         )}
       </div>

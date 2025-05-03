@@ -11,8 +11,8 @@ import { toast } from "sonner";
 const ExploreView = () => {
   const [activeTab, setActiveTab] = useState<string>("featured");
   const [topRatedVenues, setTopRatedVenues] = useState<Venue[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [usingMockData, setUsingMockData] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [usingMockData, setUsingMockData] = useState<boolean>(false);
 
   // Fetch real restaurant data on component mount
   useEffect(() => {
@@ -26,6 +26,7 @@ const ExploreView = () => {
       // Sydney CBD coordinates
       const sydneyCBD = { lat: -33.8688, lng: 151.2093 };
       
+      console.log("Fetching top rated venues for Explore view...");
       const result = await PlacesService.searchNearbyVenues({
         location: sydneyCBD,
         radius: 5000,
@@ -33,6 +34,7 @@ const ExploreView = () => {
       });
       
       if (result.venues && result.venues.length > 0) {
+        console.log(`Fetched ${result.venues.length} venues for Explore view`);
         // Sort by mock rating just for display purposes
         // In a real app we'd have real ratings from the API
         const sortedVenues = result.venues.sort(() => Math.random() - 0.5).slice(0, 5);
@@ -40,11 +42,15 @@ const ExploreView = () => {
         setUsingMockData(false);
       } else {
         // Fall back to mock data
+        console.log("No venues returned from API for Explore view, falling back to mock data");
         prepareMockData();
         setUsingMockData(true);
       }
     } catch (error) {
       console.error("Error fetching top-rated venues:", error);
+      toast("Error fetching venues. Using mock data instead.", {
+        description: error instanceof Error ? error.message : undefined
+      });
       prepareMockData();
       setUsingMockData(true);
     } finally {
@@ -142,7 +148,7 @@ const ExploreView = () => {
 
       {usingMockData && (
         <div className="mb-4 p-2 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-700">
-          Using mock data. Add a Google Places API key to fetch real Sydney venues.
+          Using mock data. API connection issue or no results returned.
         </div>
       )}
 

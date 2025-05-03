@@ -5,6 +5,10 @@ import { Venue } from "../types";
 // Using the provided Google Places API key
 const API_KEY = "AIzaSyAoqbocwE83Z3REe60z7dhN3Z2_aKnSJxc"; 
 
+// Use a proper CORS proxy
+// Note: For production, you should use your own proxy or Google Maps JavaScript API directly
+const PROXY_URL = "https://corsproxy.io/?";
+
 export interface PlacesSearchParams {
   query?: string;
   location?: { lat: number; lng: number };
@@ -19,16 +23,26 @@ export const PlacesService = {
       // Build the Places API URL
       const { location = { lat: -33.8688, lng: 151.2093 }, radius = 2000, type = "restaurant", query } = params;
 
-      let url = `https://cors-anywhere.herokuapp.com/https://maps.googleapis.com/maps/api/place/nearbysearch/json?`;
-      url += `location=${location.lat},${location.lng}`;
-      url += `&radius=${radius}`;
-      url += `&type=${type}`;
-      if (query) url += `&keyword=${encodeURIComponent(query)}`;
-      if (params.pageToken) url += `&pagetoken=${params.pageToken}`;
-      url += `&key=${API_KEY}`;
+      // Create base Google Places API URL
+      let placesUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?`;
+      placesUrl += `location=${location.lat},${location.lng}`;
+      placesUrl += `&radius=${radius}`;
+      placesUrl += `&type=${type}`;
+      if (query) placesUrl += `&keyword=${encodeURIComponent(query)}`;
+      if (params.pageToken) placesUrl += `&pagetoken=${params.pageToken}`;
+      placesUrl += `&key=${API_KEY}`;
+      
+      // Add CORS proxy
+      const url = `${PROXY_URL}${encodeURIComponent(placesUrl)}`;
 
       console.log("Fetching venues from Google Places API...");
       const response = await fetch(url);
+      
+      // Check if response is ok
+      if (!response.ok) {
+        throw new Error(`API request failed with status: ${response.status}`);
+      }
+      
       const data = await response.json();
 
       if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
@@ -65,7 +79,6 @@ export const PlacesService = {
       console.error("Error fetching venues:", error);
       toast("Failed to fetch venues", { 
         description: error instanceof Error ? error.message : "Unknown error occurred"
-        // Removed the 'variant' property which was causing TypeScript errors
       });
       return { venues: [] };
     }
@@ -73,9 +86,19 @@ export const PlacesService = {
 
   async getVenueDetails(placeId: string): Promise<Venue | null> {
     try {
-      const url = `https://cors-anywhere.herokuapp.com/https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_address,formatted_phone_number,website,opening_hours,photos,price_level,rating,types,geometry&key=${API_KEY}`;
+      // Create base URL
+      const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_address,formatted_phone_number,website,opening_hours,photos,price_level,rating,types,geometry&key=${API_KEY}`;
+      
+      // Add CORS proxy
+      const url = `${PROXY_URL}${encodeURIComponent(detailsUrl)}`;
       
       const response = await fetch(url);
+      
+      // Check if response is ok
+      if (!response.ok) {
+        throw new Error(`API request failed with status: ${response.status}`);
+      }
+      
       const data = await response.json();
 
       if (data.status !== "OK") {
@@ -109,7 +132,6 @@ export const PlacesService = {
       console.error("Error fetching venue details:", error);
       toast("Failed to fetch venue details", {
         description: error instanceof Error ? error.message : "Unknown error occurred"
-        // Removed the 'variant' property which was causing TypeScript errors
       });
       return null;
     }
