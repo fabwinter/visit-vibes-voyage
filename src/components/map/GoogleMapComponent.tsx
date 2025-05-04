@@ -42,14 +42,9 @@ const GoogleMapComponent = ({
   const mapRef = useRef<HTMLDivElement>(null);
   const moveEndTimeout = useRef<number | null>(null);
   const isMobile = useIsMobile();
-  const [isGoogleReady, setIsGoogleReady] = useState(false);
 
   // Get marker icon based on rating and selection status
   const getMarkerIcon = (venue: Venue, isSelected: boolean) => {
-    if (!isGoogleReady || typeof google === 'undefined') {
-      return null;
-    }
-    
     // Determine marker color based on rating
     let fillColor = '#555555'; // Default gray for unrated
     
@@ -78,7 +73,6 @@ const GoogleMapComponent = ({
   // Handle map load
   const onLoad = useCallback((map: google.maps.Map) => {
     setMap(map);
-    setIsGoogleReady(true);
     
     // Center on user location if available
     if (userLocation) {
@@ -86,11 +80,6 @@ const GoogleMapComponent = ({
       map.setZoom(14);
     }
   }, [userLocation]);
-  
-  // Handle script load
-  const handleScriptLoad = useCallback(() => {
-    setIsGoogleReady(true);
-  }, []);
 
   // Handle map move to show "Search this area" button
   const handleBoundsChanged = () => {
@@ -124,7 +113,7 @@ const GoogleMapComponent = ({
 
   // Focus map on selected venue
   useEffect(() => {
-    if (!map || !selectedVenue || !isGoogleReady) return;
+    if (!map || !selectedVenue) return;
     
     const venue = venues.find(v => v.id === selectedVenue);
     if (!venue) return;
@@ -132,7 +121,7 @@ const GoogleMapComponent = ({
     map.panTo({ lat: venue.coordinates.lat, lng: venue.coordinates.lng });
     map.setZoom(16);
     setInfoWindow(selectedVenue);
-  }, [selectedVenue, venues, map, isGoogleReady]);
+  }, [selectedVenue, venues, map]);
 
   // Find the venue by ID
   const getVenueById = (id: string) => {
@@ -141,15 +130,7 @@ const GoogleMapComponent = ({
 
   return (
     <div className={`relative w-full h-full ${className}`}>
-      <LoadScript 
-        googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ""} 
-        onLoad={handleScriptLoad}
-        loadingElement={
-          <div className="h-full flex items-center justify-center">
-            <p className="text-gray-500">Loading map...</p>
-          </div>
-        }
-      >
+      <LoadScript googleMapsApiKey={process.env.GOOGLE_MAPS_API_KEY || ""}>
         <GoogleMap
           mapContainerStyle={{ width: '100%', height: '100%', borderRadius: '0.5rem' }}
           options={{
@@ -164,86 +145,80 @@ const GoogleMapComponent = ({
           onLoad={onLoad}
           onBoundsChanged={handleBoundsChanged}
         >
-          {isGoogleReady && (
-            <>
-              {/* Search radius circle */}
-              {userLocation && searchRadius && (
-                <Circle
-                  center={userLocation}
-                  radius={searchRadius}
-                  options={{
-                    strokeColor: "#3BB2D0",
-                    strokeOpacity: 0.5,
-                    strokeWeight: 1,
-                    fillColor: "#3BB2D0",
-                    fillOpacity: 0.1,
-                  }}
-                />
-              )}
-              
-              {/* User location marker */}
-              {userLocation && (
-                <Marker
-                  position={{ lat: userLocation.lat, lng: userLocation.lng }}
-                  icon={{
-                    path: google.maps.SymbolPath.CIRCLE,
-                    fillColor: '#3BB2D0',
-                    fillOpacity: 1,
-                    strokeWeight: 2,
-                    strokeColor: '#FFFFFF',
-                    scale: 8,
-                  }}
-                  zIndex={1000}
-                />
-              )}
+          {/* Search radius circle */}
+          {userLocation && searchRadius && (
+            <Circle
+              center={userLocation}
+              radius={searchRadius}
+              options={{
+                strokeColor: "#3BB2D0",
+                strokeOpacity: 0.5,
+                strokeWeight: 1,
+                fillColor: "#3BB2D0",
+                fillOpacity: 0.1,
+              }}
+            />
+          )}
+          
+          {/* User location marker */}
+          {userLocation && (
+            <Marker
+              position={{ lat: userLocation.lat, lng: userLocation.lng }}
+              icon={{
+                path: google.maps.SymbolPath.CIRCLE,
+                fillColor: '#3BB2D0',
+                fillOpacity: 1,
+                strokeWeight: 2,
+                strokeColor: '#FFFFFF',
+                scale: 8,
+              }}
+              zIndex={1000}
+            />
+          )}
 
-              {/* Venue markers */}
-              {venues.map((venue) => {
-                const isSelected = selectedVenue === venue.id;
-                const markerIcon = getMarkerIcon(venue, isSelected);
-                
-                return markerIcon && (
-                  <Marker
-                    key={venue.id}
-                    position={{ lat: venue.coordinates.lat, lng: venue.coordinates.lng }}
-                    onClick={() => {
-                      onVenueSelect(venue.id);
-                      setInfoWindow(venue.id);
+          {/* Venue markers */}
+          {venues.map((venue) => {
+            const isSelected = selectedVenue === venue.id;
+            return (
+              <Marker
+                key={venue.id}
+                position={{ lat: venue.coordinates.lat, lng: venue.coordinates.lng }}
+                onClick={() => {
+                  onVenueSelect(venue.id);
+                  setInfoWindow(venue.id);
+                }}
+                icon={getMarkerIcon(venue, isSelected)}
+                zIndex={isSelected ? 999 : 1}
+              />
+            );
+          })}
+
+          {/* Info windows */}
+          {infoWindow && (
+            <InfoWindow
+              position={getVenueById(infoWindow)?.coordinates || { lat: 0, lng: 0 }}
+              onCloseClick={() => setInfoWindow(null)}
+            >
+              <div className="p-2 max-w-xs">
+                {getVenueById(infoWindow)?.photos && getVenueById(infoWindow)?.photos.length > 0 ? (
+                  <img 
+                    src={getVenueById(infoWindow)?.photos[0]} 
+                    alt={getVenueById(infoWindow)?.name} 
+                    className="w-full h-24 object-cover mb-2 rounded"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=No+Image';
                     }}
-                    icon={markerIcon}
-                    zIndex={isSelected ? 999 : 1}
                   />
-                );
-              })}
-
-              {/* Info windows */}
-              {infoWindow && (
-                <InfoWindow
-                  position={getVenueById(infoWindow)?.coordinates || { lat: 0, lng: 0 }}
-                  onCloseClick={() => setInfoWindow(null)}
-                >
-                  <div className="p-2 max-w-xs">
-                    {getVenueById(infoWindow)?.photos && getVenueById(infoWindow)?.photos.length > 0 ? (
-                      <img 
-                        src={getVenueById(infoWindow)?.photos[0]} 
-                        alt={getVenueById(infoWindow)?.name} 
-                        className="w-full h-24 object-cover mb-2 rounded"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=No+Image';
-                        }}
-                      />
-                    ) : null}
-                    <h3 className="font-semibold text-sm">{getVenueById(infoWindow)?.name}</h3>
-                    <p className="text-xs text-gray-600">{getVenueById(infoWindow)?.address}</p>
-                  </div>
-                </InfoWindow>
-              )}
-            </>
+                ) : null}
+                <h3 className="font-semibold text-sm">{getVenueById(infoWindow)?.name}</h3>
+                <p className="text-xs text-gray-600">{getVenueById(infoWindow)?.address}</p>
+              </div>
+            </InfoWindow>
           )}
         </GoogleMap>
       </LoadScript>
 
-      {!import.meta.env.VITE_GOOGLE_MAPS_API_KEY && (
+      {!process.env.GOOGLE_MAPS_API_KEY && (
         <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10 p-4 text-center">
           <div>
             <p className="text-red-500 font-bold">Google Maps API key not set</p>

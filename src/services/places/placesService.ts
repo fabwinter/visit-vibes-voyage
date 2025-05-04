@@ -1,5 +1,6 @@
 
 import { API_KEY, FOOD_PLACE_TYPES, SEARCH_RADIUS, PROXY_URL } from './config';
+import { Venue } from '@/types';
 
 interface NearbySearchParams {
   location: { lat: number; lng: number };

@@ -1,17 +1,20 @@
 
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { MapPin, Check, Star, Info, LogIn } from 'lucide-react';
 import { Venue, Visit } from '@/types';
-import { formatDistanceToNow } from 'date-fns';
+import { Share2, Heart, CheckSquare } from 'lucide-react';
+import { Button } from './ui/button';
+import { useAuthContext } from '@/hooks/useAuthContext';
+import { useWishlist } from '@/hooks/useWishlist';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import VenueCard from './VenueCard';
 
-export interface EnhancedVenueCardProps {
+interface EnhancedVenueCardProps {
   venue: Venue;
   lastVisit?: Visit;
-  onClick: () => void;
+  onClick?: () => void;
   onCheckIn: (venue: Venue) => void;
+  className?: string;
 }
 
 const EnhancedVenueCard: React.FC<EnhancedVenueCardProps> = ({
@@ -19,108 +22,101 @@ const EnhancedVenueCard: React.FC<EnhancedVenueCardProps> = ({
   lastVisit,
   onClick,
   onCheckIn,
+  className
 }) => {
-  const renderGoogleRating = () => {
-    if (!venue.googleRating) return null;
-    
-    return (
-      <div className="flex items-center text-xs">
-        <Star className="h-3 w-3 text-amber-500 mr-0.5 fill-amber-500" />
-        <span>{venue.googleRating.toFixed(1)}</span>
-      </div>
-    );
-  };
-
-  const renderLastVisit = () => {
-    if (!lastVisit) return null;
-    
-    const visitTimeAgo = formatDistanceToNow(new Date(lastVisit.timestamp), { addSuffix: true });
-    
-    return (
-      <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
-        <Check className="h-3 w-3" />
-        <span>Visited {visitTimeAgo}</span>
-        {lastVisit.rating?.overall && (
-          <div className="flex items-center ml-1">
-            <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
-            <span>{lastVisit.rating.overall.toFixed(1)}</span>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // Handle the check-in click and prevent propagation to avoid triggering onClick
-  const handleCheckInClick = (e: React.MouseEvent) => {
+  const { isAuthenticated, setShowAuthModal } = useAuthContext();
+  const { addToWishlist, removeFromWishlist } = useWishlist();
+  
+  const handleCheckIn = (e: React.MouseEvent) => {
     e.stopPropagation();
     onCheckIn(venue);
   };
-
+  
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    // Check if Web Share API is supported
+    if (navigator.share) {
+      navigator.share({
+        title: `Check out ${venue.name} on VisitVibe`,
+        text: `I found ${venue.name} on VisitVibe and thought you might like it!`,
+        url: window.location.href,
+      }).catch((error) => {
+        console.log('Error sharing:', error);
+        toast.error('Unable to share. Please try again.');
+      });
+    } else {
+      // Fallback for browsers that don't support the Web Share API
+      navigator.clipboard.writeText(window.location.href)
+        .then(() => toast.success('Link copied to clipboard!'))
+        .catch(() => toast.error('Failed to copy link.'));
+    }
+  };
+  
+  const handleWishlist = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+    
+    if (venue.inWishlist) {
+      removeFromWishlist(venue.id);
+      toast.success(`${venue.name} removed from wishlist`);
+    } else {
+      addToWishlist(venue.id);
+      toast.success(`${venue.name} added to wishlist`);
+    }
+  };
+  
   return (
-    <Card 
-      className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
-      onClick={onClick}
-    >
-      <div className="relative">
-        {venue.photos && venue.photos.length > 0 ? (
-          <div className="h-32 overflow-hidden">
-            <img 
-              src={venue.photos[0]} 
-              alt={venue.name} 
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=No+Image';
-              }}
-            />
-          </div>
-        ) : (
-          <div className="h-32 bg-gray-100 flex items-center justify-center">
-            <Info className="h-6 w-6 text-gray-400" />
-          </div>
-        )}
-      </div>
+    <div className={cn("relative", className)}>
+      <VenueCard
+        venue={venue}
+        lastVisit={lastVisit}
+        onClick={onClick}
+      />
       
-      <CardContent className="p-3">
-        <div className="flex justify-between items-start">
-          <h3 className="font-medium text-base line-clamp-1">{venue.name}</h3>
-          {renderGoogleRating()}
-        </div>
+      {/* Action buttons */}
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3 rounded-b-lg flex justify-between">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={handleCheckIn} 
+          className="text-white hover:bg-white/20"
+        >
+          <CheckSquare className="h-4 w-4 mr-1" />
+          Check-in
+        </Button>
         
-        <div className="flex items-start gap-1 mt-1 text-xs text-gray-500">
-          <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
-          <span className="line-clamp-1">{venue.address}</span>
-        </div>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={handleShare} 
+          className="text-white hover:bg-white/20"
+        >
+          <Share2 className="h-4 w-4 mr-1" />
+          Share
+        </Button>
         
-        {renderLastVisit()}
-        
-        {venue.category && venue.category.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-2">
-            {venue.category.slice(0, 2).map((cat, i) => (
-              <Badge key={i} variant="outline" className="text-[0.65rem] py-0 px-1.5">
-                {cat.replace(/_/g, ' ')}
-              </Badge>
-            ))}
-            {venue.category.length > 2 && (
-              <Badge variant="outline" className="text-[0.65rem] py-0 px-1.5">
-                +{venue.category.length - 2}
-              </Badge>
-            )}
-          </div>
-        )}
-        
-        {/* Check-in button */}
-        <div className="mt-3">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="w-full text-xs flex items-center gap-1"
-            onClick={handleCheckInClick}
-          >
-            <LogIn className="h-3 w-3" /> Check In
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={handleWishlist} 
+          className={cn(
+            "text-white hover:bg-white/20",
+            venue.inWishlist && "text-red-400"
+          )}
+        >
+          <Heart className={cn(
+            "h-4 w-4 mr-1",
+            venue.inWishlist && "fill-red-400"
+          )} />
+          {venue.inWishlist ? "Saved" : "Save"}
+        </Button>
+      </div>
+    </div>
   );
 };
 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Venue } from '@/types';
 import { useWishlist } from '@/hooks/useWishlist';
@@ -29,20 +28,6 @@ const WishlistView = () => {
   const [editingVenueId, setEditingVenueId] = useState<string | null>(null);
   const [editingVenueTags, setEditingVenueTags] = useState<string[]>([]);
   const [editingVenueCategory, setEditingVenueCategory] = useState<string>('');
-
-  // Add the missing handleCheckIn function
-  const handleCheckIn = (venue: Venue) => {
-    console.log("Checking in to venue:", venue.name);
-    // Implementation for check-in functionality
-    toast.info(`Check-in to ${venue.name}`);
-  };
-  
-  // Add venue click handler
-  const handleVenueClick = (venueId: string) => {
-    console.log("Venue clicked:", venueId);
-    // Could navigate to venue details or open a modal
-    openEditDialog(wishlistVenues.find(v => v.id === venueId) || wishlistVenues[0]);
-  };
 
   // Update filtered venues when wishlist or filters change
   useEffect(() => {
@@ -162,8 +147,7 @@ const WishlistView = () => {
             <EnhancedVenueCard
               venue={venue}
               lastVisit={venue.lastVisit}
-              onCheckIn={handleCheckIn}
-              onClick={() => handleVenueClick(venue.id)}
+              onCheckIn={(venue) => handleCheckIn(venue)}
             />
             
             {/* Wishlist actions */}

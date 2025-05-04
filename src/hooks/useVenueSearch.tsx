@@ -1,94 +1,155 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Venue } from '@/types';
-import { PlacesService } from '@/services/places';
-import { SEARCH_RADIUS } from '@/services/places/config';
-import mockData from '../mock_data.json';
+import { PlacesService } from '@/services/PlacesService';
+import { toast } from 'sonner';
+import { mockVenues } from '@/data/mockData';
 
-// Use mock data flag for development
-const useMockData = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_DATA === 'true';
+interface UseVenueSearchProps {
+  userLocation: { lat: number; lng: number };
+  mapCenter: { lat: number; lng: number } | null;
+  visits: any[];
+}
 
-export const useVenueSearch = () => {
+export const useVenueSearch = ({ userLocation, mapCenter, visits }: UseVenueSearchProps) => {
   const [venues, setVenues] = useState<Venue[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [nextPageToken, setNextPageToken] = useState<string | undefined>();
   const [usingMockData, setUsingMockData] = useState(false);
-  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   
-  // Function to search nearby venues
-  const searchNearbyVenues = useCallback(async (location: {lat: number, lng: number}) => {
+  // Fetch venues when user location or map center changes
+  useEffect(() => {
+    if (mapCenter) {
+      fetchVenues(undefined, mapCenter);
+    } else if (userLocation.lat !== -33.8688 || userLocation.lng !== 151.2093) {
+      // Only fetch if we have a real user location (not the default)
+      fetchVenues();
+    }
+  }, [userLocation, mapCenter]);
+  
+  // Function to fetch venues from Places API
+  const fetchVenues = async (pageToken?: string, searchLocation?: { lat: number; lng: number }) => {
     setIsLoading(true);
-    setError(null);
     
     try {
-      // Using the restructured PlacesService from services/places/index.ts
-      const response = await PlacesService.searchNearbyVenues({
-        location,
-        radius: SEARCH_RADIUS,
-        type: 'restaurant'
+      console.log("Attempting to fetch venues from API...");
+      const result = await PlacesService.searchNearbyVenues({
+        location: searchLocation || userLocation,
+        radius: 2000, // Changed from 5km to 2km (2000m) as requested
+        type: "restaurant", // Will be modified to include all food venues in the API service
+        pageToken: pageToken
       });
       
-      if (response.venues) {
-        setVenues(response.venues);
-        setNextPageToken(response.nextPageToken || null);
-        setUsingMockData(false);
-      }
-    } catch (error) {
-      console.error('Failed to search nearby venues:', error);
-      setError('Failed to load venues. Using mock data instead.');
-      
-      // Use mock data as fallback
-      if (useMockData || true) { // Always use mock data on error for now
-        console.log('Using mock data for venues');
-        const mockVenues = mockData.venues.map(venue => ({
-          ...venue,
-          coordinates: {
-            lat: venue.coordinates.lat + (Math.random() - 0.5) * 0.01,
-            lng: venue.coordinates.lng + (Math.random() - 0.5) * 0.01
-          }
-        }));
-        setVenues(mockVenues);
+      if (result.venues.length === 0 && !pageToken) {
+        // If no results and it's the initial fetch, fall back to mock data
+        console.log("No venues returned from API, falling back to mock data");
+        prepareMockData();
         setUsingMockData(true);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-  
-  // Load more venues with pagination
-  const handleLoadMore = useCallback(async (userLocation: {lat: number, lng: number}) => {
-    if (!nextPageToken) return;
-
-    setIsLoading(true);
-    try {
-      const response = await PlacesService.searchNearbyVenues({
-        location: userLocation,
-        radius: SEARCH_RADIUS,
-        type: 'restaurant',
-        pageToken: nextPageToken
-      });
-
-      if (response.venues) {
-        setVenues(prevVenues => [...prevVenues, ...response.venues]);
-        setNextPageToken(response.nextPageToken || null);
+      } else if (result.venues.length > 0) {
+        console.log(`Fetched ${result.venues.length} venues from API`);
+        
+        // Enhanced to properly save venues with visit data
+        const venuesWithVisitData = result.venues.map(venue => {
+          // Find all visits for this venue
+          const venueVisits = visits.filter(visit => visit.venueId === venue.id);
+          
+          // Sort by date (newest first)
+          if (venueVisits.length > 0) {
+            venueVisits.sort((a, b) => 
+              new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+            );
+            
+            // Add the latest visit to the venue
+            return {
+              ...venue,
+              lastVisit: venueVisits[0]
+            };
+          }
+          return venue;
+        });
+        
+        if (pageToken) {
+          setVenues(prevVenues => [...prevVenues, ...venuesWithVisitData]);
+        } else {
+          setVenues(venuesWithVisitData);
+        }
+        setNextPageToken(result.nextPageToken);
+        setUsingMockData(false);
+        
+        // Store venues in localStorage for other views
+        localStorage.setItem('venues', JSON.stringify(venuesWithVisitData));
       }
     } catch (error) {
-      console.error('Failed to load more venues:', error);
-      setError('Failed to load more venues.');
+      console.error("Error fetching venues:", error);
+      toast("Error fetching venues. Using mock data instead.", {
+        description: error instanceof Error ? error.message : undefined
+      });
+      prepareMockData();
       setUsingMockData(true);
     } finally {
       setIsLoading(false);
     }
-  }, [nextPageToken]);
+  };
+
+  // Prepare mock data by adding last visit information
+  const prepareMockData = () => {
+    const venuesWithLastVisit = mockVenues.map(venue => {
+      // Find all visits for this venue
+      const venueVisits = visits.filter(visit => visit.venueId === venue.id);
+      
+      // Sort by date (newest first)
+      venueVisits.sort((a, b) => 
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+      
+      // Add the latest visit to the venue
+      return {
+        ...venue,
+        lastVisit: venueVisits[0]
+      };
+    });
+    
+    setVenues(venuesWithLastVisit);
+    
+    // Store venues in localStorage for other views
+    localStorage.setItem('venues', JSON.stringify(venuesWithLastVisit));
+  };
+
+  // Load more venues
+  const handleLoadMore = () => {
+    if (nextPageToken) {
+      fetchVenues(nextPageToken);
+    }
+  };
   
+  // Handle search this area
+  const handleSearchThisArea = () => {
+    if (mapCenter) {
+      fetchVenues(undefined, mapCenter);
+    }
+  };
+  
+  // Handle place selection from autocomplete
+  const handlePlaceSelect = async (venue: Venue) => {
+    console.log("Selected venue:", venue);
+    
+    // Add this venue to our list if it's not there already
+    setVenues(prevVenues => {
+      const exists = prevVenues.some(v => v.id === venue.id);
+      if (!exists) {
+        return [venue, ...prevVenues];
+      }
+      return prevVenues;
+    });
+  };
+
   return {
     venues,
-    setVenues,
     isLoading,
     usingMockData,
     nextPageToken,
-    error,
-    searchNearbyVenues,
-    handleLoadMore
+    handleLoadMore,
+    handleSearchThisArea,
+    handlePlaceSelect
   };
 };
