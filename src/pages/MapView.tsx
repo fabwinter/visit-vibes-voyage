@@ -49,13 +49,15 @@ const MapView = () => {
     surroundingVenues,
     pendingAction,
     setPendingAction,
-    processCheckIn
+    processCheckIn,
+    mapProvider
   } = useVenues();
   
   // Log initial setup
   useEffect(() => {
     console.log("MapView loaded, venues:", venues.length, "userLocation:", userLocation);
-  }, [venues, userLocation]);
+    console.log("Using map provider:", mapProvider);
+  }, [venues, userLocation, mapProvider]);
   
   // Updated wrapper function to handle both types correctly
   const handlePlaceSelection = (placeOrVenue: google.maps.places.PlaceResult | any) => {
@@ -134,7 +136,7 @@ const MapView = () => {
   // Show error if venues failed to load
   useEffect(() => {
     if (!isLoading && venues.length === 0 && userLocation.lat !== 0) {
-      toast.info("No venues found in this area. Try searching in a different location.");
+      toast.info("No venues found in this area. Try searching in a different location or switch map provider.");
     }
   }, [venues, isLoading, userLocation]);
 

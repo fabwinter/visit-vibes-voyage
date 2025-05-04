@@ -4,6 +4,7 @@ import { useJsApiLoader } from '@react-google-maps/api';
 import { useLocationState } from './useLocationState';
 import { useVenueSearch } from './useVenueSearch';
 import { useSelectedVenue } from './useSelectedVenue';
+import { useMapProvider } from './useMapProvider';
 import { toast } from 'sonner';
 import { Venue } from '@/types';
 
@@ -12,12 +13,15 @@ const libraries = ["places"] as ["places"];
 
 export const useVenues = () => {
   const [pendingAction, setPendingAction] = useState<{type: string, venue: Venue} | null>(null);
+  const { mapProvider, googleApiKeyAvailable } = useMapProvider();
   
-  // Load Google Maps API
+  // Load Google Maps API only if we're using Google Maps
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
     libraries: libraries,
+    // Skip loading if not using Google Maps
+    isLoadEventEnabled: mapProvider === 'google' && googleApiKeyAvailable,
   });
   
   // Use our refactored hooks
@@ -29,11 +33,15 @@ export const useVenues = () => {
   useEffect(() => {
     console.log("Google Maps API loaded:", isLoaded);
     console.log("API Key available:", !!import.meta.env.VITE_GOOGLE_MAPS_API_KEY);
-  }, [isLoaded]);
+    console.log("Current map provider:", mapProvider);
+  }, [isLoaded, mapProvider]);
   
-  // Load initial venues when the location or API changes
+  // Load initial venues when the location, API, or map provider changes
   useEffect(() => {
-    if (!isLoaded) return;
+    if (mapProvider === 'google' && !isLoaded) {
+      console.log("Waiting for Google Maps API to load...");
+      return;
+    }
 
     if (locationState.userLocation.lat && locationState.userLocation.lng) {
       console.log("Loading venues with location:", locationState.userLocation);
@@ -43,7 +51,7 @@ export const useVenues = () => {
           toast.error("Failed to load venues. Using mock data instead.");
         });
     }
-  }, [locationState.userLocation, isLoaded, venueSearch.searchNearbyVenues]);
+  }, [locationState.userLocation, isLoaded, venueSearch.searchNearbyVenues, mapProvider]);
   
   // Enhanced function to handle Google place selections
   const handlePlaceSelect = useCallback((place: google.maps.places.PlaceResult) => {
@@ -130,6 +138,9 @@ export const useVenues = () => {
     
     // Google Maps API loading state
     isLoaded,
+    
+    // Map provider
+    mapProvider,
     
     // Additional state
     pendingAction,

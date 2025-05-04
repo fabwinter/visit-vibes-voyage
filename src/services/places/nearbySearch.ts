@@ -23,17 +23,15 @@ export const searchNearbyVenues = async (params: PlacesSearchParams): Promise<Pl
     // Add radius (default 500m, now using 2000m as requested)
     apiUrl += `radius=${params.radius || 2000}&`;
     
-    // Use multiple types for food venues
-    // Note: Google Places API only allows one type per request
-    // We'll use the most general food type and filter results later
+    // Make the request less restrictive by using 'restaurant' type without additional keywords
     if (params.type) {
       apiUrl += `type=${params.type}&`;
     } else {
       apiUrl += `type=restaurant&`; // Default to restaurant as it's most common
     }
     
-    // Add keyword to include all food establishments
-    apiUrl += `keyword=food,cafe,restaurant,bar&`;
+    // Simpler keyword to be more inclusive
+    apiUrl += `keyword=food&`;
     
     // Add page token if available for pagination
     if (params.pageToken) {
@@ -53,12 +51,23 @@ export const searchNearbyVenues = async (params: PlacesSearchParams): Promise<Pl
     }
     
     const data = await response.json();
-    console.log("Places API response:", data);
+    console.log("Places API response status:", data.status);
+    console.log("Places API response results count:", data.results?.length || 0);
     
-    // Check for error
+    // More detailed error logging
     if (data.error_message) {
       console.error("Places API error:", data.error_message);
-      throw new Error(data.error_message);
+      throw new Error(`Google Places API error: ${data.error_message}`);
+    }
+    
+    if (data.status === "REQUEST_DENIED") {
+      console.error("API key issue:", data);
+      throw new Error(`API request denied. Check API key permissions for Places API.`);
+    }
+    
+    if (data.status === "INVALID_REQUEST") {
+      console.error("Invalid request:", data);
+      throw new Error(`Invalid request parameters.`);
     }
     
     // Check if results exist
