@@ -30,91 +30,113 @@ const MapBox = ({
   const [token, setToken] = useState<string>(mapboxToken || 'pk.eyJ1IjoiZmFiaWFud2ludGVyYmluZSIsImEiOiJjbWE2OWNuNG0wbzFuMmtwb3czNHB4cGJwIn0.KdxkppXglJrOwuBnqcYBqA');
   const [showTokenInput, setShowTokenInput] = useState<boolean>(false);
   const moveEndTimeout = useRef<number | null>(null);
+  const [mapInitialized, setMapInitialized] = useState(false);
   const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
 
   // Initialize map
   useEffect(() => {
     if (!token || !mapContainer.current) return;
     
+    // Set access token before attempting to create the map
     mapboxgl.accessToken = token;
     
     if (map.current) return; // Map already initialized
     
-    const initialLocation = userLocation || { lat: -33.8688, lng: 151.2093 }; // Default to Sydney
-    
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/light-v10', // Use light style for better grayscale effect
-      center: [initialLocation.lng, initialLocation.lat],
-      zoom: 14, // Increased zoom level for better visibility
-    });
-
-    // Add navigation controls
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-    
-    // Apply grayscale filter to the map
-    map.current.on('load', () => {
-      if (!map.current) return;
+    try {
+      const initialLocation = userLocation && userLocation.lat !== 0 && userLocation.lng !== 0 
+        ? userLocation 
+        : { lat: -33.8688, lng: 151.2093 }; // Default to Sydney
       
-      setMapInstance(map.current);
+      // Create the map instance
+      const mapboxInstance = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/light-v10',
+        center: [initialLocation.lng, initialLocation.lat],
+        zoom: 14,
+      });
       
-      // Add grayscale filter to the map
-      const mapStyle = map.current.getStyle();
-      if (mapStyle && mapStyle.layers) {
-        mapStyle.layers.forEach(layer => {
-          if (layer.id !== 'background' && map.current) {
-            map.current.setPaintProperty(layer.id, 'raster-saturation', -1);
-          }
-        });
-      }
-    });
-
-    // Add user location marker if available
-    if (userLocation && userLocation.lat && userLocation.lng) {
-      new mapboxgl.Marker({ color: '#3BB2D0' })
-        .setLngLat([userLocation.lng, userLocation.lat])
-        .addTo(map.current);
-    }
-    
-    // Add map move handler for "search this area" functionality
-    if (onMapMove) {
-      map.current.on('moveend', () => {
-        if (!map.current) return;
+      // Store map reference
+      map.current = mapboxInstance;
+      
+      // Wait for map to load before adding controls or triggering other map operations
+      mapboxInstance.on('load', () => {
+        console.log('Mapbox map loaded successfully');
         
-        // Clear previous timeout to prevent multiple rapid calls
-        if (moveEndTimeout.current) {
-          window.clearTimeout(moveEndTimeout.current);
-        }
+        // Now that the map is fully loaded, add navigation controls
+        mapboxInstance.addControl(new mapboxgl.NavigationControl(), 'top-right');
         
-        // Set a small debounce to avoid excessive callbacks
-        moveEndTimeout.current = window.setTimeout(() => {
-          if (map.current) {
-            const center = map.current.getCenter();
-            onMapMove({ 
-              lat: center.lat, 
-              lng: center.lng 
+        // Add grayscale filter to the map
+        try {
+          const mapStyle = mapboxInstance.getStyle();
+          if (mapStyle && mapStyle.layers) {
+            mapStyle.layers.forEach(layer => {
+              if (layer.id !== 'background') {
+                mapboxInstance.setPaintProperty(layer.id, 'raster-saturation', -1);
+              }
             });
           }
-        }, 300);
+        } catch (e) {
+          console.warn('Failed to apply grayscale filter:', e);
+        }
+        
+        // Add user location marker if available
+        if (userLocation && userLocation.lat && userLocation.lng) {
+          try {
+            new mapboxgl.Marker({ color: '#3BB2D0' })
+              .setLngLat([userLocation.lng, userLocation.lat])
+              .addTo(mapboxInstance);
+          } catch (e) {
+            console.warn('Failed to add user location marker:', e);
+          }
+        }
+        
+        // Set map as initialized and make it available to other components
+        setMapInitialized(true);
+        setMapInstance(mapboxInstance);
       });
+      
+      // Add map move handler for "search this area" functionality
+      if (onMapMove) {
+        mapboxInstance.on('moveend', () => {
+          // Clear previous timeout to prevent multiple rapid calls
+          if (moveEndTimeout.current) {
+            window.clearTimeout(moveEndTimeout.current);
+          }
+          
+          // Set a small debounce to avoid excessive callbacks
+          moveEndTimeout.current = window.setTimeout(() => {
+            if (mapboxInstance) {
+              const center = mapboxInstance.getCenter();
+              onMapMove({ 
+                lat: center.lat, 
+                lng: center.lng 
+              });
+            }
+          }, 300);
+        });
+      }
+    } catch (error) {
+      console.error('Failed to initialize Mapbox map:', error);
     }
-
+    
     // Clean up on unmount
     return () => {
+      if (moveEndTimeout.current) {
+        window.clearTimeout(moveEndTimeout.current);
+      }
+      
       if (map.current) {
         map.current.remove();
         map.current = null;
-      }
-      
-      if (moveEndTimeout.current) {
-        window.clearTimeout(moveEndTimeout.current);
+        setMapInstance(null);
+        setMapInitialized(false);
       }
     };
   }, [token, userLocation, onMapMove]);
 
   // When selectedVenue changes, center map on it
   useEffect(() => {
-    if (!map.current || !selectedVenue) return;
+    if (!map.current || !selectedVenue || !mapInitialized) return;
     
     const venue = venues.find(v => v.id === selectedVenue);
     if (!venue) return;
@@ -124,7 +146,7 @@ const MapBox = ({
       zoom: 15,
       essential: true
     });
-  }, [selectedVenue, venues]);
+  }, [selectedVenue, venues, mapInitialized]);
 
   // Token management handlers
   const handleTokenChange = (newToken: string) => {
@@ -146,14 +168,14 @@ const MapBox = ({
       ) : (
         <>
           <div ref={mapContainer} className="w-full h-full rounded-lg" />
-          {!map.current && (
+          {!mapInitialized && (
             <div className="absolute inset-0 flex items-center justify-center">
               <p className="text-gray-500">Loading map...</p>
             </div>
           )}
           
-          {/* Render markers for venues */}
-          {mapInstance && venues.map(venue => (
+          {/* Only render markers when map is fully initialized */}
+          {mapInitialized && mapInstance && venues.map(venue => (
             <MapBoxMarker 
               key={venue.id}
               venue={venue}
