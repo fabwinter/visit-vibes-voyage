@@ -7,6 +7,7 @@ import CheckInButton from "@/components/CheckInButton";
 import WishlistButton from "@/components/WishlistButton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
+import { useAuthContext } from "@/hooks/useAuthContext";
 
 interface SelectedVenueDetailsProps {
   venue: Venue | null;
@@ -20,6 +21,7 @@ const SelectedVenueDetails: React.FC<SelectedVenueDetailsProps> = ({
   onCheckIn,
 }) => {
   const isMobile = useIsMobile();
+  const { isAuthenticated, setShowAuthModal } = useAuthContext();
 
   if (!venue) {
     return null;
@@ -33,6 +35,12 @@ const SelectedVenueDetails: React.FC<SelectedVenueDetailsProps> = ({
   
   // Handle share
   const handleShare = () => {
+    if (!isAuthenticated) {
+      toast.error("Please sign in to share venues");
+      setShowAuthModal(true);
+      return;
+    }
+    
     if (navigator.share) {
       navigator.share({
         title: venue.name,

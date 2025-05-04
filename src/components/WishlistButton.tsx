@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tags, Plus, X } from 'lucide-react';
 import { Venue } from '@/types';
 import { useWishlist } from '@/hooks/useWishlist';
+import { useAuthContext } from '@/hooks/useAuthContext';
+import { toast } from 'sonner';
 
 interface WishlistButtonProps {
   venue: Venue;
@@ -17,6 +19,7 @@ interface WishlistButtonProps {
 
 const WishlistButton = ({ venue, type = 'full', className = '' }: WishlistButtonProps) => {
   const { isInWishlist, addToWishlist, removeFromWishlist, categories } = useWishlist();
+  const { isAuthenticated, setShowAuthModal } = useAuthContext();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [customTags, setCustomTags] = useState<string[]>([]);
@@ -25,6 +28,12 @@ const WishlistButton = ({ venue, type = 'full', className = '' }: WishlistButton
   const venueInWishlist = isInWishlist(venue.id);
   
   const handleAddToWishlist = () => {
+    if (!isAuthenticated) {
+      toast.error("Please sign in to use the wishlist feature");
+      setShowAuthModal(true);
+      return;
+    }
+
     if (venueInWishlist) {
       removeFromWishlist(venue.id);
     } else {

@@ -1,294 +1,118 @@
-import { useState, useEffect, useRef } from 'react';
-import { mockUserProfile, predefinedTags } from '../data/mockData';
-import StarRating from '../components/StarRating';
-import { Star, Award, MapPin, LogOut, Camera, Edit } from 'lucide-react';
-import { Visit, UserProfile, Venue } from '@/types';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+
+import { useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
+import { User, Mail, LogOut, Clock, Tags, MapPin } from "lucide-react";
+import { useAuthContext } from "@/hooks/useAuthContext";
+import { useWishlist } from "@/hooks/useWishlist";
+import { useVisitData } from "@/hooks/useVisitData";
 
 const ProfileView = () => {
-  const [userProfile, setUserProfile] = useState<UserProfile>({
-    ...mockUserProfile,
-    wishlistCategories: [] // Add the required field
-  });
-  const [visits, setVisits] = useState<Visit[]>([]);
-  const [venues, setVenues] = useState<Venue[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Load data from localStorage
+  const { user, isAuthenticated, logout, setShowAuthModal } = useAuthContext();
+  const { wishlistItems } = useWishlist();
+  const { visits } = useVisitData();
+  const navigate = useNavigate();
+  
   useEffect(() => {
-    // Load visits
-    const storedVisits = localStorage.getItem('visits');
-    if (storedVisits) {
-      const parsedVisits = JSON.parse(storedVisits);
-      setVisits(parsedVisits);
+    // If not logged in, show auth modal
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
     }
-
-    // Load venues
-    const storedVenues = localStorage.getItem('venues');
-    if (storedVenues) {
-      setVenues(JSON.parse(storedVenues));
-    }
-
-    // Create profile from real data, or use mock as fallback
-    const userName = localStorage.getItem('userName') || mockUserProfile.name;
-    const userEmail = localStorage.getItem('userEmail') || mockUserProfile.email;
-    const userPhoto = localStorage.getItem('userPhoto') || mockUserProfile.photo;
-
-    setUserProfile({
-      ...mockUserProfile,
-      name: userName,
-      email: userEmail,
-      photo: userPhoto,
-      visits: [],  // We'll calculate stats from the actual visits array
-      savedVenues: [], // Not implemented yet
-      wishlistCategories: [] // Add the required field
-    });
-  }, []);
-
-  // Extract all tags from visits
-  const allTags = visits.reduce((tags, visit) => {
-    return [...tags, ...visit.tags];
-  }, [] as string[]);
-
-  // Count occurrences of each tag
-  const tagCounts = allTags.reduce((acc, tag) => {
-    acc[tag] = (acc[tag] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  // Sort tags by frequency
-  const sortedTags = Object.keys(tagCounts).sort((a, b) => tagCounts[b] - tagCounts[a]);
-
-  // Calculate stats
-  const totalVisits = visits.length;
-  const uniqueVenues = new Set(visits.map(visit => visit.venueId)).size;
-  const averageRating = visits.length > 0
-    ? visits.reduce((sum, visit) => sum + visit.rating.overall, 0) / visits.length
-    : 0;
+  }, [isAuthenticated, setShowAuthModal]);
   
-  // Calculate badges
-  const earnedBadges = [
-    { 
-      name: "Explorer", 
-      description: "Visited 3+ unique venues", 
-      icon: <MapPin className="w-5 h-5" />,
-      earned: uniqueVenues >= 3
-    },
-    { 
-      name: "Critic", 
-      description: "Rated 5+ meals", 
-      icon: <Star className="w-5 h-5" />,
-      earned: visits.reduce((count, visit) => count + visit.dishes.length, 0) >= 5
-    },
-    { 
-      name: "Regular", 
-      description: "Visited the same place 3+ times", 
-      icon: <Award className="w-5 h-5" />,
-      earned: Object.values(
-        visits.reduce((acc, visit) => {
-          acc[visit.venueId] = (acc[visit.venueId] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>)
-      ).some(count => count >= 3)
-    },
-  ];
-
   const handleLogout = () => {
-    toast("This is a demo app", {
-      description: "Logout functionality would be implemented with auth integration"
-    });
-  };
-
-  const handleEditProfile = () => {
-    // Simple profile editing
-    const newName = prompt("Enter your name:", userProfile.name);
-    if (newName && newName.trim() !== '') {
-      localStorage.setItem('userName', newName);
-      setUserProfile(prev => ({ ...prev, name: newName }));
-      toast.success("Profile updated");
-    }
+    logout();
+    navigate('/');
   };
   
-  // Handle photo upload
-  const handlePhotoUpload = () => {
-    fileInputRef.current?.click();
-  };
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="container max-w-md mx-auto p-4 h-full flex flex-col items-center justify-center">
+        <Card className="w-full">
+          <CardHeader className="text-center">
+            <CardTitle>Sign in Required</CardTitle>
+            <CardDescription>
+              Please sign in to view your profile
+            </CardDescription>
+          </CardHeader>
+          <CardFooter>
+            <Button onClick={() => setShowAuthModal(true)} className="w-full">
+              Sign in
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
   
-  // Process the uploaded photo
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    
-    // Check file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image too large", { description: "Please choose an image smaller than 5MB" });
-      return;
-    }
-    
-    // Create a FileReader to read the image as a data URL
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const photoDataUrl = e.target?.result as string;
-      if (photoDataUrl) {
-        // Save to localStorage and update state
-        localStorage.setItem('userPhoto', photoDataUrl);
-        setUserProfile(prev => ({ ...prev, photo: photoDataUrl }));
-        toast.success("Profile photo updated");
-      }
-    };
-    reader.onerror = () => {
-      toast.error("Error reading file");
-    };
-    reader.readAsDataURL(file);
-  };
-
   return (
-    <div className="px-4 pt-6 pb-24">
-      {/* Profile header */}
-      <div className="flex items-center mb-6">
-        <div className="relative">
-          <Avatar className="w-20 h-20 border-2 border-visitvibe-primary">
-            <AvatarImage 
-              src={userProfile.photo || undefined}
-              alt={userProfile.name} 
-              className="object-cover"
-            />
-            <AvatarFallback>
-              {userProfile.name.slice(0, 2).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          
-          {/* Edit photo button */}
-          <button 
-            className="absolute bottom-0 right-0 bg-visitvibe-primary text-white rounded-full p-1 shadow-md"
-            onClick={handlePhotoUpload}
-          >
-            <Camera size={16} />
-          </button>
-          
-          {/* Hidden file input */}
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            className="hidden"
-            accept="image/*"
-          />
-        </div>
-        
-        <div className="ml-4">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">{userProfile.name}</h1>
-            <button 
-              onClick={handleEditProfile}
-              className="text-visitvibe-primary"
-              aria-label="Edit profile"
-            >
-              <Edit size={16} />
-            </button>
-          </div>
-          <p className="text-gray-500 text-sm">{userProfile.email}</p>
-          <div className="flex items-center mt-1">
-            <StarRating rating={averageRating} size="sm" />
-            <span className="text-gray-500 text-sm ml-2">Average rating</span>
-          </div>
-        </div>
-      </div>
-      
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-3 text-center">
-          <p className="text-2xl font-bold text-visitvibe-primary">{totalVisits}</p>
-          <p className="text-xs text-gray-500 mt-1">Total Visits</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-3 text-center">
-          <p className="text-2xl font-bold text-visitvibe-primary">{uniqueVenues}</p>
-          <p className="text-xs text-gray-500 mt-1">Unique Venues</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-3 text-center">
-          <p className="text-2xl font-bold text-visitvibe-primary">{venues.length}</p>
-          <p className="text-xs text-gray-500 mt-1">Found Places</p>
-        </div>
-      </div>
-      
-      {/* Badges */}
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-3">Your Badges</h2>
-        <div className="grid grid-cols-2 gap-3">
-          {earnedBadges.map((badge) => (
-            <div 
-              key={badge.name} 
-              className={`bg-white rounded-lg shadow p-3 flex items-center ${
-                badge.earned ? '' : 'opacity-50'
-              }`}
-            >
-              <div className={`
-                p-2 rounded-full mr-3
-                ${badge.earned 
-                  ? 'bg-visitvibe-primary/10 text-visitvibe-primary' 
-                  : 'bg-gray-200 text-gray-400'
-                }
-              `}>
-                {badge.icon}
-              </div>
-              <div>
-                <p className="font-medium">{badge.name}</p>
-                <p className="text-xs text-gray-500">{badge.description}</p>
-                {!badge.earned && (
-                  <p className="text-xs text-gray-400 mt-1">Not earned yet</p>
-                )}
-              </div>
+    <div className="container max-w-md mx-auto p-4">
+      <Card className="mb-4">
+        <CardHeader>
+          <CardTitle>My Profile</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col items-center justify-center py-4">
+            <div className="bg-gray-100 rounded-full p-6 mb-4">
+              <User className="h-12 w-12 text-visitvibe-primary" />
             </div>
-          ))}
-        </div>
-      </div>
-      
-      {/* My Tags */}
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-3">My Tags</h2>
-        {sortedTags.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {sortedTags.slice(0, 12).map((tag) => (
-              <span key={tag} className="tag-badge">
-                {tag} ({tagCounts[tag]})
-              </span>
-            ))}
-            {sortedTags.length > 12 && (
-              <span className="text-xs text-gray-500 self-end">
-                +{sortedTags.length - 12} more
-              </span>
-            )}
+            <h2 className="text-xl font-bold">{user.name}</h2>
           </div>
-        ) : (
-          <p className="text-gray-500 text-sm">
-            No tags yet. Add tags when checking in to venues.
-          </p>
-        )}
+          
+          <div className="flex items-center space-x-2">
+            <Mail className="h-5 w-5 text-gray-500" />
+            <span>{user.email}</span>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <Card className="col-span-1">
+          <CardHeader className="p-4 pb-2">
+            <div className="flex items-center space-x-2">
+              <Clock className="h-5 w-5 text-visitvibe-primary" />
+              <CardTitle className="text-lg">Visits</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <p className="text-3xl font-bold">{visits.length}</p>
+            <p className="text-sm text-gray-500">Places visited</p>
+          </CardContent>
+          <CardFooter className="p-2">
+            <Button variant="ghost" size="sm" className="w-full" onClick={() => navigate('/visits')}>
+              View All
+            </Button>
+          </CardFooter>
+        </Card>
+        
+        <Card className="col-span-1">
+          <CardHeader className="p-4 pb-2">
+            <div className="flex items-center space-x-2">
+              <Tags className="h-5 w-5 text-visitvibe-primary" />
+              <CardTitle className="text-lg">Wishlist</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <p className="text-3xl font-bold">{wishlistItems.length}</p>
+            <p className="text-sm text-gray-500">Saved places</p>
+          </CardContent>
+          <CardFooter className="p-2">
+            <Button variant="ghost" size="sm" className="w-full" onClick={() => navigate('/wishlist')}>
+              View All
+            </Button>
+          </CardFooter>
+        </Card>
       </div>
       
-      {/* Settings */}
-      <div>
-        <h2 className="text-lg font-semibold mb-3">Settings</h2>
-        <div className="bg-white rounded-lg shadow divide-y">
-          <button 
-            className="w-full text-left py-3 px-4"
-            onClick={handleEditProfile}
-          >
-            Edit Profile
-          </button>
-          <button className="w-full text-left py-3 px-4">Notifications</button>
-          <button className="w-full text-left py-3 px-4">Privacy</button>
-          <button 
-            className="w-full text-left py-3 px-4 text-red-500 flex items-center"
-            onClick={handleLogout}
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Log Out
-          </button>
-        </div>
-      </div>
+      <Button 
+        onClick={handleLogout} 
+        variant="destructive" 
+        className="w-full flex items-center justify-center gap-2"
+      >
+        <LogOut className="h-4 w-4" />
+        Sign Out
+      </Button>
     </div>
   );
 };
