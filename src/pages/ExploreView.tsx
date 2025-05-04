@@ -9,12 +9,14 @@ import { toast } from "sonner";
 import WishlistButton from "@/components/WishlistButton";
 import { mockVenues, mockVisits } from "../data/mockData";
 import EnhancedVenueCard from '@/components/EnhancedVenueCard';
+import { useVisitData } from "@/hooks/useVisitData";
 
 const ExploreView = () => {
   const [activeTab, setActiveTab] = useState<string>("featured");
   const [topRatedVenues, setTopRatedVenues] = useState<Venue[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [usingMockData, setUsingMockData] = useState<boolean>(false);
+  const { processCheckIn } = useVisitData();
 
   // Fetch real restaurant data on component mount
   useEffect(() => {
@@ -84,6 +86,29 @@ const ExploreView = () => {
       .slice(0, 5);
       
     setTopRatedVenues(venuesWithLastVisit);
+  };
+
+  // Handle check-in for venues
+  const handleCheckIn = (venue: Venue) => {
+    // Create a simple check-in record
+    const visit = {
+      id: crypto.randomUUID(),
+      venueId: venue.id,
+      timestamp: new Date().toISOString(),
+      rating: {
+        food: 0,
+        ambiance: 0,
+        service: 0,
+        value: 0,
+        overall: 0
+      },
+      dishes: [],
+      photos: [],
+      tags: []
+    };
+    
+    processCheckIn(visit);
+    toast.success(`Checked in at ${venue.name}`);
   };
 
   // Featured Australian food articles (updated with real content)
@@ -207,7 +232,7 @@ const ExploreView = () => {
                       <EnhancedVenueCard
                         venue={venue}
                         lastVisit={venue.lastVisit}
-                        onCheckIn={(venue) => handleCheckIn(venue)}
+                        onCheckIn={handleCheckIn}
                       />
                       {/* Google rating badge */}
                       {venue.googleRating && (
@@ -329,7 +354,7 @@ const ExploreView = () => {
                   <EnhancedVenueCard
                     venue={venue}
                     lastVisit={venue.lastVisit}
-                    onCheckIn={(venue) => handleCheckIn(venue)}
+                    onCheckIn={handleCheckIn}
                   />
                   {/* Google rating badge */}
                   {venue.googleRating && (

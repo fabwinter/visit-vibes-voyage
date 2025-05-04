@@ -12,6 +12,7 @@ import { FilterOptions } from '@/components/VenueFilters';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { filterVenues, extractCategories, extractTags } from '@/utils/filterUtils';
 import { toast } from 'sonner';
+import { useVisitData } from '@/hooks/useVisitData';
 
 const WishlistView = () => {
   const { wishlistVenues, categories, tags, updateWishlistItem, removeFromWishlist } = useWishlist();
@@ -28,6 +29,7 @@ const WishlistView = () => {
   const [editingVenueId, setEditingVenueId] = useState<string | null>(null);
   const [editingVenueTags, setEditingVenueTags] = useState<string[]>([]);
   const [editingVenueCategory, setEditingVenueCategory] = useState<string>('');
+  const { processCheckIn } = useVisitData();
 
   // Update filtered venues when wishlist or filters change
   useEffect(() => {
@@ -37,21 +39,7 @@ const WishlistView = () => {
 
   // Custom filter function for wishlist
   const filterWishlistVenues = (venues: Venue[], options: FilterOptions): Venue[] => {
-    return venues.filter(venue => {
-      // Filter by category
-      if (options.category && options.category !== 'all') {
-        if (venue.wishlistCategory !== options.category) return false;
-      }
-
-      // Filter by tags
-      if (options.tags && options.tags.length > 0) {
-        const venueTags = venue.wishlistTags || [];
-        // Check if any of the selected tags are in the venue tags
-        if (!options.tags.some(tag => venueTags.includes(tag))) return false;
-      }
-
-      return true;
-    });
+    return venues;
   };
 
   // Handle filter changes
@@ -108,6 +96,33 @@ const WishlistView = () => {
     setAddCategoryOpen(false);
   };
 
+  // Handle check-in for venues
+  const handleCheckIn = (venue: Venue) => {
+    // Create a simple check-in record
+    const visit = {
+      id: crypto.randomUUID(),
+      venueId: venue.id,
+      timestamp: new Date().toISOString(),
+      rating: {
+        food: 0,
+        ambiance: 0,
+        service: 0,
+        value: 0,
+        overall: 0
+      },
+      dishes: [],
+      photos: [],
+      tags: []
+    };
+    
+    processCheckIn(visit);
+    toast.success(`Checked in at ${venue.name}`);
+    
+    // Remove from wishlist after check-in
+    removeFromWishlist(venue.id);
+    toast.success(`${venue.name} removed from wishlist`);
+  };
+
   return (
     <div className="px-4 pt-6 pb-24">
       <h1 className="text-2xl font-bold mb-4">Your Wishlist</h1>
@@ -147,7 +162,7 @@ const WishlistView = () => {
             <EnhancedVenueCard
               venue={venue}
               lastVisit={venue.lastVisit}
-              onCheckIn={(venue) => handleCheckIn(venue)}
+              onCheckIn={handleCheckIn}
             />
             
             {/* Wishlist actions */}
