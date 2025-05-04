@@ -7,6 +7,7 @@ import { PlacesService } from "@/services/PlacesService";
 import { Venue } from "@/types";
 import { toast } from "sonner";
 import WishlistButton from "@/components/WishlistButton";
+import { mockVenues, mockVisits } from "../data/mockData";
 
 const ExploreView = () => {
   const [activeTab, setActiveTab] = useState<string>("featured");

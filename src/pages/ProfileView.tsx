@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { mockUserProfile, predefinedTags } from '../data/mockData';
 import StarRating from '../components/StarRating';
@@ -9,7 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 const ProfileView = () => {
-  const [userProfile, setUserProfile] = useState<UserProfile>(mockUserProfile);
+  const [userProfile, setUserProfile] = useState<UserProfile>({
+    ...mockUserProfile,
+    wishlistCategories: [] // Add the required field
+  });
   const [visits, setVisits] = useState<Visit[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -41,6 +43,7 @@ const ProfileView = () => {
       photo: userPhoto,
       visits: [],  // We'll calculate stats from the actual visits array
       savedVenues: [], // Not implemented yet
+      wishlistCategories: [] // Add the required field
     });
   }, []);
 

@@ -132,7 +132,8 @@ const MapView = () => {
         {selectedVenueDetails && (
           <SelectedVenueDetails
             venue={selectedVenueDetails}
-            onCheckIn={handleCheckIn}
+            onCheckIn={() => handleCheckIn()}
+            onClose={() => setSelectedVenueDetails(null)}
           />
         )}
         

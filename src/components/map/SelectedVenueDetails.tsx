@@ -1,8 +1,8 @@
 
 import { Button } from "@/components/ui/button";
 import { Venue } from "@/types";
-import { formatDistance } from "date-fns";
-import { Phone, Globe, MapPin, Clock } from "lucide-react";
+import { formatDistance } from 'date-fns';
+import { Phone, Globe, MapPin, Clock } from 'lucide-react';
 import CheckInButton from "@/components/CheckInButton";
 import WishlistButton from "@/components/WishlistButton";
 
@@ -108,7 +108,13 @@ const SelectedVenueDetails: React.FC<SelectedVenueDetailsProps> = ({
       </div>
 
       <div className="mt-4 flex justify-between">
-        <CheckInButton venue={venue} onCheckIn={onCheckIn} />
+        <Button 
+          variant="default" 
+          onClick={() => onCheckIn(venue)}
+          className="flex items-center gap-2"
+        >
+          <span>Check In</span>
+        </Button>
         <WishlistButton venue={venue} />
       </div>
     </div>
