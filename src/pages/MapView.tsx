@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { filterVenues } from '../utils/filterUtils';
@@ -8,6 +7,7 @@ import { FilterOptions } from '../components/VenueFilters';
 import { Venue } from '@/types';
 import { toast } from "sonner";
 import { useIsMobile } from '../hooks/use-mobile';
+import VenueCard from '../components/VenueCard';
 
 // Import refactored components
 import SearchBar from '../components/map/SearchBar';
