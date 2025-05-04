@@ -1,155 +1,115 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { Venue } from '@/types';
-import { PlacesService } from '@/services/PlacesService';
-import { toast } from 'sonner';
-import { mockVenues } from '@/data/mockData';
+import { nearbySearch } from '@/services/places/placesService';
+import { FOOD_PLACE_TYPES, SEARCH_RADIUS } from '@/services/places/config';
+import mockData from '../mock_data.json';
 
-interface UseVenueSearchProps {
-  userLocation: { lat: number; lng: number };
-  mapCenter: { lat: number; lng: number } | null;
-  visits: any[];
-}
+// Map Google Places API results to our Venue type
+const mapResponseToVenues = (results: google.maps.places.PlaceResult[]): Venue[] => {
+  return results.map(place => {
+    const photoUrls = place.photos ? place.photos.map(photo => photo.getUrl({ maxWidth: 500, maxHeight: 500 })) : [];
 
-export const useVenueSearch = ({ userLocation, mapCenter, visits }: UseVenueSearchProps) => {
+    return {
+      id: place.place_id || 'unknown',
+      name: place.name || 'Unknown',
+      address: place.formatted_address || 'No Address',
+      coordinates: {
+        lat: place.geometry?.location?.lat() || 0,
+        lng: place.geometry?.location?.lng() || 0
+      },
+      photos: photoUrls,
+      website: place.website || undefined,
+      hours: place.opening_hours?.weekday_text?.join('\n') || undefined,
+      phoneNumber: place.formatted_phone_number || undefined,
+      priceLevel: place.price_level || undefined,
+      category: place.types || [],
+      googleRating: place.rating || undefined,
+      inWishlist: false,
+      wishlistTags: [],
+      wishlistCategory: ''
+    };
+  });
+};
+
+const useMockData = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_DATA === 'true';
+
+export const useVenueSearch = () => {
   const [venues, setVenues] = useState<Venue[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [nextPageToken, setNextPageToken] = useState<string | undefined>();
+  const [isLoading, setIsLoading] = useState(false);
   const [usingMockData, setUsingMockData] = useState(false);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   
-  // Fetch venues when user location or map center changes
-  useEffect(() => {
-    if (mapCenter) {
-      fetchVenues(undefined, mapCenter);
-    } else if (userLocation.lat !== -33.8688 || userLocation.lng !== 151.2093) {
-      // Only fetch if we have a real user location (not the default)
-      fetchVenues();
-    }
-  }, [userLocation, mapCenter]);
-  
-  // Function to fetch venues from Places API
-  const fetchVenues = async (pageToken?: string, searchLocation?: { lat: number; lng: number }) => {
+  // Function to search nearby venues
+  const searchNearbyVenues = useCallback(async (location: google.maps.LatLngLiteral) => {
     setIsLoading(true);
     
     try {
-      console.log("Attempting to fetch venues from API...");
-      const result = await PlacesService.searchNearbyVenues({
-        location: searchLocation || userLocation,
-        radius: 2000, // Changed from 5km to 2km (2000m) as requested
-        type: "restaurant", // Will be modified to include all food venues in the API service
-        pageToken: pageToken
+      const response = await nearbySearch({
+        location: location,
+        radius: SEARCH_RADIUS,
+        types: FOOD_PLACE_TYPES,
+        pageToken: null
       });
       
-      if (result.venues.length === 0 && !pageToken) {
-        // If no results and it's the initial fetch, fall back to mock data
-        console.log("No venues returned from API, falling back to mock data");
-        prepareMockData();
-        setUsingMockData(true);
-      } else if (result.venues.length > 0) {
-        console.log(`Fetched ${result.venues.length} venues from API`);
-        
-        // Enhanced to properly save venues with visit data
-        const venuesWithVisitData = result.venues.map(venue => {
-          // Find all visits for this venue
-          const venueVisits = visits.filter(visit => visit.venueId === venue.id);
-          
-          // Sort by date (newest first)
-          if (venueVisits.length > 0) {
-            venueVisits.sort((a, b) => 
-              new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-            );
-            
-            // Add the latest visit to the venue
-            return {
-              ...venue,
-              lastVisit: venueVisits[0]
-            };
-          }
-          return venue;
-        });
-        
-        if (pageToken) {
-          setVenues(prevVenues => [...prevVenues, ...venuesWithVisitData]);
-        } else {
-          setVenues(venuesWithVisitData);
-        }
-        setNextPageToken(result.nextPageToken);
-        setUsingMockData(false);
-        
-        // Store venues in localStorage for other views
-        localStorage.setItem('venues', JSON.stringify(venuesWithVisitData));
+      if (response.results) {
+        const newVenues = mapResponseToVenues(response.results);
+        setVenues(newVenues);
+        setNextPageToken(response.next_page_token || null);
       }
     } catch (error) {
-      console.error("Error fetching venues:", error);
-      toast("Error fetching venues. Using mock data instead.", {
-        description: error instanceof Error ? error.message : undefined
+      console.error('Failed to search nearby venues:', error);
+      
+      // If real API fails, use mock data
+      if (useMockData) {
+        const mockVenues = mockData.venues.map(venue => ({
+          ...venue,
+          coordinates: {
+            lat: venue.coordinates.lat + (Math.random() - 0.5) * 0.01,
+            lng: venue.coordinates.lng + (Math.random() - 0.5) * 0.01
+          }
+        }));
+        setVenues(mockVenues);
+        setUsingMockData(true);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+  
+  // Load more venues with pagination
+  const handleLoadMore = useCallback(async (userLocation: google.maps.LatLngLiteral) => {
+    if (!nextPageToken) return;
+
+    setIsLoading(true);
+    try {
+      const response = await nearbySearch({
+        location: userLocation,
+        radius: SEARCH_RADIUS,
+        types: FOOD_PLACE_TYPES,
+        pageToken: nextPageToken
       });
-      prepareMockData();
+
+      if (response.results) {
+        const newVenues = mapResponseToVenues(response.results);
+        setVenues(prevVenues => [...prevVenues, ...newVenues]);
+        setNextPageToken(response.next_page_token || null);
+      }
+    } catch (error) {
+      console.error('Failed to load more venues:', error);
       setUsingMockData(true);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Prepare mock data by adding last visit information
-  const prepareMockData = () => {
-    const venuesWithLastVisit = mockVenues.map(venue => {
-      // Find all visits for this venue
-      const venueVisits = visits.filter(visit => visit.venueId === venue.id);
-      
-      // Sort by date (newest first)
-      venueVisits.sort((a, b) => 
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      );
-      
-      // Add the latest visit to the venue
-      return {
-        ...venue,
-        lastVisit: venueVisits[0]
-      };
-    });
-    
-    setVenues(venuesWithLastVisit);
-    
-    // Store venues in localStorage for other views
-    localStorage.setItem('venues', JSON.stringify(venuesWithLastVisit));
-  };
-
-  // Load more venues
-  const handleLoadMore = () => {
-    if (nextPageToken) {
-      fetchVenues(nextPageToken);
-    }
-  };
+  }, [nextPageToken]);
   
-  // Handle search this area
-  const handleSearchThisArea = () => {
-    if (mapCenter) {
-      fetchVenues(undefined, mapCenter);
-    }
-  };
-  
-  // Handle place selection from autocomplete
-  const handlePlaceSelect = async (venue: Venue) => {
-    console.log("Selected venue:", venue);
-    
-    // Add this venue to our list if it's not there already
-    setVenues(prevVenues => {
-      const exists = prevVenues.some(v => v.id === venue.id);
-      if (!exists) {
-        return [venue, ...prevVenues];
-      }
-      return prevVenues;
-    });
-  };
-
   return {
     venues,
+    setVenues,
     isLoading,
     usingMockData,
     nextPageToken,
-    handleLoadMore,
-    handleSearchThisArea,
-    handlePlaceSelect
+    searchNearbyVenues,
+    handleLoadMore
   };
 };
