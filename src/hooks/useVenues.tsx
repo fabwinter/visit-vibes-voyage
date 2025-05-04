@@ -8,9 +8,8 @@ import { useDebounce } from './useDebounce';
 import { useSearchParams } from 'react-router-dom';
 import { SEARCH_RADIUS } from '@/services/places/config';
 
-// Specify the correct type for libraries
-// Updated to use a string literal type to match expected library values
-const libraries: ["places" | "drawing" | "geometry" | "visualization"][] = ['places'];
+// Specify the libraries for Google Maps
+const libraries: ["places"] = ["places"];
 
 const useMockData = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_DATA === 'true';
 

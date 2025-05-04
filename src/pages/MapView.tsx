@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { filterVenues } from '../utils/filterUtils';
@@ -68,7 +67,7 @@ const MapView = () => {
     if (location.state?.selectedVenueId) {
       handleVenueSelect(location.state.selectedVenueId);
     }
-  }, [location.state]);
+  }, [location.state, handleVenueSelect]);
   
   // Apply additional filters
   const filteredVenues = filterVenues(venues, filterOptions);
@@ -128,7 +127,7 @@ const MapView = () => {
       // Clear pending action
       setPendingAction(null);
     }
-  }, [isAuthenticated, pendingAction]);
+  }, [isAuthenticated, pendingAction, setIsCheckInOpen, setShowVenueSheet]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-132px)] md:flex-row">
