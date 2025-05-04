@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { filterVenues } from '../utils/filterUtils';
@@ -8,7 +7,7 @@ import { FilterOptions } from '../components/VenueFilters';
 import { Venue } from '@/types';
 import { toast } from "sonner";
 import { useIsMobile } from '../hooks/use-mobile';
-import VenueCard from '../components/VenueCard';
+import EnhancedVenueCard from '../components/EnhancedVenueCard';
 
 // Import refactored components
 import SearchBar from '../components/map/SearchBar';
@@ -199,7 +198,7 @@ const MapView = () => {
                   className="transition-all duration-200 ring-2 ring-visitvibe-primary ring-offset-2"
                   onClick={() => handleVenueSelect(selectedVenueDetails.id)}
                 >
-                  <VenueCard
+                  <EnhancedVenueCard
                     venue={selectedVenueDetails}
                     lastVisit={selectedVenueDetails.lastVisit}
                     onClick={() => handleVenueSelect(selectedVenueDetails.id)}
@@ -224,7 +223,7 @@ const MapView = () => {
                       className="transition-all duration-200"
                       onClick={() => handleVenueSelect(venue.id)}
                     >
-                      <VenueCard
+                      <EnhancedVenueCard
                         venue={venue}
                         lastVisit={venue.lastVisit}
                         onClick={() => handleVenueSelect(venue.id)}
@@ -249,6 +248,7 @@ const MapView = () => {
               onVenueSelect={handleVenueSelect}
               onLoadMore={handleLoadMore}
               onCheckIn={handleCheckIn}
+              useEnhancedCard={true}
             />
           </div>
         )}
@@ -277,9 +277,9 @@ const MapView = () => {
       />
 
       {/* Check-in form dialog */}
-      {selectedVenueDetails && pendingAction?.venue && (
+      {selectedVenueDetails && (
         <CheckInForm
-          venue={pendingAction.type === 'check-in' ? pendingAction.venue : selectedVenueDetails}
+          venue={selectedVenueDetails}
           isOpen={isCheckInOpen}
           onClose={() => setIsCheckInOpen(false)}
           onCheckIn={handleProcessCheckIn}

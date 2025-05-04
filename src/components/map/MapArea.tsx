@@ -4,6 +4,7 @@ import { Search } from 'lucide-react';
 import GoogleMapComponent from './GoogleMapComponent';
 import { Venue } from '@/types';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { SEARCH_RADIUS } from '@/services/places/config';
 
 interface MapAreaProps {
   venues: Venue[];
@@ -36,6 +37,8 @@ const MapArea = ({
           selectedVenue={selectedVenue}
           onMapMove={onMapMove}
           className="w-full h-full"
+          searchRadius={SEARCH_RADIUS}
+          mapStyle="grayscale"
         />
       </div>
       

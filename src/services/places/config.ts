@@ -26,3 +26,6 @@ export const FOOD_PLACE_TYPES = [
   "dessert",
   "ice_cream"
 ];
+
+// Maximum search radius in meters (2km)
+export const SEARCH_RADIUS = 2000;

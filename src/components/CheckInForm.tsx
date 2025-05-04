@@ -41,7 +41,7 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn, initialVisit }: CheckI
   const [photos, setPhotos] = useState<string[]>(initialVisit?.photos || []);
   const [dishes, setDishes] = useState<DishRating[]>(initialVisit?.dishes || []);
   const [activeTab, setActiveTab] = useState('details');
-  const [partySize, setPartySize] = useState(initialVisit?.partySize || 1);
+  const [partySize, setPartySize] = useState<number | undefined>(initialVisit?.partySize || 1);
   const [totalBill, setTotalBill] = useState<number | undefined>(initialVisit?.totalBill);
 
   // Editable dish state
@@ -83,9 +83,8 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn, initialVisit }: CheckI
   // Handle party size changes
   const handlePartySizeChange = (value: string) => {
     const size = parseInt(value, 10);
-    // Allow empty string to facilitate deletion
     if (value === '') {
-      setPartySize(undefined as unknown as number);
+      setPartySize(undefined);
     } else if (!isNaN(size) && size >= 1) {
       setPartySize(size);
     }
@@ -231,7 +230,7 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn, initialVisit }: CheckI
       notes,
       tags,
       wouldVisitAgain,
-      visitType,
+      visitType, 
       partySize,
       totalBill: finalTotalBill || undefined,
     };

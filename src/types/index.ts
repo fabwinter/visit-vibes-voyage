@@ -33,6 +33,7 @@ export interface DishRating {
   tags: string[];
   notes?: string;
   type: "dish" | "drink"; // Added type to distinguish between dishes and drinks
+  quantity?: number; // Added quantity for multiple items
 }
 
 export interface VisitRating {
@@ -54,6 +55,8 @@ export interface Visit {
   tags: string[];
   wouldVisitAgain?: boolean;
   totalBill?: number; // Added total bill amount
+  visitType?: 'eat-in' | 'takeaway'; // Added visit type
+  partySize?: number; // Added party size
 }
 
 export type RatingLevel = "good" | "mid" | "bad";
