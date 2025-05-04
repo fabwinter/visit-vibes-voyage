@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Compass, Award, BookOpen, MapPin } from "lucide-react";
 import VenueCard from "../components/VenueCard";
@@ -28,6 +29,12 @@ const ExploreView = () => {
     // You would typically open a check-in form or dialog here
     // For now, just show a toast
     toast.info(`Check-in to ${venue.name}`);
+  };
+  
+  // Add a venue click handler
+  const handleVenueClick = (venueId: string) => {
+    console.log("Venue clicked:", venueId);
+    // You could navigate to a venue details page or open a modal
   };
 
   const fetchTopRatedVenues = async () => {
@@ -217,6 +224,7 @@ const ExploreView = () => {
                         venue={venue}
                         lastVisit={venue.lastVisit}
                         onCheckIn={handleCheckIn}
+                        onClick={() => handleVenueClick(venue.id)}
                       />
                       {/* Google rating badge */}
                       {venue.googleRating && (
@@ -339,6 +347,7 @@ const ExploreView = () => {
                     venue={venue}
                     lastVisit={venue.lastVisit}
                     onCheckIn={handleCheckIn}
+                    onClick={() => handleVenueClick(venue.id)}
                   />
                   {/* Google rating badge */}
                   {venue.googleRating && (

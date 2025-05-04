@@ -64,6 +64,11 @@ const MapView = () => {
     processCheckIn
   } = useVenues();
   
+  // Fix for the type compatibility issue - create a wrapper function
+  const handlePlaceSelection = (place: google.maps.places.PlaceResult) => {
+    handlePlaceSelect(place);
+  };
+  
   // Check if we need to select a venue from navigation state
   useEffect(() => {
     if (location.state?.selectedVenueId) {
@@ -142,7 +147,7 @@ const MapView = () => {
           venues={venues}
           userLocation={userLocation}
           onFilterChange={setFilterOptions}
-          onPlaceSelect={handlePlaceSelect}
+          onPlaceSelect={handlePlaceSelection}
           className="mb-4"
         />
         

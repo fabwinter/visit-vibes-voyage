@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Venue } from '@/types';
 import { useWishlist } from '@/hooks/useWishlist';
@@ -34,6 +35,13 @@ const WishlistView = () => {
     console.log("Checking in to venue:", venue.name);
     // Implementation for check-in functionality
     toast.info(`Check-in to ${venue.name}`);
+  };
+  
+  // Add venue click handler
+  const handleVenueClick = (venueId: string) => {
+    console.log("Venue clicked:", venueId);
+    // Could navigate to venue details or open a modal
+    openEditDialog(wishlistVenues.find(v => v.id === venueId) || wishlistVenues[0]);
   };
 
   // Update filtered venues when wishlist or filters change
@@ -155,6 +163,7 @@ const WishlistView = () => {
               venue={venue}
               lastVisit={venue.lastVisit}
               onCheckIn={handleCheckIn}
+              onClick={() => handleVenueClick(venue.id)}
             />
             
             {/* Wishlist actions */}
