@@ -65,7 +65,7 @@ const VenueList: React.FC<VenueListProps> = ({
                 venue={venue}
                 lastVisit={venue.lastVisit}
                 onClick={() => onVenueSelect(venue.id)}
-                onCheckIn={onCheckIn}
+                onCheckIn={() => onCheckIn(venue)}
               />
             ) : (
               <VenueCard

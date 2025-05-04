@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { filterVenues } from '../utils/filterUtils';
@@ -73,11 +74,11 @@ const MapView = () => {
   const filteredVenues = filterVenues(venues, filterOptions);
 
   // Fix the handlePlaceSelect function to handle the type mismatch
-  const handlePlaceSelectWrapper = (place: google.maps.places.PlaceResult) => {
-    if (place && place.geometry && place.geometry.location) {
+  const handlePlaceSelectWrapper = (venue: Venue) => {
+    if (venue) {
       const newLocation = {
-        lat: place.geometry.location.lat(),
-        lng: place.geometry.location.lng(),
+        lat: venue.coordinates.lat,
+        lng: venue.coordinates.lng,
       };
       setMapCenter(newLocation);
     }
@@ -213,7 +214,7 @@ const MapView = () => {
                     venue={selectedVenueDetails}
                     lastVisit={selectedVenueDetails.lastVisit}
                     onClick={() => handleVenueSelect(selectedVenueDetails.id)}
-                    onCheckIn={handleCheckIn}
+                    onCheckIn={() => handleCheckIn(selectedVenueDetails)}
                   />
                 </div>
               </div>
@@ -238,7 +239,7 @@ const MapView = () => {
                         venue={venue}
                         lastVisit={venue.lastVisit}
                         onClick={() => handleVenueSelect(venue.id)}
-                        onCheckIn={handleCheckIn}
+                        onCheckIn={() => handleCheckIn(venue)}
                       />
                     </div>
                   ))}

@@ -49,7 +49,7 @@ const GoogleMapComponent = ({
 
   // Get marker icon based on rating and selection status
   const getMarkerIcon = (venue: Venue, isSelected: boolean) => {
-    if (!window.google || !window.google.maps) {
+    if (typeof window.google === 'undefined' || !window.google.maps) {
       return null;
     }
     
@@ -202,7 +202,7 @@ const GoogleMapComponent = ({
           onLoad={onLoad}
           onBoundsChanged={handleBoundsChanged}
         >
-          {apiLoaded && (
+          {apiLoaded && window.google && window.google.maps && (
             <>
               {/* Search radius circle */}
               {userLocation && searchRadius && (

@@ -54,7 +54,7 @@ const PlaceSearchInput = ({
       
       try {
         // Check if Google Maps API is loaded
-        if (!window.google || !window.google.maps) {
+        if (typeof window.google === 'undefined' || !window.google.maps) {
           throw new Error("Google Maps API not loaded");
         }
         
@@ -81,7 +81,7 @@ const PlaceSearchInput = ({
     // Get full details when a place is selected
     try {
       // Check if Google Maps API is loaded
-      if (!window.google || !window.google.maps) {
+      if (typeof window.google === 'undefined' || !window.google.maps) {
         throw new Error("Google Maps API not loaded");
       }
       
