@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Venue } from '@/types';
 import { nearbySearch } from '@/services/places/placesService';
@@ -7,6 +8,7 @@ import { useJsApiLoader } from '@react-google-maps/api';
 import { useDebounce } from './useDebounce';
 import { useSearchParams } from 'react-router-dom';
 import { SEARCH_RADIUS } from '@/services/places/config';
+import { toast } from 'sonner';
 
 // Specify the correct type for libraries
 const libraries: ("places" | "drawing" | "geometry" | "visualization" | "localContext")[] = ['places'];
@@ -52,11 +54,36 @@ export const useVenues = () => {
   const [selectedVenueDetails, setSelectedVenueDetails] = useState<Venue | null>(null);
   const debouncedCenter = useDebounce(mapCenter, 500);
   
-  const { isLoaded } = useJsApiLoader({
+  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+  
+  const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || '',
+    googleMapsApiKey: googleMapsApiKey,
     libraries: libraries,
   });
+
+  useEffect(() => {
+    if (loadError) {
+      console.error("Google Maps API failed to load:", loadError);
+      toast.error("Failed to load Google Maps API. Using mock data instead.");
+      prepareMockData();
+      setUsingMockData(true);
+    }
+  }, [loadError]);
+
+  // Function to prepare mock data
+  const prepareMockData = () => {
+    console.log("Preparing mock data");
+    const mockVenues = mockData.venues.map(venue => ({
+      ...venue,
+      coordinates: {
+        lat: venue.coordinates.lat + (Math.random() - 0.5) * 0.01,
+        lng: venue.coordinates.lng + (Math.random() - 0.5) * 0.01
+      }
+    }));
+    setVenues(mockVenues);
+    setUsingMockData(true);
+  };
 
   // Get initial location from params
   useEffect(() => {
@@ -117,6 +144,12 @@ export const useVenues = () => {
 
   // Modified search function to enforce the 2km radius
   const searchNearbyVenues = useCallback(async (location: google.maps.LatLngLiteral) => {
+    if (!isLoaded) {
+      console.warn("Google Maps API not loaded yet");
+      prepareMockData();
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
@@ -136,21 +169,12 @@ export const useVenues = () => {
       console.error('Failed to search nearby venues:', error);
       
       // If real API fails, use mock data
-      if (useMockData) {
-        const mockVenues = mockData.venues.map(venue => ({
-          ...venue,
-          coordinates: {
-            lat: venue.coordinates.lat + (Math.random() - 0.5) * 0.01,
-            lng: venue.coordinates.lng + (Math.random() - 0.5) * 0.01
-          }
-        }));
-        setVenues(mockVenues);
-        setUsingMockData(true);
-      }
+      toast.error("Failed to search nearby venues. Using mock data instead.");
+      prepareMockData();
     } finally {
       setIsLoading(false);
     }
-  }, [useMockData]);
+  }, [isLoaded]);
 
   // Filter venues to those within the search radius
   const filterVenuesWithinRadius = useCallback((center: google.maps.LatLngLiteral, venues: Venue[], radius: number) => {
@@ -211,12 +235,14 @@ export const useVenues = () => {
 
   // Load initial venues or when the location changes
   useEffect(() => {
-    if (!isLoaded) return;
-
     if (userLocation.lat && userLocation.lng) {
-      searchNearbyVenues(userLocation);
+      if (isLoaded) {
+        searchNearbyVenues(userLocation);
+      } else if (loadError) {
+        prepareMockData();
+      }
     }
-  }, [userLocation, isLoaded, searchNearbyVenues]);
+  }, [userLocation, isLoaded, loadError, searchNearbyVenues]);
 
   // Load more venues
   const handleLoadMore = useCallback(async () => {
@@ -238,6 +264,7 @@ export const useVenues = () => {
       }
     } catch (error) {
       console.error('Failed to load more venues:', error);
+      toast.error("Failed to load more venues");
       setUsingMockData(true);
     } finally {
       setIsLoading(false);

@@ -16,7 +16,8 @@ import VisitDetailsView from "./pages/VisitDetailsView";
 import NotFound from "./pages/NotFound";
 
 // Make API keys available
-if (!process.env.GOOGLE_MAPS_API_KEY) {
+const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+if (!googleMapsApiKey) {
   console.warn("Google Maps API key not set. Map functionality will be limited.");
 }
 
