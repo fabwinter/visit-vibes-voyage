@@ -78,6 +78,13 @@ export const useVenues = () => {
         
         // If we have a name and place_id, we can create a temporary venue
         if (place.name) {
+          // Fix: Use getUrl method for photo references instead of direct access
+          const photos = place.photos ? 
+            place.photos.map(p => {
+              // Use getUrl() method instead of accessing photo_reference directly
+              return p.getUrl({ maxWidth: 400 });
+            }) : [];
+            
           const tempVenue: Venue = {
             id: place.place_id,
             name: place.name,
@@ -87,9 +94,7 @@ export const useVenues = () => {
               lng: newLocation.lng
             },
             category: place.types || [],
-            photos: place.photos ? 
-              place.photos.map(p => `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${p.photo_reference}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`) : 
-              []
+            photos: photos
           };
           
           // Add this venue to our list and select it
