@@ -7,6 +7,7 @@ import CheckInForm from '../components/CheckInForm';
 import { FilterOptions } from '../components/VenueFilters';
 import { Venue } from '@/types';
 import { toast } from "sonner";
+import { useIsMobile } from '../hooks/use-mobile';
 
 // Import refactored components
 import SearchBar from '../components/map/SearchBar';
@@ -14,6 +15,15 @@ import VenueList from '../components/map/VenueList';
 import MapArea from '../components/map/MapArea';
 import SelectedVenueDetails from '../components/map/SelectedVenueDetails';
 import { useVenues } from '../hooks/useVenues';
+import { 
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger 
+} from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { ArrowUp } from "lucide-react";
 
 const MapView = () => {
   const location = useLocation();
@@ -43,6 +53,8 @@ const MapView = () => {
   // UI state
   const [isCheckInOpen, setIsCheckInOpen] = useState(false);
   const [selectedVenueDetails, setSelectedVenueDetails] = useState<Venue | null>(null);
+  const [showVenueSheet, setShowVenueSheet] = useState(false);
+  const isMobile = useIsMobile();
 
   // Check if we need to select a venue from navigation state
   useEffect(() => {
@@ -66,6 +78,11 @@ const MapView = () => {
         setSelectedVenueDetails(venue);
         // Center map on selected venue
         setMapCenter(venue.coordinates);
+        
+        // Open bottom sheet on mobile
+        if (isMobile) {
+          setShowVenueSheet(true);
+        }
       } else {
         // Fetch details if not in our current list
         try {
@@ -75,17 +92,27 @@ const MapView = () => {
             setSelectedVenueDetails(details);
             // Center map on selected venue
             setMapCenter(details.coordinates);
+            
+            // Open bottom sheet on mobile
+            if (isMobile) {
+              setShowVenueSheet(true);
+            }
           }
         } catch (error) {
           console.error("Error fetching venue details:", error);
         }
       }
+    } else if (isMobile) {
+      // If already selected, just toggle the sheet
+      setShowVenueSheet(true);
     }
     
-    // Scroll to the selected venue card if it exists
-    const venueCard = document.getElementById(`venue-${venueId}`);
-    if (venueCard) {
-      venueCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Scroll to the selected venue card if it exists and we're not on mobile
+    if (!isMobile) {
+      const venueCard = document.getElementById(`venue-${venueId}`);
+      if (venueCard) {
+        venueCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
     }
   };
   
@@ -93,6 +120,7 @@ const MapView = () => {
   const handleCheckIn = () => {
     if (selectedVenueDetails) {
       setIsCheckInOpen(true);
+      setShowVenueSheet(false); // Close sheet when opening check-in form
     } else {
       toast.error("Please select a venue first");
     }
@@ -104,21 +132,28 @@ const MapView = () => {
     setIsCheckInOpen(false);
   };
 
+  // Close venue details sheet
+  const handleCloseVenueSheet = () => {
+    setShowVenueSheet(false);
+  };
+
   return (
-    <div className="h-[calc(100vh-132px)] flex flex-col md:flex-row">
-      {/* Map Area - Left side */}
-      <MapArea
-        venues={filteredVenues}
-        userLocation={userLocation}
-        selectedVenue={selectedVenue}
-        showSearchThisArea={showSearchThisArea}
-        onVenueSelect={handleVenueSelect}
-        onMapMove={handleMapMove}
-        onSearchArea={handleSearchThisArea}
-      />
+    <div className="flex flex-col h-[calc(100vh-132px)] md:flex-row">
+      {/* Map Area - Takes full width on mobile, left side on desktop */}
+      <div className={`${isMobile ? 'h-[50vh]' : ''} w-full md:w-1/2 lg:w-3/5 md:h-full`}>
+        <MapArea
+          venues={filteredVenues}
+          userLocation={userLocation}
+          selectedVenue={selectedVenue}
+          showSearchThisArea={showSearchThisArea}
+          onVenueSelect={handleVenueSelect}
+          onMapMove={handleMapMove}
+          onSearchArea={handleSearchThisArea}
+        />
+      </div>
       
-      {/* Right side - Search, Filters and Venue List */}
-      <div className="w-full md:w-1/2 lg:w-2/5 md:h-full md:overflow-y-auto p-4 md:order-2">
+      {/* Search and Venue List - Below map on mobile, right side on desktop */}
+      <div className="w-full md:w-1/2 lg:w-2/5 flex flex-col md:h-full md:overflow-y-auto p-4">
         {/* Search with filters */}
         <SearchBar
           venues={venues}
@@ -128,8 +163,8 @@ const MapView = () => {
           className="mb-4"
         />
         
-        {/* Selected venue details if available */}
-        {selectedVenueDetails && (
+        {/* Selected venue details on desktop */}
+        {!isMobile && selectedVenueDetails && (
           <SelectedVenueDetails
             venue={selectedVenueDetails}
             onCheckIn={() => handleCheckIn()}
@@ -137,21 +172,72 @@ const MapView = () => {
           />
         )}
         
-        {/* Venues list */}
-        <VenueList
-          venues={filteredVenues}
-          isLoading={isLoading}
-          usingMockData={usingMockData}
-          selectedVenue={selectedVenue}
-          nextPageToken={nextPageToken}
-          onVenueSelect={handleVenueSelect}
-          onLoadMore={handleLoadMore}
-        />
+        {/* List toggle for mobile - could expand this into a sheet/drawer */}
+        {isMobile && (
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button 
+                className="mb-2 w-full bg-white border border-gray-200 text-gray-700 hover:bg-gray-100 flex justify-between items-center"
+                variant="outline"
+              >
+                <span>View All Venues ({filteredVenues.length})</span>
+                <ArrowUp className="h-4 w-4" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="h-[85vh] pt-6">
+              <SheetHeader>
+                <SheetTitle>Food Venues</SheetTitle>
+              </SheetHeader>
+              <div className="flex-1 overflow-y-auto py-4">
+                <VenueList
+                  venues={filteredVenues}
+                  isLoading={isLoading}
+                  usingMockData={usingMockData}
+                  selectedVenue={selectedVenue}
+                  nextPageToken={nextPageToken}
+                  onVenueSelect={handleVenueSelect}
+                  onLoadMore={handleLoadMore}
+                />
+              </div>
+            </SheetContent>
+          </Sheet>
+        )}
+        
+        {/* Always show venue list on desktop, or on mobile if not in sheet mode */}
+        {(!isMobile || !showVenueSheet) && (
+          <div className={`${isMobile ? 'max-h-[35vh] overflow-y-auto' : ''}`}>
+            <VenueList
+              venues={filteredVenues}
+              isLoading={isLoading}
+              usingMockData={usingMockData}
+              selectedVenue={selectedVenue}
+              nextPageToken={nextPageToken}
+              onVenueSelect={handleVenueSelect}
+              onLoadMore={handleLoadMore}
+            />
+          </div>
+        )}
       </div>
 
-      {/* Floating check-in button */}
+      {/* Bottom sheet for selected venue on mobile */}
+      {isMobile && selectedVenueDetails && (
+        <Sheet open={showVenueSheet} onOpenChange={setShowVenueSheet}>
+          <SheetContent side="bottom" className="max-h-[75vh] overflow-y-auto">
+            <SheetHeader className="mb-2">
+              <SheetTitle>{selectedVenueDetails.name}</SheetTitle>
+            </SheetHeader>
+            <SelectedVenueDetails
+              venue={selectedVenueDetails}
+              onCheckIn={() => handleCheckIn()}
+              onClose={handleCloseVenueSheet}
+            />
+          </SheetContent>
+        </Sheet>
+      )}
+
+      {/* Floating check-in button - adjusted position for mobile */}
       <CheckInButton 
-        className="fixed right-6 bottom-24 w-14 h-14"
+        className={`fixed ${isMobile ? 'right-4 bottom-20' : 'right-6 bottom-24'} w-14 h-14`}
         onClick={handleCheckIn}
       />
 

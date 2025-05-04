@@ -2,6 +2,7 @@
 import { Button } from '@/components/ui/button';
 import VenueCard from '../VenueCard';
 import { Venue } from '@/types';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface VenueListProps {
   venues: Venue[];
@@ -22,12 +23,14 @@ const VenueList = ({
   onVenueSelect,
   onLoadMore
 }: VenueListProps) => {
+  const isMobile = useIsMobile();
+  
   return (
-    <div className="mt-4">
+    <div className="mt-2">
       <div className="flex justify-between items-center mb-3">
         <h2 className="text-xl font-bold">Food Venues</h2>
         <span className="text-sm text-gray-500">
-          {isLoading ? 'Loading...' : `${venues.length} results within 5km`}
+          {isLoading ? 'Loading...' : `${venues.length} results`}
         </span>
       </div>
       
@@ -48,12 +51,13 @@ const VenueList = ({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4">
+          <div className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-1 gap-4'}`}>
             {venues.map((venue) => (
               <div 
                 key={venue.id} 
                 id={`venue-${venue.id}`}
                 className={`transition-all duration-200 ${selectedVenue === venue.id ? 'ring-2 ring-visitvibe-primary ring-offset-2' : ''}`}
+                onClick={() => onVenueSelect(venue.id)}
               >
                 <VenueCard
                   venue={venue}
@@ -70,6 +74,7 @@ const VenueList = ({
                 variant="outline" 
                 onClick={onLoadMore}
                 disabled={isLoading}
+                className="w-full md:w-auto"
               >
                 {isLoading ? 'Loading...' : 'Load More Venues'}
               </Button>

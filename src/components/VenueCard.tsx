@@ -4,6 +4,7 @@ import { MapPin, Utensils, Coffee, Share2 } from 'lucide-react';
 import StarRating from './StarRating';
 import { Venue, Visit } from '../types';
 import { toast } from "sonner";
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface VenueCardProps {
   venue: Venue;
@@ -13,6 +14,8 @@ interface VenueCardProps {
 }
 
 const VenueCard = ({ venue, lastVisit, className = '', onClick }: VenueCardProps) => {
+  const isMobile = useIsMobile();
+  
   // Function to determine venue icon based on categories
   const getVenueIcon = () => {
     const categories = venue.category?.map(c => c.toLowerCase()) || [];
@@ -54,22 +57,19 @@ const VenueCard = ({ venue, lastVisit, className = '', onClick }: VenueCardProps
   };
 
   return (
-    <div onClick={onClick} className="cursor-pointer">
-      <Link 
-        to={`/venue/${venue.id}`}
-        className={`block rounded-lg overflow-hidden shadow-md bg-white transition-transform hover:scale-[1.02] ${className}`}
-        onClick={(e) => {
-          if (onClick) {
-            e.preventDefault(); // Prevent navigation when used with onClick
-            onClick();
-          }
-        }}
+    <div 
+      onClick={onClick} 
+      className={`cursor-pointer ${isMobile ? 'active:bg-gray-50' : ''}`}
+    >
+      <div
+        className={`block rounded-lg overflow-hidden shadow-md bg-white transition-transform ${isMobile ? 'hover:bg-gray-50 active:scale-[0.99]' : 'hover:scale-[1.02]'} ${className}`}
       >
         <div className="relative h-40">
           <img
             src={venue.photos?.[0] || 'https://placehold.co/600x400?text=No+Image'}
             alt={venue.name}
             className="w-full h-full object-cover"
+            loading="lazy"
             onError={(e) => {
               (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=No+Image';
             }}
@@ -90,7 +90,7 @@ const VenueCard = ({ venue, lastVisit, className = '', onClick }: VenueCardProps
           {/* Share button */}
           <button
             onClick={handleShare}
-            className="absolute top-3 left-3 bg-black/50 rounded-full p-2 text-white hover:bg-black/70 transition-all"
+            className={`absolute top-3 left-3 bg-black/50 rounded-full p-2 text-white ${isMobile ? 'hover:bg-black/60 active:bg-black/70' : 'hover:bg-black/70'} transition-all`}
             aria-label="Share this venue"
           >
             <Share2 size={16} />
@@ -129,7 +129,7 @@ const VenueCard = ({ venue, lastVisit, className = '', onClick }: VenueCardProps
             </div>
           )}
         </div>
-      </Link>
+      </div>
     </div>
   );
 };

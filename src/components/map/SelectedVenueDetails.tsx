@@ -2,9 +2,11 @@
 import { Button } from "@/components/ui/button";
 import { Venue } from "@/types";
 import { formatDistance } from 'date-fns';
-import { Phone, Globe, MapPin, Clock } from 'lucide-react';
+import { Phone, Globe, MapPin, Clock, Share2 } from 'lucide-react';
 import CheckInButton from "@/components/CheckInButton";
 import WishlistButton from "@/components/WishlistButton";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { toast } from "sonner";
 
 interface SelectedVenueDetailsProps {
   venue: Venue | null;
@@ -17,6 +19,8 @@ const SelectedVenueDetails: React.FC<SelectedVenueDetailsProps> = ({
   onClose,
   onCheckIn,
 }) => {
+  const isMobile = useIsMobile();
+
   if (!venue) {
     return null;
   }
@@ -26,22 +30,41 @@ const SelectedVenueDetails: React.FC<SelectedVenueDetailsProps> = ({
     formatDistance(new Date(venue.lastVisit.timestamp), new Date(), {
       addSuffix: true,
     });
+  
+  // Handle share
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: venue.name,
+        text: `Check out ${venue.name} at ${venue.address}`,
+        url: window.location.href
+      })
+      .then(() => toast.success("Shared successfully"))
+      .catch(error => console.error('Error sharing', error));
+    } else {
+      toast("Sharing not supported on this browser", {
+        description: "Try copying the link directly"
+      });
+    }
+  };
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 bg-white p-4 shadow-lg rounded-t-lg">
+    <div className={isMobile ? "p-2" : "absolute bottom-0 left-0 right-0 bg-white p-4 shadow-lg rounded-t-lg"}>
       <div className="flex items-start justify-between">
         <div>
           <h3 className="text-xl font-bold">{venue.name}</h3>
           <p className="text-gray-500 text-sm">{venue.address}</p>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClose}
-          className="text-gray-500"
-        >
-          ×
-        </Button>
+        {!isMobile && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="text-gray-500"
+          >
+            ×
+          </Button>
+        )}
       </div>
 
       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -51,32 +74,29 @@ const SelectedVenueDetails: React.FC<SelectedVenueDetailsProps> = ({
               src={venue.photos[0]}
               alt={venue.name}
               className="object-cover w-full h-36 rounded"
+              loading="lazy"
             />
           </div>
         )}
 
         <div className="space-y-2">
           {venue.phoneNumber && (
-            <div className="flex items-center space-x-2 text-sm">
+            <a href={`tel:${venue.phoneNumber}`} className="flex items-center space-x-2 text-sm text-blue-500">
               <Phone className="h-4 w-4 text-gray-500" />
-              <a href={`tel:${venue.phoneNumber}`} className="text-blue-500">
-                {venue.phoneNumber}
-              </a>
-            </div>
+              <span>{venue.phoneNumber}</span>
+            </a>
           )}
 
           {venue.website && (
-            <div className="flex items-center space-x-2 text-sm">
+            <a 
+              href={venue.website}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center space-x-2 text-sm text-blue-500"
+            >
               <Globe className="h-4 w-4 text-gray-500" />
-              <a
-                href={venue.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-500"
-              >
-                Website
-              </a>
-            </div>
+              <span>Website</span>
+            </a>
           )}
 
           {venue.address && (
@@ -107,15 +127,23 @@ const SelectedVenueDetails: React.FC<SelectedVenueDetailsProps> = ({
         </div>
       </div>
 
-      <div className="mt-4 flex justify-between">
+      <div className="mt-4 flex justify-between gap-2">
         <Button 
           variant="default" 
           onClick={() => onCheckIn(venue)}
-          className="flex items-center gap-2"
+          className="flex-1 flex items-center justify-center gap-2"
         >
           <span>Check In</span>
         </Button>
-        <WishlistButton venue={venue} />
+        <WishlistButton venue={venue} className="flex-1" />
+        <Button 
+          variant="outline" 
+          onClick={handleShare}
+          size="icon"
+          className="rounded-full"
+        >
+          <Share2 className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   );
