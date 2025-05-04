@@ -1,6 +1,6 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { GoogleMap, LoadScript, Marker, InfoWindow } from '@react-google-maps/api';
+import { GoogleMap, LoadScript, Marker, InfoWindow, Circle } from '@react-google-maps/api';
 import { Venue } from '@/types';
 import { getRatingLevel } from '@/types';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -12,6 +12,8 @@ interface GoogleMapComponentProps {
   selectedVenue?: string | null;
   className?: string;
   onMapMove?: (center: { lat: number; lng: number }) => void;
+  searchRadius?: number;
+  mapStyle?: string;
 }
 
 // Grayscale map style
@@ -31,7 +33,9 @@ const GoogleMapComponent = ({
   userLocation,
   selectedVenue,
   className,
-  onMapMove
+  onMapMove,
+  searchRadius = 2000,
+  mapStyle = "grayscale"
 }: GoogleMapComponentProps) => {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [infoWindow, setInfoWindow] = useState<string | null>(null);
@@ -130,7 +134,7 @@ const GoogleMapComponent = ({
         <GoogleMap
           mapContainerStyle={{ width: '100%', height: '100%', borderRadius: '0.5rem' }}
           options={{
-            styles: grayscaleMapStyle,
+            styles: mapStyle === "grayscale" ? grayscaleMapStyle : undefined,
             disableDefaultUI: false,
             zoomControl: true,
             streetViewControl: false,
@@ -141,6 +145,21 @@ const GoogleMapComponent = ({
           onLoad={onLoad}
           onBoundsChanged={handleBoundsChanged}
         >
+          {/* Search radius circle */}
+          {userLocation && searchRadius && (
+            <Circle
+              center={userLocation}
+              radius={searchRadius}
+              options={{
+                strokeColor: "#3BB2D0",
+                strokeOpacity: 0.5,
+                strokeWeight: 1,
+                fillColor: "#3BB2D0",
+                fillOpacity: 0.1,
+              }}
+            />
+          )}
+          
           {/* User location marker */}
           {userLocation && (
             <Marker

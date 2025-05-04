@@ -8,6 +8,7 @@ import { Venue } from "@/types";
 import { toast } from "sonner";
 import WishlistButton from "@/components/WishlistButton";
 import { mockVenues, mockVisits } from "../data/mockData";
+import EnhancedVenueCard from '@/components/EnhancedVenueCard';
 
 const ExploreView = () => {
   const [activeTab, setActiveTab] = useState<string>("featured");
@@ -203,9 +204,10 @@ const ExploreView = () => {
                 <div className="flex gap-4" style={{ minWidth: 'max-content' }}>
                   {topRatedVenues.map((venue) => (
                     <div key={venue.id} className="w-64 relative">
-                      <VenueCard
+                      <EnhancedVenueCard
                         venue={venue}
                         lastVisit={venue.lastVisit}
+                        onCheckIn={(venue) => handleCheckIn(venue)}
                       />
                       {/* Google rating badge */}
                       {venue.googleRating && (
@@ -324,9 +326,10 @@ const ExploreView = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {topRatedVenues.map((venue) => (
                 <div key={venue.id} className="relative">
-                  <VenueCard
+                  <EnhancedVenueCard
                     venue={venue}
                     lastVisit={venue.lastVisit}
+                    onCheckIn={(venue) => handleCheckIn(venue)}
                   />
                   {/* Google rating badge */}
                   {venue.googleRating && (

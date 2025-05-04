@@ -72,6 +72,17 @@ const MapView = () => {
   // Apply additional filters
   const filteredVenues = filterVenues(venues, filterOptions);
 
+  // Fix the handlePlaceSelect function to handle the type mismatch
+  const handlePlaceSelectWrapper = (place: google.maps.places.PlaceResult) => {
+    if (place && place.geometry && place.geometry.location) {
+      const newLocation = {
+        lat: place.geometry.location.lat(),
+        lng: place.geometry.location.lng(),
+      };
+      setMapCenter(newLocation);
+    }
+  };
+
   // Handle check-in with authentication check
   const handleCheckIn = (venueToCheckIn?: Venue) => {
     const venue = venueToCheckIn || selectedVenueDetails;
@@ -140,7 +151,7 @@ const MapView = () => {
           venues={venues}
           userLocation={userLocation}
           onFilterChange={setFilterOptions}
-          onPlaceSelect={handlePlaceSelect}
+          onPlaceSelect={handlePlaceSelectWrapper}
           className="mb-4"
         />
         

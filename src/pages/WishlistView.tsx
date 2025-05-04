@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { Venue } from '@/types';
 import { useWishlist } from '@/hooks/useWishlist';
-import VenueCard from '../components/VenueCard';
+import EnhancedVenueCard from '@/components/EnhancedVenueCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -145,7 +144,11 @@ const WishlistView = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {filteredVenues.map((venue) => (
           <div key={venue.id} className="relative">
-            <VenueCard venue={venue} lastVisit={venue.lastVisit} />
+            <EnhancedVenueCard
+              venue={venue}
+              lastVisit={venue.lastVisit}
+              onCheckIn={(venue) => handleCheckIn(venue)}
+            />
             
             {/* Wishlist actions */}
             <div className="absolute top-2 right-2 flex gap-2">

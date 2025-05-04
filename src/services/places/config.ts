@@ -27,5 +27,24 @@ export const FOOD_PLACE_TYPES = [
   "ice_cream"
 ];
 
+// Types of places we DON'T want to show in food search
+export const NON_FOOD_PLACE_TYPES = [
+  "gas_station",
+  "hospital",
+  "bank",
+  "pharmacy",
+  "car_dealer",
+  "car_repair",
+  "car_wash",
+  "gym",
+  "school",
+  "university",
+  "church",
+  "mosque",
+  "temple",
+  "library",
+  "post_office"
+];
+
 // Maximum search radius in meters (2km)
 export const SEARCH_RADIUS = 2000;

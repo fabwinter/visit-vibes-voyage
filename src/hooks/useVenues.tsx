@@ -8,7 +8,8 @@ import { useDebounce } from './useDebounce';
 import { useSearchParams } from 'react-router-dom';
 import { SEARCH_RADIUS } from '@/services/places/config';
 
-const libraries = ['places'];
+// Specify the correct type for libraries
+const libraries: ("places" | "drawing" | "geometry" | "visualization" | "localContext")[] = ['places'];
 
 const useMockData = process.env.NODE_ENV === 'development' && process.env.REACT_APP_USE_MOCK_DATA === 'true';
 
@@ -26,7 +27,7 @@ const mapResponseToVenues = (results: google.maps.places.PlaceResult[]): Venue[]
       },
       photos: photoUrls,
       website: place.website || undefined,
-      hours: place.opening_hours?.weekday_text.join('\n') || undefined,
+      hours: place.opening_hours?.weekday_text?.join('\n') || undefined,
       phoneNumber: place.formatted_phone_number || undefined,
       priceLevel: place.price_level || undefined,
       category: place.types || [],
@@ -43,7 +44,7 @@ export const useVenues = () => {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number }>({ lat: 0, lng: 0 });
   const [isLoading, setIsLoading] = useState(false);
   const [usingMockData, setUsingMockData] = useState(false);
-	const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [mapCenter, setMapCenter] = useState<google.maps.LatLngLiteral | null>(null);
   const [showSearchThisArea, setShowSearchThisArea] = useState(false);
@@ -58,17 +59,17 @@ export const useVenues = () => {
   });
 
   // Get initial location from params
-	useEffect(() => {
-		const lat = searchParams.get("lat");
-		const lng = searchParams.get("lng");
+  useEffect(() => {
+    const lat = searchParams.get("lat");
+    const lng = searchParams.get("lng");
 
-		if (lat && lng) {
-			const latitude = parseFloat(lat);
-			const longitude = parseFloat(lng);
+    if (lat && lng) {
+      const latitude = parseFloat(lat);
+      const longitude = parseFloat(lng);
 
-			setUserLocation({ lat: latitude, lng: longitude });
-		}
-	}, [searchParams]);
+      setUserLocation({ lat: latitude, lng: longitude });
+    }
+  }, [searchParams]);
 
   // Get user's current location
   useEffect(() => {
