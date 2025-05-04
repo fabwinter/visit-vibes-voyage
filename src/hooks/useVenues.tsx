@@ -20,8 +20,7 @@ export const useVenues = () => {
     id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
     libraries: libraries,
-    // Skip loading if not using Google Maps
-    isLoadEventEnabled: mapProvider === 'google' && googleApiKeyAvailable,
+    // Remove the unsupported isLoadEventEnabled property
   });
   
   // Use our refactored hooks
