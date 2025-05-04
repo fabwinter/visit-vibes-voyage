@@ -4,7 +4,6 @@ import { useJsApiLoader } from '@react-google-maps/api';
 import { useLocationState } from './useLocationState';
 import { useVenueSearch } from './useVenueSearch';
 import { useSelectedVenue } from './useSelectedVenue';
-import { useMapProvider } from './useMapProvider';
 import { toast } from 'sonner';
 import { Venue } from '@/types';
 
@@ -13,14 +12,12 @@ const libraries = ["places"] as ["places"];
 
 export const useVenues = () => {
   const [pendingAction, setPendingAction] = useState<{type: string, venue: Venue} | null>(null);
-  const { mapProvider, googleApiKeyAvailable } = useMapProvider();
   
-  // Load Google Maps API only if we're using Google Maps
+  // Load Google Maps API
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
     libraries: libraries,
-    // Remove the unsupported isLoadEventEnabled property
   });
   
   // Use our refactored hooks
@@ -32,15 +29,11 @@ export const useVenues = () => {
   useEffect(() => {
     console.log("Google Maps API loaded:", isLoaded);
     console.log("API Key available:", !!import.meta.env.VITE_GOOGLE_MAPS_API_KEY);
-    console.log("Current map provider:", mapProvider);
-  }, [isLoaded, mapProvider]);
+  }, [isLoaded]);
   
-  // Load initial venues when the location, API, or map provider changes
+  // Load initial venues when the location or API changes
   useEffect(() => {
-    if (mapProvider === 'google' && !isLoaded) {
-      console.log("Waiting for Google Maps API to load...");
-      return;
-    }
+    if (!isLoaded) return;
 
     if (locationState.userLocation.lat && locationState.userLocation.lng) {
       console.log("Loading venues with location:", locationState.userLocation);
@@ -50,7 +43,7 @@ export const useVenues = () => {
           toast.error("Failed to load venues. Using mock data instead.");
         });
     }
-  }, [locationState.userLocation, isLoaded, venueSearch.searchNearbyVenues, mapProvider]);
+  }, [locationState.userLocation, isLoaded, venueSearch.searchNearbyVenues]);
   
   // Enhanced function to handle Google place selections
   const handlePlaceSelect = useCallback((place: google.maps.places.PlaceResult) => {
@@ -71,6 +64,7 @@ export const useVenues = () => {
     locationState.setMapCenter(newLocation);
 
     // If the place has a place_id, try to find it in existing venues
+    // or fetch details and add it to venues
     if (place.place_id) {
       // Check if we already have this venue
       const existingVenue = venueSearch.venues.find(v => v.id === place.place_id);
@@ -82,35 +76,10 @@ export const useVenues = () => {
       } else {
         // If not, we might want to fetch its details and add it to venues
         console.log("New place selected, may need to fetch details:", place);
-        
-        // If we have a name and place_id, we can create a temporary venue
-        if (place.name) {
-          // Fix: Use getUrl method for photo references instead of direct access
-          const photos = place.photos ? 
-            place.photos.map(p => {
-              // Use getUrl() method instead of accessing photo_reference directly
-              return p.getUrl({ maxWidth: 400 });
-            }) : [];
-            
-          const tempVenue: Venue = {
-            id: place.place_id,
-            name: place.name,
-            address: place.vicinity || place.formatted_address || "",
-            coordinates: {
-              lat: newLocation.lat,
-              lng: newLocation.lng
-            },
-            category: place.types || [],
-            photos: photos
-          };
-          
-          // Add this venue to our list and select it
-          venueSearch.setVenues(prev => [...prev, tempVenue]);
-          selectedVenueState.handleVenueSelect(tempVenue.id);
-        }
+        // This would be implemented based on your requirements
       }
     }
-  }, [locationState, venueSearch.venues, selectedVenueState, venueSearch.setVenues]);
+  }, [locationState, venueSearch.venues, selectedVenueState]);
   
   // Handle check-in with auth
   const handleCheckIn = useCallback((venue: Venue) => {
@@ -137,9 +106,6 @@ export const useVenues = () => {
     
     // Google Maps API loading state
     isLoaded,
-    
-    // Map provider
-    mapProvider,
     
     // Additional state
     pendingAction,

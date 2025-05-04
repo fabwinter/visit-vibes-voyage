@@ -9,7 +9,7 @@ interface SearchBarProps {
   venues: Venue[];
   userLocation: { lat: number; lng: number };
   onFilterChange: (filters: FilterOptions) => void;
-  onPlaceSelect: (venueOrPlace: Venue | google.maps.places.PlaceResult) => void;
+  onPlaceSelect: (venue: Venue | google.maps.places.PlaceResult) => void;
   className?: string;
 }
 
@@ -40,7 +40,7 @@ const SearchBar = ({
       {/* Search with autocomplete */}
       <PlaceSearchInput 
         onSelect={(placeOrVenue) => {
-          console.log("Place or venue selected:", placeOrVenue);
+          console.log("Place selected:", placeOrVenue);
           onPlaceSelect(placeOrVenue);
         }}
         userLocation={userLocation}

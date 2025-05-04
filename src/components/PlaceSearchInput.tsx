@@ -6,7 +6,6 @@ import { PlacesService } from '@/services/PlacesService';
 import { Venue } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { useMapProvider } from '@/hooks/useMapProvider';
 
 interface PlaceSearchInputProps {
   onSelect: (venue: Venue | google.maps.places.PlaceResult) => void;
@@ -26,7 +25,6 @@ const PlaceSearchInput = ({
   const [results, setResults] = useState<Venue[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
-  const { mapProvider } = useMapProvider();
   
   // Handle click outside to close dropdown
   useEffect(() => {
@@ -44,11 +42,6 @@ const PlaceSearchInput = ({
   
   // Search places when query changes
   useEffect(() => {
-    if (!userLocation.lat || !userLocation.lng) {
-      console.log('Waiting for valid user location...');
-      return;
-    }
-    
     const searchPlaces = async () => {
       if (query.length < 2) {
         setResults([]);
@@ -58,7 +51,6 @@ const PlaceSearchInput = ({
       setIsLoading(true);
       try {
         const venues = await PlacesService.searchPlaces(query, userLocation);
-        console.log(`Search results (${mapProvider}):`, venues);
         setResults(venues);
       } catch (error) {
         console.error('Error searching places:', error);
@@ -71,28 +63,23 @@ const PlaceSearchInput = ({
     
     const debounce = setTimeout(searchPlaces, 300);
     return () => clearTimeout(debounce);
-  }, [query, userLocation, mapProvider]);
+  }, [query, userLocation]);
   
   const handleSelect = async (venue: Venue) => {
     setQuery(venue.name);
     setIsOpen(false);
-    console.log('Selected venue:', venue);
     
+    // Get full details when a place is selected
     try {
-      if (mapProvider === 'google') {
-        // Get full details when a place is selected
-        const details = await PlacesService.getVenueDetails(venue.id);
-        if (details) {
-          console.log('Fetched venue details:', details);
-          onSelect(details);
-          return;
-        }
+      const details = await PlacesService.getVenueDetails(venue.id);
+      if (details) {
+        onSelect(details);
+      } else {
+        onSelect(venue);
       }
-      
-      // If we got here, either we're not using Google Maps or details fetch failed
-      onSelect(venue);
     } catch (error) {
       console.error('Error fetching venue details:', error);
+      // If details fetch fails, still use the basic venue info
       onSelect(venue);
     }
   };
@@ -109,7 +96,7 @@ const PlaceSearchInput = ({
             setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}
-          placeholder={`${placeholder} (using ${mapProvider === 'google' ? 'Google Maps' : 'Mapbox'})`}
+          placeholder={placeholder}
           className="w-full pl-10 pr-4 py-3 rounded-full border border-input bg-background"
         />
         {isLoading && (
@@ -119,7 +106,7 @@ const PlaceSearchInput = ({
         )}
       </div>
       
-      {isOpen && (query.length > 0) && (
+      {isOpen && (
         <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white rounded-md shadow-lg overflow-hidden border">
           <Command className="rounded-lg border shadow-md">
             <CommandList>
