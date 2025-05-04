@@ -70,8 +70,10 @@ const MapView = () => {
       handlePlaceSelect(placeOrVenue as google.maps.places.PlaceResult);
     } else {
       // If it's already a Venue, handle it differently
-      // We could select it directly or transform it
-      handleVenueSelect(placeOrVenue.id);
+      // We need to safely access the id property
+      if ('id' in placeOrVenue) {
+        handleVenueSelect(placeOrVenue.id);
+      }
     }
   };
   
