@@ -7,7 +7,7 @@ import { Venue } from '@/types';
 import { cn } from '@/lib/utils';
 
 interface PlaceSearchInputProps {
-  onSelect: (venue: Venue) => void;
+  onSelect: (venue: Venue | google.maps.places.PlaceResult) => void;
   userLocation: { lat: number; lng: number };
   className?: string;
   placeholder?: string;

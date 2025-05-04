@@ -34,6 +34,39 @@ export const useVenues = () => {
     }
   }, [locationState.userLocation, isLoaded, venueSearch.searchNearbyVenues]);
   
+  // Enhanced function to handle Google place selections
+  const handlePlaceSelect = useCallback((place: google.maps.places.PlaceResult) => {
+    if (!place || !place.geometry || !place.geometry.location) {
+      toast.error("Invalid place selection");
+      return;
+    }
+
+    // Extract location from place
+    const newLocation = {
+      lat: place.geometry.location.lat(),
+      lng: place.geometry.location.lng(),
+    };
+
+    // Update location state
+    locationState.setMapCenter(newLocation);
+
+    // If the place has a place_id, try to find it in existing venues
+    // or fetch details and add it to venues
+    if (place.place_id) {
+      // Check if we already have this venue
+      const existingVenue = venueSearch.venues.find(v => v.id === place.place_id);
+      
+      if (existingVenue) {
+        // If we have it, select it
+        selectedVenueState.handleVenueSelect(existingVenue.id);
+      } else {
+        // If not, we might want to fetch its details and add it to venues
+        // This would depend on your implementation needs
+        console.log("New place selected, may need to fetch details:", place);
+      }
+    }
+  }, [locationState, venueSearch.venues, selectedVenueState]);
+  
   // Handle check-in with auth
   const handleCheckIn = useCallback((venue: Venue) => {
     // This is a stub - the actual logic is in the MapView component
@@ -63,6 +96,9 @@ export const useVenues = () => {
     // Additional state
     pendingAction,
     setPendingAction,
+    
+    // Enhanced place selection handler
+    handlePlaceSelect,
     
     // Check-in methods
     handleCheckIn,

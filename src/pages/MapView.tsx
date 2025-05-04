@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { filterVenues } from '../utils/filterUtils';
@@ -64,9 +63,16 @@ const MapView = () => {
     processCheckIn
   } = useVenues();
   
-  // Fix for the type compatibility issue - create a wrapper function
-  const handlePlaceSelection = (place: google.maps.places.PlaceResult) => {
-    handlePlaceSelect(place);
+  // Updated wrapper function to handle both types correctly
+  const handlePlaceSelection = (placeOrVenue: google.maps.places.PlaceResult | Venue) => {
+    // If it's a Google Place, pass it to the handler
+    if ('place_id' in placeOrVenue) {
+      handlePlaceSelect(placeOrVenue as google.maps.places.PlaceResult);
+    } else {
+      // If it's already a Venue, handle it differently
+      // We could select it directly or transform it
+      handleVenueSelect(placeOrVenue.id);
+    }
   };
   
   // Check if we need to select a venue from navigation state
