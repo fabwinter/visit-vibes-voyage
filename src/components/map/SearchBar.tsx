@@ -39,7 +39,10 @@ const SearchBar = ({
     <div className={className}>
       {/* Search with autocomplete */}
       <PlaceSearchInput 
-        onSelect={onPlaceSelect}
+        onSelect={(placeOrVenue) => {
+          console.log("Place selected:", placeOrVenue);
+          onPlaceSelect(placeOrVenue);
+        }}
         userLocation={userLocation}
         className="mb-4"
       />

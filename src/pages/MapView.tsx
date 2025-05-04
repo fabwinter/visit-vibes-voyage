@@ -63,16 +63,28 @@ const MapView = () => {
     processCheckIn
   } = useVenues();
   
+  // Log initial setup
+  useEffect(() => {
+    console.log("MapView loaded, venues:", venues.length, "userLocation:", userLocation);
+  }, [venues, userLocation]);
+  
   // Updated wrapper function to handle both types correctly
   const handlePlaceSelection = (placeOrVenue: google.maps.places.PlaceResult | Venue) => {
+    console.log("handlePlaceSelection called with:", placeOrVenue);
+    
     // If it's a Google Place, pass it to the handler
     if ('place_id' in placeOrVenue) {
+      console.log("Handling as PlaceResult");
       handlePlaceSelect(placeOrVenue as google.maps.places.PlaceResult);
     } else {
       // If it's already a Venue, handle it differently
+      console.log("Handling as Venue");
       // We need to safely access the id property
       if ('id' in placeOrVenue) {
+        console.log("Selecting venue with ID:", placeOrVenue.id);
         handleVenueSelect(placeOrVenue.id);
+      } else {
+        console.error("Received object with neither place_id nor id:", placeOrVenue);
       }
     }
   };
@@ -132,6 +144,13 @@ const MapView = () => {
   const handleCloseVenueSheet = () => {
     setShowVenueSheet(false);
   };
+
+  // Show error if venues failed to load
+  useEffect(() => {
+    if (!isLoading && venues.length === 0 && userLocation.lat !== 0) {
+      toast.info("No venues found in this area. Try searching in a different location.");
+    }
+  }, [venues, isLoading, userLocation]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-132px)] md:flex-row">

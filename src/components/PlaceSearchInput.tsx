@@ -5,6 +5,7 @@ import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, Command
 import { PlacesService } from '@/services/PlacesService';
 import { Venue } from '@/types';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface PlaceSearchInputProps {
   onSelect: (venue: Venue | google.maps.places.PlaceResult) => void;
@@ -53,6 +54,8 @@ const PlaceSearchInput = ({
         setResults(venues);
       } catch (error) {
         console.error('Error searching places:', error);
+        toast.error('Search failed. Please try again.');
+        setResults([]);
       } finally {
         setIsLoading(false);
       }
@@ -76,6 +79,7 @@ const PlaceSearchInput = ({
       }
     } catch (error) {
       console.error('Error fetching venue details:', error);
+      // If details fetch fails, still use the basic venue info
       onSelect(venue);
     }
   };
@@ -93,7 +97,7 @@ const PlaceSearchInput = ({
           }}
           onFocus={() => setIsOpen(true)}
           placeholder={placeholder}
-          className="w-full pl-10 pr-4 py-6 rounded-full border border-input bg-background"
+          className="w-full pl-10 pr-4 py-3 rounded-full border border-input bg-background"
         />
         {isLoading && (
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2">

@@ -25,12 +25,23 @@ export const useVenues = () => {
   const venueSearch = useVenueSearch();
   const selectedVenueState = useSelectedVenue(venueSearch.venues);
   
+  // Log when isLoaded state changes
+  useEffect(() => {
+    console.log("Google Maps API loaded:", isLoaded);
+    console.log("API Key available:", !!import.meta.env.VITE_GOOGLE_MAPS_API_KEY);
+  }, [isLoaded]);
+  
   // Load initial venues when the location or API changes
   useEffect(() => {
     if (!isLoaded) return;
 
     if (locationState.userLocation.lat && locationState.userLocation.lng) {
-      venueSearch.searchNearbyVenues(locationState.userLocation);
+      console.log("Loading venues with location:", locationState.userLocation);
+      venueSearch.searchNearbyVenues(locationState.userLocation)
+        .catch(error => {
+          console.error("Failed to search venues:", error);
+          toast.error("Failed to load venues. Using mock data instead.");
+        });
     }
   }, [locationState.userLocation, isLoaded, venueSearch.searchNearbyVenues]);
   
@@ -40,6 +51,8 @@ export const useVenues = () => {
       toast.error("Invalid place selection");
       return;
     }
+
+    console.log("Place selected:", place);
 
     // Extract location from place
     const newLocation = {
@@ -58,11 +71,12 @@ export const useVenues = () => {
       
       if (existingVenue) {
         // If we have it, select it
+        console.log("Selecting existing venue:", existingVenue.name);
         selectedVenueState.handleVenueSelect(existingVenue.id);
       } else {
         // If not, we might want to fetch its details and add it to venues
-        // This would depend on your implementation needs
         console.log("New place selected, may need to fetch details:", place);
+        // This would be implemented based on your requirements
       }
     }
   }, [locationState, venueSearch.venues, selectedVenueState]);

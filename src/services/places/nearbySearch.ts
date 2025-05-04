@@ -1,18 +1,23 @@
 
 import { API_KEY, PROXY_URL, FOOD_PLACE_TYPES } from "./config";
 import { PlacesSearchParams, PlacesSearchResponse } from "./types";
-import { generatePhotoURL } from "./utils";
+import { generatePhotoURL, convertPlaceToVenue } from "./utils";
 import { Venue } from "@/types";
+import { toast } from "sonner";
 
 // Search nearby venues
 export const searchNearbyVenues = async (params: PlacesSearchParams): Promise<PlacesSearchResponse> => {
   try {
+    console.log("Searching for nearby venues with params:", params);
+    
     // Build API URL
     let apiUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?`;
     
     // Add location if available
     if (params.location) {
       apiUrl += `location=${params.location.lat},${params.location.lng}&`;
+    } else {
+      throw new Error("Location is required for nearby search");
     }
     
     // Add radius (default 500m, now using 2000m as requested)
@@ -38,14 +43,28 @@ export const searchNearbyVenues = async (params: PlacesSearchParams): Promise<Pl
     // Add API key
     apiUrl += `key=${API_KEY}`;
     
+    console.log("Making Places API request via proxy");
+    
     // Make the API call via proxy to avoid CORS issues
     const response = await fetch(`${PROXY_URL}${encodeURIComponent(apiUrl)}`);
+    
+    if (!response.ok) {
+      throw new Error(`API request failed with status: ${response.status}`);
+    }
+    
     const data = await response.json();
+    console.log("Places API response:", data);
     
     // Check for error
     if (data.error_message) {
       console.error("Places API error:", data.error_message);
       throw new Error(data.error_message);
+    }
+    
+    // Check if results exist
+    if (!data.results || !Array.isArray(data.results)) {
+      console.warn("No results returned from Places API or invalid format");
+      return { venues: [], nextPageToken: null };
     }
     
     // Transform results to our Venue format
@@ -88,6 +107,8 @@ export const searchNearbyVenues = async (params: PlacesSearchParams): Promise<Pl
       };
     });
     
+    console.log(`Transformed ${venues.length} venues from Places API`);
+    
     // Return venues and next_page_token if available for pagination
     return {
       venues,
@@ -95,6 +116,7 @@ export const searchNearbyVenues = async (params: PlacesSearchParams): Promise<Pl
     };
   } catch (error) {
     console.error("Error searching nearby venues:", error);
+    toast.error("Failed to load venues. Please try again later.");
     throw error;
   }
 };
