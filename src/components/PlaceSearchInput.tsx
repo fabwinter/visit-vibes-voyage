@@ -42,6 +42,11 @@ const PlaceSearchInput = ({
   
   // Search places when query changes
   useEffect(() => {
+    if (!userLocation.lat || !userLocation.lng) {
+      console.log('Waiting for valid user location...');
+      return;
+    }
+    
     const searchPlaces = async () => {
       if (query.length < 2) {
         setResults([]);
@@ -51,6 +56,7 @@ const PlaceSearchInput = ({
       setIsLoading(true);
       try {
         const venues = await PlacesService.searchPlaces(query, userLocation);
+        console.log('Search results:', venues);
         setResults(venues);
       } catch (error) {
         console.error('Error searching places:', error);
@@ -68,11 +74,13 @@ const PlaceSearchInput = ({
   const handleSelect = async (venue: Venue) => {
     setQuery(venue.name);
     setIsOpen(false);
+    console.log('Selected venue:', venue);
     
     // Get full details when a place is selected
     try {
       const details = await PlacesService.getVenueDetails(venue.id);
       if (details) {
+        console.log('Fetched venue details:', details);
         onSelect(details);
       } else {
         onSelect(venue);
@@ -106,7 +114,7 @@ const PlaceSearchInput = ({
         )}
       </div>
       
-      {isOpen && (
+      {isOpen && (query.length > 0) && (
         <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white rounded-md shadow-lg overflow-hidden border">
           <Command className="rounded-lg border shadow-md">
             <CommandList>

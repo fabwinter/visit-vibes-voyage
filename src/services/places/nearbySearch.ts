@@ -67,6 +67,12 @@ export const searchNearbyVenues = async (params: PlacesSearchParams): Promise<Pl
       return { venues: [], nextPageToken: null };
     }
     
+    if (data.status === "ZERO_RESULTS") {
+      console.log("Zero results returned from Places API");
+      toast.info("No venues found in this area. Try a different location.");
+      return { venues: [], nextPageToken: null };
+    }
+    
     // Transform results to our Venue format
     const venues: Venue[] = data.results.map((place: any) => {
       // Generate photo URL if available

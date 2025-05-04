@@ -64,7 +64,6 @@ export const useVenues = () => {
     locationState.setMapCenter(newLocation);
 
     // If the place has a place_id, try to find it in existing venues
-    // or fetch details and add it to venues
     if (place.place_id) {
       // Check if we already have this venue
       const existingVenue = venueSearch.venues.find(v => v.id === place.place_id);
@@ -76,10 +75,30 @@ export const useVenues = () => {
       } else {
         // If not, we might want to fetch its details and add it to venues
         console.log("New place selected, may need to fetch details:", place);
-        // This would be implemented based on your requirements
+        
+        // If we have a name and place_id, we can create a temporary venue
+        if (place.name) {
+          const tempVenue: Venue = {
+            id: place.place_id,
+            name: place.name,
+            address: place.vicinity || place.formatted_address || "",
+            coordinates: {
+              lat: newLocation.lat,
+              lng: newLocation.lng
+            },
+            category: place.types || [],
+            photos: place.photos ? 
+              place.photos.map(p => `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${p.photo_reference}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`) : 
+              []
+          };
+          
+          // Add this venue to our list and select it
+          venueSearch.setVenues(prev => [...prev, tempVenue]);
+          selectedVenueState.handleVenueSelect(tempVenue.id);
+        }
       }
     }
-  }, [locationState, venueSearch.venues, selectedVenueState]);
+  }, [locationState, venueSearch.venues, selectedVenueState, venueSearch.setVenues]);
   
   // Handle check-in with auth
   const handleCheckIn = useCallback((venue: Venue) => {
