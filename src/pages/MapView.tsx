@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { filterVenues } from '../utils/filterUtils';
@@ -73,8 +74,10 @@ const MapView = () => {
   const filteredVenues = filterVenues(venues, filterOptions);
 
   // Handle check-in with authentication check
-  const handleCheckIn = () => {
-    if (!selectedVenueDetails) {
+  const handleCheckIn = (venueToCheckIn?: Venue) => {
+    const venue = venueToCheckIn || selectedVenueDetails;
+    
+    if (!venue) {
       toast.error("Please select a venue first");
       return;
     }
@@ -82,7 +85,7 @@ const MapView = () => {
     if (!isAuthenticated) {
       setPendingAction({
         type: 'check-in',
-        venue: selectedVenueDetails
+        venue: venue
       });
       setShowAuthModal(true);
       return;
@@ -121,7 +124,7 @@ const MapView = () => {
       {/* Map Area - Takes full width on mobile, left side on desktop */}
       <div className={`${isMobile ? 'h-[50vh]' : ''} w-full md:w-1/2 lg:w-3/5 md:h-full`}>
         <MapArea
-          venues={[...(selectedVenueDetails ? [selectedVenueDetails] : []), ...surroundingVenues]}
+          venues={venues}
           userLocation={userLocation}
           selectedVenue={selectedVenue}
           showSearchThisArea={showSearchThisArea}
@@ -176,6 +179,7 @@ const MapView = () => {
                   nextPageToken={nextPageToken}
                   onVenueSelect={handleVenueSelect}
                   onLoadMore={handleLoadMore}
+                  onCheckIn={handleCheckIn}
                 />
               </div>
             </SheetContent>
@@ -199,6 +203,7 @@ const MapView = () => {
                     venue={selectedVenueDetails}
                     lastVisit={selectedVenueDetails.lastVisit}
                     onClick={() => handleVenueSelect(selectedVenueDetails.id)}
+                    onCheckIn={handleCheckIn}
                   />
                 </div>
               </div>
@@ -223,6 +228,7 @@ const MapView = () => {
                         venue={venue}
                         lastVisit={venue.lastVisit}
                         onClick={() => handleVenueSelect(venue.id)}
+                        onCheckIn={handleCheckIn}
                       />
                     </div>
                   ))}
@@ -242,6 +248,7 @@ const MapView = () => {
               nextPageToken={nextPageToken}
               onVenueSelect={handleVenueSelect}
               onLoadMore={handleLoadMore}
+              onCheckIn={handleCheckIn}
             />
           </div>
         )}
@@ -266,13 +273,13 @@ const MapView = () => {
       {/* Floating check-in button - adjusted position for mobile */}
       <CheckInButton 
         className={`fixed ${isMobile ? 'right-4 bottom-20' : 'right-6 bottom-24'} w-14 h-14`}
-        onClick={handleCheckIn}
+        onClick={() => handleCheckIn()}
       />
 
       {/* Check-in form dialog */}
-      {selectedVenueDetails && (
+      {selectedVenueDetails && pendingAction?.venue && (
         <CheckInForm
-          venue={selectedVenueDetails}
+          venue={pendingAction.type === 'check-in' ? pendingAction.venue : selectedVenueDetails}
           isOpen={isCheckInOpen}
           onClose={() => setIsCheckInOpen(false)}
           onCheckIn={handleProcessCheckIn}

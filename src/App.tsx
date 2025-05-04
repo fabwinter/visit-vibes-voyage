@@ -15,7 +15,19 @@ import ProfileView from "./pages/ProfileView";
 import VisitDetailsView from "./pages/VisitDetailsView";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+// Make API keys available
+if (!process.env.GOOGLE_MAPS_API_KEY) {
+  console.warn("Google Maps API key not set. Map functionality will be limited.");
+}
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

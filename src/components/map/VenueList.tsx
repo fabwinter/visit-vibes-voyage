@@ -12,6 +12,7 @@ interface VenueListProps {
   nextPageToken?: string;
   onVenueSelect: (venueId: string) => void;
   onLoadMore: () => void;
+  onCheckIn?: (venue: Venue) => void;
 }
 
 const VenueList = ({
@@ -21,7 +22,8 @@ const VenueList = ({
   selectedVenue,
   nextPageToken,
   onVenueSelect,
-  onLoadMore
+  onLoadMore,
+  onCheckIn
 }: VenueListProps) => {
   const isMobile = useIsMobile();
   
@@ -63,6 +65,7 @@ const VenueList = ({
                   venue={venue}
                   lastVisit={venue.lastVisit}
                   onClick={() => onVenueSelect(venue.id)}
+                  onCheckIn={onCheckIn ? () => onCheckIn(venue) : undefined}
                 />
               </div>
             ))}

@@ -35,8 +35,8 @@ export const useVenueSearch = ({ userLocation, mapCenter, visits }: UseVenueSear
       console.log("Attempting to fetch venues from API...");
       const result = await PlacesService.searchNearbyVenues({
         location: searchLocation || userLocation,
-        radius: 5000, // 5km radius
-        type: "restaurant", // Default to food venues
+        radius: 2000, // Changed from 5km to 2km (2000m) as requested
+        type: "restaurant", // Will be modified to include all food venues in the API service
         pageToken: pageToken
       });
       
@@ -129,7 +129,7 @@ export const useVenueSearch = ({ userLocation, mapCenter, visits }: UseVenueSear
     }
   };
   
-  // Handle place selection from autocomplete - enhanced to center map
+  // Handle place selection from autocomplete
   const handlePlaceSelect = async (venue: Venue) => {
     console.log("Selected venue:", venue);
     

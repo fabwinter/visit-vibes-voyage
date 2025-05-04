@@ -1,20 +1,25 @@
 
 import { Link } from 'react-router-dom';
-import { MapPin, Utensils, Coffee, Share2 } from 'lucide-react';
+import { MapPin, Utensils, Coffee, Share2, Plus, Star } from 'lucide-react';
 import StarRating from './StarRating';
 import { Venue, Visit } from '../types';
 import { toast } from "sonner";
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Button } from '@/components/ui/button';
+import { useAuthContext } from '@/hooks/useAuthContext';
+import WishlistButton from './WishlistButton';
 
 interface VenueCardProps {
   venue: Venue;
   lastVisit?: Visit;
   className?: string;
   onClick?: () => void;
+  onCheckIn?: (venue: Venue) => void;
 }
 
-const VenueCard = ({ venue, lastVisit, className = '', onClick }: VenueCardProps) => {
+const VenueCard = ({ venue, lastVisit, className = '', onClick, onCheckIn }: VenueCardProps) => {
   const isMobile = useIsMobile();
+  const { isAuthenticated, setShowAuthModal } = useAuthContext();
   
   // Function to determine venue icon based on categories
   const getVenueIcon = () => {
@@ -41,6 +46,12 @@ const VenueCard = ({ venue, lastVisit, className = '', onClick }: VenueCardProps
     e.preventDefault(); // Prevent navigation
     e.stopPropagation(); // Prevent triggering the card click
     
+    if (!isAuthenticated) {
+      toast.error("Please sign in to share venues");
+      setShowAuthModal(true);
+      return;
+    }
+    
     if (navigator.share) {
       navigator.share({
         title: venue.name,
@@ -53,6 +64,22 @@ const VenueCard = ({ venue, lastVisit, className = '', onClick }: VenueCardProps
       toast("Sharing not supported on this browser", {
         description: "Try copying the link directly"
       });
+    }
+  };
+  
+  // Handle check-in
+  const handleCheckIn = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!isAuthenticated) {
+      toast.error("Please sign in to check in to venues");
+      setShowAuthModal(true);
+      return;
+    }
+    
+    if (onCheckIn) {
+      onCheckIn(venue);
     }
   };
 
@@ -128,6 +155,31 @@ const VenueCard = ({ venue, lastVisit, className = '', onClick }: VenueCardProps
               )}
             </div>
           )}
+          
+          {/* Action buttons */}
+          <div className="mt-4 pt-3 border-t border-gray-100 flex gap-2 justify-between">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex-1 text-xs flex items-center gap-1"
+              onClick={handleCheckIn}
+            >
+              <Plus className="h-3 w-3" />
+              Check-in
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 text-xs flex items-center gap-1"
+              onClick={handleShare}
+            >
+              <Share2 className="h-3 w-3" />
+              Share
+            </Button>
+            
+            <WishlistButton venue={venue} type="icon" className="flex-grow-0" />
+          </div>
         </div>
       </div>
     </div>

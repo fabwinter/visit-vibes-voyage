@@ -15,13 +15,20 @@ export const searchNearbyVenues = async (params: PlacesSearchParams): Promise<Pl
       apiUrl += `location=${params.location.lat},${params.location.lng}&`;
     }
     
-    // Add radius (default 500m)
-    apiUrl += `radius=${params.radius || 500}&`;
+    // Add radius (default 500m, now using 2000m as requested)
+    apiUrl += `radius=${params.radius || 2000}&`;
     
-    // Add type if available
+    // Use multiple types for food venues
+    // Note: Google Places API only allows one type per request
+    // We'll use the most general food type and filter results later
     if (params.type) {
       apiUrl += `type=${params.type}&`;
+    } else {
+      apiUrl += `type=restaurant&`; // Default to restaurant as it's most common
     }
+    
+    // Add keyword to include all food establishments
+    apiUrl += `keyword=food,cafe,restaurant,bar&`;
     
     // Add page token if available for pagination
     if (params.pageToken) {
@@ -54,6 +61,7 @@ export const searchNearbyVenues = async (params: PlacesSearchParams): Promise<Pl
         : "Hours not available";
         
       // Extract place types that match our food place types
+      // This helps categorize the venue correctly
       const category = place.types
         .filter((type: string) => FOOD_PLACE_TYPES.includes(type))
         .map((type: string) => {

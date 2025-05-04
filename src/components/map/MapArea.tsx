@@ -1,7 +1,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Search } from 'lucide-react';
-import MapComponent from '../MapComponent';
+import GoogleMapComponent from './GoogleMapComponent';
 import { Venue } from '@/types';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -29,7 +29,7 @@ const MapArea = ({
   return (
     <div className={`w-full ${isMobile ? 'h-full' : 'md:h-full md:order-1'} p-2 relative`}>
       <div className="h-full rounded-lg overflow-hidden border border-gray-200 shadow-md">
-        <MapComponent 
+        <GoogleMapComponent 
           venues={venues} 
           onVenueSelect={onVenueSelect}
           userLocation={userLocation}
