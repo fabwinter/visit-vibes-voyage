@@ -24,13 +24,14 @@ export const useWishlist = () => {
         const wishlistVenues = items.map(item => {
           const venue = venues.find(v => v.id === item.venueId);
           if (venue) {
-            // Fix the type predicate issue by properly extending the Venue type
-            return {
+            // Create a properly typed Venue object with the wishlist properties
+            const venueWithWishlist: Venue = {
               ...venue,
               inWishlist: true,
               wishlistTags: item.tags,
               wishlistCategory: item.category
             };
+            return venueWithWishlist;
           }
           return null;
         }).filter((v): v is Venue => v !== null);
