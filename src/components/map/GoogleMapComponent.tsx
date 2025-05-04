@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { GoogleMap, LoadScript, Marker, InfoWindow, Circle } from '@react-google-maps/api';
 import { Venue } from '@/types';
@@ -130,7 +129,7 @@ const GoogleMapComponent = ({
 
   return (
     <div className={`relative w-full h-full ${className}`}>
-      <LoadScript googleMapsApiKey={process.env.GOOGLE_MAPS_API_KEY || ""}>
+      <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ""}>
         <GoogleMap
           mapContainerStyle={{ width: '100%', height: '100%', borderRadius: '0.5rem' }}
           options={{
@@ -218,7 +217,7 @@ const GoogleMapComponent = ({
         </GoogleMap>
       </LoadScript>
 
-      {!process.env.GOOGLE_MAPS_API_KEY && (
+      {!import.meta.env.VITE_GOOGLE_MAPS_API_KEY && (
         <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10 p-4 text-center">
           <div>
             <p className="text-red-500 font-bold">Google Maps API key not set</p>

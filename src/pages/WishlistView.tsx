@@ -29,6 +29,13 @@ const WishlistView = () => {
   const [editingVenueTags, setEditingVenueTags] = useState<string[]>([]);
   const [editingVenueCategory, setEditingVenueCategory] = useState<string>('');
 
+  // Add the missing handleCheckIn function
+  const handleCheckIn = (venue: Venue) => {
+    console.log("Checking in to venue:", venue.name);
+    // Implementation for check-in functionality
+    toast.info(`Check-in to ${venue.name}`);
+  };
+
   // Update filtered venues when wishlist or filters change
   useEffect(() => {
     const filtered = filterWishlistVenues(wishlistVenues, filters);
@@ -147,7 +154,7 @@ const WishlistView = () => {
             <EnhancedVenueCard
               venue={venue}
               lastVisit={venue.lastVisit}
-              onCheckIn={(venue) => handleCheckIn(venue)}
+              onCheckIn={handleCheckIn}
             />
             
             {/* Wishlist actions */}

@@ -76,6 +76,7 @@ const EnhancedVenueCard: React.FC<EnhancedVenueCardProps> = ({
         venue={venue}
         lastVisit={lastVisit}
         onClick={onClick}
+        onCheckIn={onCheckIn}
       />
       
       {/* Action buttons */}

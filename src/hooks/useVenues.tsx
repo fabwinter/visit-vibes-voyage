@@ -9,9 +9,10 @@ import { useSearchParams } from 'react-router-dom';
 import { SEARCH_RADIUS } from '@/services/places/config';
 
 // Specify the correct type for libraries
-const libraries: ("places" | "drawing" | "geometry" | "visualization" | "localContext")[] = ['places'];
+// Updated to use a string literal type to match expected library values
+const libraries: ["places" | "drawing" | "geometry" | "visualization"][] = ['places'];
 
-const useMockData = process.env.NODE_ENV === 'development' && process.env.REACT_APP_USE_MOCK_DATA === 'true';
+const useMockData = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_DATA === 'true';
 
 const mapResponseToVenues = (results: google.maps.places.PlaceResult[]): Venue[] => {
   return results.map(place => {
@@ -54,7 +55,7 @@ export const useVenues = () => {
   
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || '',
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
     libraries: libraries,
   });
 

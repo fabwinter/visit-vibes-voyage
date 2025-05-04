@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { filterVenues } from '../utils/filterUtils';
@@ -7,7 +8,7 @@ import { FilterOptions } from '../components/VenueFilters';
 import { Venue } from '@/types';
 import { toast } from "sonner";
 import { useIsMobile } from '../hooks/use-mobile';
-import EnhancedVenueCard from '../components/EnhancedVenueCard';
+import EnhancedVenueCard from '@/components/EnhancedVenueCard';
 
 // Import refactored components
 import SearchBar from '../components/map/SearchBar';
@@ -73,7 +74,7 @@ const MapView = () => {
   const filteredVenues = filterVenues(venues, filterOptions);
 
   // Fix the handlePlaceSelect function to handle the type mismatch
-  const handlePlaceSelectWrapper = (place: google.maps.places.PlaceResult) => {
+  const handlePlaceSelectWrapper = (place: any) => {
     if (place && place.geometry && place.geometry.location) {
       const newLocation = {
         lat: place.geometry.location.lat(),

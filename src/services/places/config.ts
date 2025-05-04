@@ -2,7 +2,8 @@
 // Google Places API configuration
 
 // API key to use for Places API requests
-export const API_KEY = process.env.GOOGLE_MAPS_API_KEY || ""; 
+// Using Vite's import.meta.env instead of process.env
+export const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ""; 
 
 // Proxy URL to avoid CORS issues when calling the API
 export const PROXY_URL = "/api/places-proxy?url=";

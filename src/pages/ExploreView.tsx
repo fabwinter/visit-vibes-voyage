@@ -10,6 +10,7 @@ import WishlistButton from "@/components/WishlistButton";
 import { mockVenues, mockVisits } from "../data/mockData";
 import EnhancedVenueCard from '@/components/EnhancedVenueCard';
 
+// Create a local handleCheckIn function for the ExploreView
 const ExploreView = () => {
   const [activeTab, setActiveTab] = useState<string>("featured");
   const [topRatedVenues, setTopRatedVenues] = useState<Venue[]>([]);
@@ -20,6 +21,14 @@ const ExploreView = () => {
   useEffect(() => {
     fetchTopRatedVenues();
   }, []);
+
+  const handleCheckIn = (venue: Venue) => {
+    // Implementation details here
+    console.log("Checking in to venue:", venue.name);
+    // You would typically open a check-in form or dialog here
+    // For now, just show a toast
+    toast.info(`Check-in to ${venue.name}`);
+  };
 
   const fetchTopRatedVenues = async () => {
     setIsLoading(true);
@@ -207,7 +216,7 @@ const ExploreView = () => {
                       <EnhancedVenueCard
                         venue={venue}
                         lastVisit={venue.lastVisit}
-                        onCheckIn={(venue) => handleCheckIn(venue)}
+                        onCheckIn={handleCheckIn}
                       />
                       {/* Google rating badge */}
                       {venue.googleRating && (
@@ -329,7 +338,7 @@ const ExploreView = () => {
                   <EnhancedVenueCard
                     venue={venue}
                     lastVisit={venue.lastVisit}
-                    onCheckIn={(venue) => handleCheckIn(venue)}
+                    onCheckIn={handleCheckIn}
                   />
                   {/* Google rating badge */}
                   {venue.googleRating && (
