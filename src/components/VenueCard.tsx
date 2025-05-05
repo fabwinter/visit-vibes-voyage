@@ -1,105 +1,136 @@
-import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { MapPin, Check, Star, Clock, Info } from 'lucide-react';
-import { Venue, Visit } from '@/types';
-import { formatDistanceToNow } from 'date-fns';
 
-export interface VenueCardProps {
+import { Link } from 'react-router-dom';
+import { MapPin, Utensils, Coffee, Share2 } from 'lucide-react';
+import StarRating from './StarRating';
+import { Venue, Visit } from '../types';
+import { toast } from "sonner";
+
+interface VenueCardProps {
   venue: Venue;
   lastVisit?: Visit;
-  onClick: () => void;
+  className?: string;
+  onClick?: () => void;
 }
 
-const VenueCard: React.FC<VenueCardProps> = ({
-  venue,
-  lastVisit,
-  onClick,
-}) => {
-  const renderGoogleRating = () => {
-    if (!venue.googleRating) return null;
+const VenueCard = ({ venue, lastVisit, className = '', onClick }: VenueCardProps) => {
+  // Function to determine venue icon based on categories
+  const getVenueIcon = () => {
+    const categories = venue.category?.map(c => c.toLowerCase()) || [];
     
-    return (
-      <div className="flex items-center text-xs">
-        <Star className="h-3 w-3 text-amber-500 mr-0.5 fill-amber-500" />
-        <span>{venue.googleRating.toFixed(1)}</span>
-      </div>
-    );
+    if (categories.some(c => c.includes('cafe') || c.includes('coffee'))) {
+      return <Coffee className="w-4 h-4 mr-1" />;
+    }
+    
+    return <Utensils className="w-4 h-4 mr-1" />;
   };
-
-  const renderLastVisit = () => {
-    if (!lastVisit) return null;
+  
+  // Format category names for display
+  const formatCategory = (category: string) => {
+    return category
+      .replace(/_/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+  
+  // Handle share action
+  const handleShare = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent navigation
+    e.stopPropagation(); // Prevent triggering the card click
     
-    const visitTimeAgo = formatDistanceToNow(new Date(lastVisit.timestamp), { addSuffix: true });
-    
-    return (
-      <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
-        <Check className="h-3 w-3" />
-        <span>Visited {visitTimeAgo}</span>
-        {lastVisit.rating?.overall && (
-          <div className="flex items-center ml-1">
-            <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
-            <span>{lastVisit.rating.overall.toFixed(1)}</span>
-          </div>
-        )}
-      </div>
-    );
+    if (navigator.share) {
+      navigator.share({
+        title: venue.name,
+        text: `Check out ${venue.name} at ${venue.address}`,
+        url: window.location.href
+      })
+      .then(() => toast.success("Shared successfully"))
+      .catch(error => console.error('Error sharing', error));
+    } else {
+      toast("Sharing not supported on this browser", {
+        description: "Try copying the link directly"
+      });
+    }
   };
 
   return (
-    <Card 
-      className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
-      onClick={onClick}
-    >
-      <div className="relative">
-        {venue.photos && venue.photos.length > 0 ? (
-          <div className="h-32 overflow-hidden">
-            <img 
-              src={venue.photos[0]} 
-              alt={venue.name} 
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=No+Image';
-              }}
-            />
-          </div>
-        ) : (
-          <div className="h-32 bg-gray-100 flex items-center justify-center">
-            <Info className="h-6 w-6 text-gray-400" />
-          </div>
-        )}
-      </div>
-      
-      <CardContent className="p-3">
-        <div className="flex justify-between items-start">
-          <h3 className="font-medium text-base line-clamp-1">{venue.name}</h3>
-          {renderGoogleRating()}
+    <div onClick={onClick} className="cursor-pointer">
+      <Link 
+        to={`/venue/${venue.id}`}
+        className={`block rounded-lg overflow-hidden shadow-md bg-white transition-transform hover:scale-[1.02] ${className}`}
+        onClick={(e) => {
+          if (onClick) {
+            e.preventDefault(); // Prevent navigation when used with onClick
+            onClick();
+          }
+        }}
+      >
+        <div className="relative h-40">
+          <img
+            src={venue.photos?.[0] || 'https://placehold.co/600x400?text=No+Image'}
+            alt={venue.name}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=No+Image';
+            }}
+          />
+          
+          {venue.priceLevel !== undefined && (
+            <div className="absolute top-3 right-3 bg-black bg-opacity-50 text-white px-2 py-1 rounded">
+              {'$'.repeat(venue.priceLevel)}
+            </div>
+          )}
+          
+          {lastVisit && (
+            <div className="absolute bottom-3 right-3 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+              Last visited: {new Date(lastVisit.timestamp).toLocaleDateString()}
+            </div>
+          )}
+          
+          {/* Share button */}
+          <button
+            onClick={handleShare}
+            className="absolute top-3 left-3 bg-black/50 rounded-full p-2 text-white hover:bg-black/70 transition-all"
+            aria-label="Share this venue"
+          >
+            <Share2 size={16} />
+          </button>
         </div>
         
-        <div className="flex items-start gap-1 mt-1 text-xs text-gray-500">
-          <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
-          <span className="line-clamp-1">{venue.address}</span>
-        </div>
-        
-        {renderLastVisit()}
-        
-        {venue.category && venue.category.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-2">
-            {venue.category.slice(0, 2).map((cat, i) => (
-              <Badge key={i} variant="outline" className="text-[0.65rem] py-0 px-1.5">
-                {cat.replace(/_/g, ' ')}
-              </Badge>
-            ))}
-            {venue.category.length > 2 && (
-              <Badge variant="outline" className="text-[0.65rem] py-0 px-1.5">
-                +{venue.category.length - 2}
-              </Badge>
-            )}
+        <div className="p-4">
+          <h3 className="text-lg font-semibold">{venue.name}</h3>
+          
+          <div className="flex items-center text-gray-600 text-sm mt-1">
+            <MapPin className="w-4 h-4 mr-1" />
+            <span className="truncate">{venue.address}</span>
           </div>
-        )}
-      </CardContent>
-    </Card>
+          
+          {lastVisit && (
+            <div className="mt-2">
+              <StarRating rating={lastVisit.rating.overall} size="md" />
+              {lastVisit.wouldVisitAgain !== undefined && (
+                <div className={`text-xs mt-1 ${lastVisit.wouldVisitAgain ? 'text-green-600' : 'text-red-600'}`}>
+                  {lastVisit.wouldVisitAgain ? 'Would visit again' : 'Would not visit again'}
+                </div>
+              )}
+            </div>
+          )}
+          
+          {venue.category && venue.category.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1">
+              {venue.category.slice(0, 3).map((cat) => (
+                <span key={cat} className="tag-badge">
+                  {formatCategory(cat)}
+                </span>
+              ))}
+              {venue.category.length > 3 && (
+                <span className="text-xs text-gray-500">+{venue.category.length - 3} more</span>
+              )}
+            </div>
+          )}
+        </div>
+      </Link>
+    </div>
   );
 };
 

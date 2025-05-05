@@ -1,148 +1,64 @@
-
-import { useState, useEffect, useCallback } from 'react';
-import { useJsApiLoader } from '@react-google-maps/api';
-import { useLocationState } from './useLocationState';
-import { useVenueSearch } from './useVenueSearch';
-import { useSelectedVenue } from './useSelectedVenue';
-import { toast } from 'sonner';
+import { useState } from 'react';
 import { Venue } from '@/types';
+import { PlacesService } from '@/services/PlacesService';
+import { toast } from 'sonner';
+import { useLocation } from './useLocation';
+import { useMapInteraction } from './useMapInteraction';
+import { useVenueSearch } from './useVenueSearch';
+import { useVisitData } from './useVisitData';
 
-// Specify the libraries for Google Maps
-const libraries = ["places"] as ["places"];
+interface UseVenuesProps {
+  initialLocation?: { lat: number; lng: number };
+}
 
-export const useVenues = () => {
-  const [pendingAction, setPendingAction] = useState<{type: string, venue: Venue} | null>(null);
-  
-  // Load Google Maps API
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
-    libraries: libraries,
+export const useVenues = ({ initialLocation }: UseVenuesProps = {}) => {
+  // Use custom hooks for better code organization
+  const { userLocation, setUserLocation } = useLocation(initialLocation);
+  const { mapCenter, setMapCenter, showSearchThisArea, handleMapMove, setShowSearchThisArea } = useMapInteraction();
+  const { visits, processCheckIn } = useVisitData();
+  const { venues, isLoading, usingMockData, nextPageToken, handleLoadMore, handleSearchThisArea, handlePlaceSelect: originalHandlePlaceSelect } = useVenueSearch({
+    userLocation,
+    mapCenter,
+    visits
   });
-  
-  // Use our refactored hooks
-  const locationState = useLocationState();
-  const venueSearch = useVenueSearch();
-  const selectedVenueState = useSelectedVenue(venueSearch.venues);
-  
-  // Log when isLoaded state changes
-  useEffect(() => {
-    console.log("Google Maps API loaded:", isLoaded);
-    console.log("API Key available:", !!import.meta.env.VITE_GOOGLE_MAPS_API_KEY);
-  }, [isLoaded]);
-  
-  // Load initial venues when the location or API changes
-  useEffect(() => {
-    if (!isLoaded) return;
 
-    if (locationState.userLocation.lat && locationState.userLocation.lng) {
-      console.log("Loading venues with location:", locationState.userLocation);
-      venueSearch.searchNearbyVenues(locationState.userLocation)
-        .catch(error => {
-          console.error("Failed to search venues:", error);
-          toast.error("Failed to load venues. Using mock data instead.");
-        });
-    }
-  }, [locationState.userLocation, isLoaded, venueSearch.searchNearbyVenues]);
-  
-  // Enhanced function to handle Google place selections
-  const handlePlaceSelect = useCallback((place: google.maps.places.PlaceResult) => {
-    if (!place || !place.geometry || !place.geometry.location) {
-      toast.error("Invalid place selection");
-      return;
-    }
-
-    console.log("Place selected:", place);
-
-    // Extract location from place
-    const newLocation = {
-      lat: place.geometry.location.lat(),
-      lng: place.geometry.location.lng(),
-    };
-
-    // Update location state
-    locationState.setMapCenter(newLocation);
-
-    // If the place has a place_id, try to find it in existing venues
-    if (place.place_id) {
-      // Check if we already have this venue
-      const existingVenue = venueSearch.venues.find(v => v.id === place.place_id);
-      
-      if (existingVenue) {
-        // If we have it, select it
-        console.log("Selecting existing venue:", existingVenue.name);
-        selectedVenueState.handleVenueSelect(existingVenue.id);
-      } else {
-        // If not, we might want to fetch its details and add it to venues
-        console.log("New place selected, may need to fetch details:", place);
-        
-        // If we have a name and place_id, we can create a temporary venue
-        if (place.name) {
-          // Fix: Use getUrl method for photo references instead of direct access
-          const photos = place.photos ? 
-            place.photos.map(p => {
-              // Use getUrl() method instead of accessing photo_reference directly
-              return p.getUrl({ maxWidth: 400 });
-            }) : [];
-            
-          const tempVenue: Venue = {
-            id: place.place_id,
-            name: place.name,
-            address: place.vicinity || place.formatted_address || "",
-            coordinates: {
-              lat: newLocation.lat,
-              lng: newLocation.lng
-            },
-            category: place.types || [],
-            photos: photos
-          };
-          
-          // Add this venue to our list and select it
-          venueSearch.setVenues(prev => [...prev, tempVenue]);
-          selectedVenueState.handleVenueSelect(tempVenue.id);
+  // Enhanced place selection handler that also centers the map
+  const handlePlaceSelect = async (venue: Venue) => {
+    // If we already have coordinates, update the selected venue right away
+    if (venue.coordinates.lat !== 0 && venue.coordinates.lng !== 0) {
+      // Center map on the selected venue
+      setMapCenter(venue.coordinates);
+      originalHandlePlaceSelect(venue);
+    } 
+    // Otherwise fetch details to get coordinates
+    else {
+      try {
+        const details = await PlacesService.getVenueDetails(venue.id);
+        if (details) {
+          // Center map on the selected venue
+          setMapCenter(details.coordinates);
+          originalHandlePlaceSelect(details);
         }
+      } catch (error) {
+        console.error("Error fetching venue details:", error);
+        toast.error("Could not get details for this venue");
       }
     }
-  }, [locationState, venueSearch.venues, selectedVenueState, venueSearch.setVenues]);
-  
-  // Handle check-in with auth
-  const handleCheckIn = useCallback((venue: Venue) => {
-    // This is a stub - the actual logic is in the MapView component
-    console.log('Check-in requested for venue:', venue.name);
-  }, []);
-  
-  // Process check-in data
-  const processCheckIn = useCallback((visit: any) => {
-    // This is a placeholder for check-in processing
-    console.log('Processing check-in:', visit);
-    toast.success("Check-in successful!");
-  }, []);
+  };
 
   return {
-    // Location-related properties
-    ...locationState,
-    
-    // Venues search-related properties
-    ...venueSearch,
-    
-    // Selected venue-related properties
-    ...selectedVenueState,
-    
-    // Google Maps API loading state
-    isLoaded,
-    
-    // Additional state
-    pendingAction,
-    setPendingAction,
-    
-    // Enhanced place selection handler
+    venues,
+    userLocation,
+    isLoading,
+    usingMockData,
+    nextPageToken,
+    showSearchThisArea,
+    setMapCenter,
+    handleMapMove,
+    handleSearchThisArea,
     handlePlaceSelect,
-    
-    // Check-in methods
-    handleCheckIn,
+    handleLoadMore,
     processCheckIn,
-    
-    // Convenience method to load more venues
-    handleLoadMore: () => venueSearch.handleLoadMore(locationState.userLocation)
+    visits
   };
 };

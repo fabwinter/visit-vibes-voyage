@@ -5,33 +5,26 @@ import { filterVenues } from '../utils/filterUtils';
 import CheckInButton from '../components/CheckInButton';
 import CheckInForm from '../components/CheckInForm';
 import { FilterOptions } from '../components/VenueFilters';
+import { Venue } from '@/types';
 import { toast } from "sonner";
-import { useIsMobile } from '../hooks/use-mobile';
 
 // Import refactored components
 import SearchBar from '../components/map/SearchBar';
+import VenueList from '../components/map/VenueList';
 import MapArea from '../components/map/MapArea';
-import MapViewContent from '../components/map/MapViewContent';
 import SelectedVenueDetails from '../components/map/SelectedVenueDetails';
 import { useVenues } from '../hooks/useVenues';
-import AuthModal from '@/components/auth/AuthModal';
-import { useAuthContext } from '@/hooks/useAuthContext';
 
 const MapView = () => {
   const location = useLocation();
+  const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
     rating: 'all',
     category: 'all',
     tags: [],
   });
-  const { isAuthenticated, showAuthModal, setShowAuthModal } = useAuthContext();
-  const isMobile = useIsMobile();
   
-  // UI state
-  const [isCheckInOpen, setIsCheckInOpen] = useState(false);
-  const [showVenueSheet, setShowVenueSheet] = useState(false);
-  
-  // Use our custom hook for venue management
+  // Use our custom hook for venue and location management
   const {
     venues,
     userLocation,
@@ -39,163 +32,126 @@ const MapView = () => {
     usingMockData,
     nextPageToken,
     showSearchThisArea,
+    setMapCenter,
     handleMapMove,
     handleSearchThisArea,
     handlePlaceSelect,
-    handleVenueSelect,
     handleLoadMore,
-    selectedVenue,
-    selectedVenueDetails,
-    surroundingVenues,
-    pendingAction,
-    setPendingAction,
     processCheckIn
   } = useVenues();
   
-  // Log initial setup
-  useEffect(() => {
-    console.log("MapView loaded, venues:", venues.length, "userLocation:", userLocation);
-  }, [venues, userLocation]);
-  
-  // Updated wrapper function to handle both types correctly
-  const handlePlaceSelection = (placeOrVenue: google.maps.places.PlaceResult | any) => {
-    console.log("handlePlaceSelection called with:", placeOrVenue);
-    
-    if ('place_id' in placeOrVenue && placeOrVenue.place_id) {
-      // It's a Google Place
-      console.log("Handling as PlaceResult");
-      handlePlaceSelect(placeOrVenue as google.maps.places.PlaceResult);
-    } else if ('id' in placeOrVenue) {
-      // It's a Venue
-      console.log("Handling as Venue");
-      handleVenueSelect(placeOrVenue.id);
-    } else {
-      console.error("Received object with neither place_id nor id:", placeOrVenue);
-      toast.error("Invalid place data received");
-    }
-  };
-  
+  // UI state
+  const [isCheckInOpen, setIsCheckInOpen] = useState(false);
+  const [selectedVenueDetails, setSelectedVenueDetails] = useState<Venue | null>(null);
+
   // Check if we need to select a venue from navigation state
   useEffect(() => {
     if (location.state?.selectedVenueId) {
-      handleVenueSelect(location.state.selectedVenueId);
+      setSelectedVenue(location.state.selectedVenueId);
     }
-  }, [location.state, handleVenueSelect]);
+  }, [location.state]);
   
   // Apply additional filters
   const filteredVenues = filterVenues(venues, filterOptions);
-  
-  // Handle check-in with authentication check
-  const handleCheckIn = (venueToCheckIn?: any) => {
-    const venue = venueToCheckIn || selectedVenueDetails;
+
+  // Handle venue selection from map or list
+  const handleVenueSelect = async (venueId: string) => {
+    setSelectedVenue(venueId);
     
-    if (!venue) {
-      toast.error("Please select a venue first");
-      return;
+    // Get venue details if not already selected
+    if (!selectedVenueDetails || selectedVenueDetails.id !== venueId) {
+      const venue = venues.find(v => v.id === venueId);
+      
+      if (venue) {
+        setSelectedVenueDetails(venue);
+        // Center map on selected venue
+        setMapCenter(venue.coordinates);
+      } else {
+        // Fetch details if not in our current list
+        try {
+          const { PlacesService } = await import('../services/PlacesService');
+          const details = await PlacesService.getVenueDetails(venueId);
+          if (details) {
+            setSelectedVenueDetails(details);
+            // Center map on selected venue
+            setMapCenter(details.coordinates);
+          }
+        } catch (error) {
+          console.error("Error fetching venue details:", error);
+        }
+      }
     }
     
-    if (!isAuthenticated) {
-      setPendingAction({
-        type: 'check-in',
-        venue: venue
-      });
-      setShowAuthModal(true);
-      return;
+    // Scroll to the selected venue card if it exists
+    const venueCard = document.getElementById(`venue-${venueId}`);
+    if (venueCard) {
+      venueCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-    
-    setIsCheckInOpen(true);
-    setShowVenueSheet(false); // Close sheet when opening check-in form
   };
   
-  // Handle actions after authentication
-  useEffect(() => {
-    if (isAuthenticated && pendingAction) {
-      if (pendingAction.type === 'check-in') {
-        setIsCheckInOpen(true);
-        setShowVenueSheet(false);
-      }
-      
-      // Clear pending action
-      setPendingAction(null);
+  // Handle check-in
+  const handleCheckIn = () => {
+    if (selectedVenueDetails) {
+      setIsCheckInOpen(true);
+    } else {
+      toast.error("Please select a venue first");
     }
-  }, [isAuthenticated, pendingAction, setPendingAction]);
-
+  };
+  
   // Process check-in and close dialog
   const handleProcessCheckIn = (visit: any) => {
     processCheckIn(visit);
     setIsCheckInOpen(false);
   };
 
-  // Close venue details sheet
-  const handleCloseVenueSheet = () => {
-    setShowVenueSheet(false);
-  };
-
-  // Show error if venues failed to load
-  useEffect(() => {
-    if (!isLoading && venues.length === 0 && userLocation.lat !== 0) {
-      toast.info("No venues found in this area. Try searching in a different location.");
-    }
-  }, [venues, isLoading, userLocation]);
-
   return (
-    <div className="flex flex-col h-[calc(100vh-132px)] md:flex-row">
-      {/* Map Area */}
-      <div className={`${isMobile ? 'h-[50vh]' : ''} w-full md:w-1/2 lg:w-3/5 md:h-full`}>
-        <MapArea
-          venues={venues}
-          userLocation={userLocation}
-          selectedVenue={selectedVenue}
-          showSearchThisArea={showSearchThisArea}
-          onVenueSelect={handleVenueSelect}
-          onMapMove={handleMapMove}
-          onSearchArea={handleSearchThisArea}
-        />
-      </div>
+    <div className="h-[calc(100vh-132px)] flex flex-col md:flex-row">
+      {/* Map Area - Left side */}
+      <MapArea
+        venues={filteredVenues}
+        userLocation={userLocation}
+        selectedVenue={selectedVenue}
+        showSearchThisArea={showSearchThisArea}
+        onVenueSelect={handleVenueSelect}
+        onMapMove={handleMapMove}
+        onSearchArea={handleSearchThisArea}
+      />
       
-      {/* Search and Venue List */}
-      <div className="w-full md:w-1/2 lg:w-2/5 flex flex-col md:h-full md:overflow-y-auto p-4">
+      {/* Right side - Search, Filters and Venue List */}
+      <div className="w-full md:w-1/2 lg:w-2/5 md:h-full md:overflow-y-auto p-4 md:order-2">
         {/* Search with filters */}
         <SearchBar
           venues={venues}
           userLocation={userLocation}
           onFilterChange={setFilterOptions}
-          onPlaceSelect={handlePlaceSelection}
+          onPlaceSelect={handlePlaceSelect}
           className="mb-4"
         />
         
-        {/* Selected venue details on desktop */}
-        {!isMobile && selectedVenueDetails && (
+        {/* Selected venue details if available */}
+        {selectedVenueDetails && (
           <SelectedVenueDetails
             venue={selectedVenueDetails}
-            onCheckIn={() => handleCheckIn(selectedVenueDetails)}
-            onClose={() => handleVenueSelect('')}
+            onCheckIn={handleCheckIn}
           />
         )}
         
-        {/* Venue List Content - using our refactored component */}
-        <MapViewContent 
-          venues={venues}
-          filteredVenues={filteredVenues}
-          selectedVenue={selectedVenue}
-          selectedVenueDetails={selectedVenueDetails}
-          surroundingVenues={surroundingVenues}
+        {/* Venues list */}
+        <VenueList
+          venues={filteredVenues}
           isLoading={isLoading}
           usingMockData={usingMockData}
+          selectedVenue={selectedVenue}
           nextPageToken={nextPageToken}
-          showVenueSheet={showVenueSheet}
-          setShowVenueSheet={setShowVenueSheet}
-          handleVenueSelect={handleVenueSelect}
-          handleCheckIn={handleCheckIn}
-          handleLoadMore={handleLoadMore}
-          handleCloseVenueSheet={handleCloseVenueSheet}
+          onVenueSelect={handleVenueSelect}
+          onLoadMore={handleLoadMore}
         />
       </div>
 
       {/* Floating check-in button */}
       <CheckInButton 
-        className={`fixed ${isMobile ? 'right-4 bottom-20' : 'right-6 bottom-24'} w-14 h-14`}
-        onClick={() => handleCheckIn()}
+        className="fixed right-6 bottom-24 w-14 h-14"
+        onClick={handleCheckIn}
       />
 
       {/* Check-in form dialog */}
@@ -207,12 +163,6 @@ const MapView = () => {
           onCheckIn={handleProcessCheckIn}
         />
       )}
-      
-      {/* Authentication modal */}
-      <AuthModal 
-        isOpen={showAuthModal} 
-        onClose={() => setShowAuthModal(false)} 
-      />
     </div>
   );
 };
