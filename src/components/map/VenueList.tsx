@@ -2,6 +2,7 @@
 import { Button } from '@/components/ui/button';
 import VenueCard from '../VenueCard';
 import { Venue } from '@/types';
+import { MapPin, AlertCircle } from 'lucide-react';
 
 interface VenueListProps {
   venues: Venue[];
@@ -32,19 +33,26 @@ const VenueList = ({
       </div>
       
       {usingMockData && (
-        <div className="mb-4 p-2 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-700">
-          Using mock data. API connection issue or no results returned.
+        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-700 flex items-center gap-2">
+          <AlertCircle className="h-5 w-5 flex-shrink-0" />
+          <div className="text-sm">
+            <p className="font-medium">Using mock data</p>
+            <p className="text-yellow-600">API connection issue or no results returned.</p>
+          </div>
         </div>
       )}
       
       {isLoading && venues.length === 0 ? (
-        <div className="text-center py-8">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-visitvibe-primary border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
-          <p className="mt-2 text-gray-500">Loading food venues...</p>
+        <div className="text-center py-10 bg-gray-50 rounded-lg border border-gray-100">
+          <div className="inline-block h-10 w-10 animate-spin rounded-full border-4 border-solid border-visitvibe-primary border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite] mb-2"></div>
+          <p className="text-gray-600">Loading food venues...</p>
+          <p className="text-sm text-gray-500 mt-2">Finding the best nearby options for you</p>
         </div>
       ) : venues.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
-          <p>No food venues found in this area</p>
+        <div className="text-center py-10 bg-gray-50 rounded-lg border border-gray-100">
+          <MapPin className="h-10 w-10 mx-auto text-gray-400 mb-2" />
+          <p className="text-gray-600 font-medium">No food venues found</p>
+          <p className="text-sm text-gray-500 mt-2">Try changing your location or search terms</p>
         </div>
       ) : (
         <>
@@ -70,8 +78,14 @@ const VenueList = ({
                 variant="outline" 
                 onClick={onLoadMore}
                 disabled={isLoading}
+                className="w-full"
               >
-                {isLoading ? 'Loading...' : 'Load More Venues'}
+                {isLoading ? (
+                  <>
+                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-visitvibe-primary border-r-transparent align-[-0.125em] mr-2"></span>
+                    Loading...
+                  </>
+                ) : 'Load More Venues'}
               </Button>
             </div>
           )}

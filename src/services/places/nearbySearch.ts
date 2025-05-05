@@ -3,10 +3,14 @@ import { API_KEY, PROXY_URL, FOOD_PLACE_TYPES } from "./config";
 import { PlacesSearchParams, PlacesSearchResponse } from "./types";
 import { generatePhotoURL } from "./utils";
 import { Venue } from "@/types";
+import { toast } from "sonner";
+import { mockVenues } from "@/data/mockData";
 
 // Search nearby venues
 export const searchNearbyVenues = async (params: PlacesSearchParams): Promise<PlacesSearchResponse> => {
   try {
+    console.log("Searching for nearby venues with params:", params);
+    
     // Build API URL
     let apiUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?`;
     
@@ -39,6 +43,12 @@ export const searchNearbyVenues = async (params: PlacesSearchParams): Promise<Pl
     if (data.error_message) {
       console.error("Places API error:", data.error_message);
       throw new Error(data.error_message);
+    }
+
+    // Check if we have valid results
+    if (data.status !== "OK" || data.results.length === 0) {
+      console.log("No results or non-OK status:", data.status);
+      throw new Error(`API returned status: ${data.status}`);
     }
     
     // Transform results to our Venue format
@@ -87,6 +97,21 @@ export const searchNearbyVenues = async (params: PlacesSearchParams): Promise<Pl
     };
   } catch (error) {
     console.error("Error searching nearby venues:", error);
-    throw error;
+    
+    // Return mock data instead
+    console.log("Falling back to mock data");
+    toast.error("API request failed, using mock data instead", { 
+      description: error instanceof Error ? error.message : "Unknown error" 
+    });
+    
+    // Return mock data with proper coordinates as fallback
+    return {
+      venues: mockVenues.map(venue => ({
+        ...venue,
+        // Ensure each mock venue has proper coordinates
+        coordinates: venue.coordinates || { lat: -33.8688, lng: 151.2093 }
+      })),
+      nextPageToken: undefined,
+    };
   }
 };

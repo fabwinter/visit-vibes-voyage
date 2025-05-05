@@ -37,7 +37,8 @@ const MapView = () => {
     handleSearchThisArea,
     handlePlaceSelect,
     handleLoadMore,
-    processCheckIn
+    processCheckIn,
+    centerToUserLocation
   } = useVenues();
   
   // UI state
@@ -121,6 +122,7 @@ const MapView = () => {
         onVenueSelect={handleVenueSelect}
         onMapMove={handleMapMove}
         onSearchArea={handleSearchThisArea}
+        onCenterToUserLocation={centerToUserLocation}
       />
       
       {/* Right side - Search, Filters and Venue List */}

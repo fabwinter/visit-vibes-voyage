@@ -1,6 +1,6 @@
 
 import { Button } from '@/components/ui/button';
-import { Search } from 'lucide-react';
+import { Search, Navigation } from 'lucide-react';
 import MapComponent from '../MapComponent';
 import { Venue } from '@/types';
 
@@ -12,6 +12,7 @@ interface MapAreaProps {
   onVenueSelect: (venueId: string) => void;
   onMapMove: (center: { lat: number; lng: number }) => void;
   onSearchArea: () => void;
+  onCenterToUserLocation?: () => void; // New prop for centering on user location
 }
 
 const MapArea = ({
@@ -21,7 +22,8 @@ const MapArea = ({
   showSearchThisArea,
   onVenueSelect,
   onMapMove,
-  onSearchArea
+  onSearchArea,
+  onCenterToUserLocation
 }: MapAreaProps) => {
   return (
     <div className="w-full md:w-1/2 lg:w-3/5 h-[350px] md:h-full md:order-1 p-4 relative">
@@ -46,6 +48,16 @@ const MapArea = ({
           Search this area
         </Button>
       )}
+
+      {/* Center on my location button */}
+      <Button
+        onClick={onCenterToUserLocation}
+        className="absolute bottom-6 right-6 z-10 bg-white text-visitvibe-primary border border-gray-200 shadow-lg hover:bg-gray-100"
+        size="icon"
+        title="Center on my location"
+      >
+        <Navigation className="h-5 w-5" />
+      </Button>
     </div>
   );
 };

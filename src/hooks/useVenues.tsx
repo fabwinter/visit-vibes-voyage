@@ -55,6 +55,23 @@ export const useVenues = ({ initialLocation }: UseVenuesProps = {}) => {
     }
   };
 
+  // Function to center the map back to user location
+  const centerToUserLocation = () => {
+    if (!userLocation) {
+      toast.error("Could not determine your location");
+      return;
+    }
+
+    console.log("Centering map on user location:", userLocation);
+    setMapCenter(userLocation);
+    toast.success("Map centered on your location");
+    
+    // If we don't have venues yet, search in this area
+    if (venues.length === 0 || usingMockData) {
+      handleSearchThisArea();
+    }
+  };
+
   return {
     venues,
     userLocation,
@@ -68,6 +85,7 @@ export const useVenues = ({ initialLocation }: UseVenuesProps = {}) => {
     handlePlaceSelect,
     handleLoadMore,
     processCheckIn,
-    visits
+    visits,
+    centerToUserLocation
   };
 };

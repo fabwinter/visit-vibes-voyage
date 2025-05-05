@@ -2,9 +2,12 @@
 import { toast } from "sonner";
 import { buildPlacesApiUrl } from "./utils";
 import { Venue } from "@/types";
+import { mockVenues } from "@/data/mockData";
 
 export const searchPlaces = async (query: string, location: { lat: number; lng: number }): Promise<Venue[]> => {
   try {
+    console.log("Searching places with query:", query, "near:", location);
+    
     // Create query parameters
     const queryParams: Record<string, string> = {
       input: query,
@@ -44,7 +47,17 @@ export const searchPlaces = async (query: string, location: { lat: number; lng: 
     return venues;
   } catch (error) {
     console.error("Error searching places:", error);
-    toast.error("Failed to search places");
-    return [];
+    toast.error("Search failed, showing suggestions from mock data");
+    
+    // Filter mock venues that match the query in some way
+    const filteredMockVenues = mockVenues.filter(venue => 
+      venue.name.toLowerCase().includes(query.toLowerCase()) || 
+      venue.address.toLowerCase().includes(query.toLowerCase()) ||
+      (venue.category && venue.category.some(cat => 
+        cat.toLowerCase().includes(query.toLowerCase())
+      ))
+    );
+    
+    return filteredMockVenues.length > 0 ? filteredMockVenues : [];
   }
 };
