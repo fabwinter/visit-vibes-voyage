@@ -9,7 +9,7 @@ interface SearchBarProps {
   venues: Venue[];
   userLocation: { lat: number; lng: number };
   onFilterChange: (filters: FilterOptions) => void;
-  onPlaceSelect: (venue: Venue) => void;
+  onPlaceSelect: (venue: Venue | google.maps.places.PlaceResult) => void;
   className?: string;
 }
 

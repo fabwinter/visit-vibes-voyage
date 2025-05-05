@@ -1,0 +1,59 @@
+
+{
+  "venues": [
+    {
+      "id": "mock-venue-1",
+      "name": "Café Deluxe",
+      "address": "123 Main St, Example City",
+      "coordinates": {
+        "lat": -33.8651,
+        "lng": 151.2099
+      },
+      "photos": [
+        "https://placehold.co/600x400?text=Cafe+Deluxe"
+      ],
+      "website": "https://example.com",
+      "hours": "Mon-Fri: 7am-8pm, Sat-Sun: 8am-6pm",
+      "phoneNumber": "+1234567890",
+      "priceLevel": 2,
+      "category": ["cafe", "restaurant"],
+      "googleRating": 4.5
+    },
+    {
+      "id": "mock-venue-2",
+      "name": "Burger Palace",
+      "address": "456 Oak Ave, Example City",
+      "coordinates": {
+        "lat": -33.8701,
+        "lng": 151.2079
+      },
+      "photos": [
+        "https://placehold.co/600x400?text=Burger+Palace"
+      ],
+      "website": "https://example.com",
+      "hours": "Daily: 11am-10pm",
+      "phoneNumber": "+1234567891",
+      "priceLevel": 1,
+      "category": ["restaurant", "fast_food"],
+      "googleRating": 4.2
+    },
+    {
+      "id": "mock-venue-3",
+      "name": "Sushi Delight",
+      "address": "789 Pine St, Example City",
+      "coordinates": {
+        "lat": -33.8721,
+        "lng": 151.2059
+      },
+      "photos": [
+        "https://placehold.co/600x400?text=Sushi+Delight"
+      ],
+      "website": "https://example.com",
+      "hours": "Tue-Sun: 5pm-11pm, Mon: Closed",
+      "phoneNumber": "+1234567892",
+      "priceLevel": 3,
+      "category": ["restaurant", "japanese"],
+      "googleRating": 4.8
+    }
+  ]
+}

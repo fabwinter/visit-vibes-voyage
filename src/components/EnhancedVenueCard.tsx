@@ -1,21 +1,24 @@
+
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Check, Star, Clock, Info } from 'lucide-react';
+import { MapPin, Check, Star, Info, LogIn } from 'lucide-react';
 import { Venue, Visit } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 
-export interface VenueCardProps {
+export interface EnhancedVenueCardProps {
   venue: Venue;
   lastVisit?: Visit;
   onClick: () => void;
+  onCheckIn: (venue: Venue) => void;
 }
 
-const VenueCard: React.FC<VenueCardProps> = ({
+const EnhancedVenueCard: React.FC<EnhancedVenueCardProps> = ({
   venue,
   lastVisit,
   onClick,
+  onCheckIn,
 }) => {
   const renderGoogleRating = () => {
     if (!venue.googleRating) return null;
@@ -45,6 +48,12 @@ const VenueCard: React.FC<VenueCardProps> = ({
         )}
       </div>
     );
+  };
+
+  // Handle the check-in click and prevent propagation to avoid triggering onClick
+  const handleCheckInClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onCheckIn(venue);
   };
 
   return (
@@ -98,9 +107,21 @@ const VenueCard: React.FC<VenueCardProps> = ({
             )}
           </div>
         )}
+        
+        {/* Check-in button */}
+        <div className="mt-3">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full text-xs flex items-center gap-1"
+            onClick={handleCheckInClick}
+          >
+            <LogIn className="h-3 w-3" /> Check In
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
 };
 
-export default VenueCard;
+export default EnhancedVenueCard;

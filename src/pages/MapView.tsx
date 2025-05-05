@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { filterVenues } from '../utils/filterUtils';
@@ -7,6 +6,8 @@ import CheckInForm from '../components/CheckInForm';
 import { FilterOptions } from '../components/VenueFilters';
 import { Venue } from '@/types';
 import { toast } from "sonner";
+import { useIsMobile } from '../hooks/use-mobile';
+import EnhancedVenueCard from '@/components/EnhancedVenueCard';
 
 // Import refactored components
 import SearchBar from '../components/map/SearchBar';
@@ -14,17 +15,33 @@ import VenueList from '../components/map/VenueList';
 import MapArea from '../components/map/MapArea';
 import SelectedVenueDetails from '../components/map/SelectedVenueDetails';
 import { useVenues } from '../hooks/useVenues';
+import { 
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger 
+} from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { ArrowUp, MapPin } from "lucide-react";
+import AuthModal from '@/components/auth/AuthModal';
+import { useAuthContext } from '@/hooks/useAuthContext';
 
 const MapView = () => {
   const location = useLocation();
-  const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
     rating: 'all',
     category: 'all',
     tags: [],
   });
+  const { isAuthenticated, showAuthModal, setShowAuthModal } = useAuthContext();
+  const isMobile = useIsMobile();
   
-  // Use our custom hook for venue and location management
+  // UI state
+  const [isCheckInOpen, setIsCheckInOpen] = useState(false);
+  const [showVenueSheet, setShowVenueSheet] = useState(false);
+  
+  // Use our custom hook for venue management
   const {
     venues,
     userLocation,
@@ -36,122 +53,135 @@ const MapView = () => {
     handleMapMove,
     handleSearchThisArea,
     handlePlaceSelect,
+    handleVenueSelect,
     handleLoadMore,
+    selectedVenue,
+    selectedVenueDetails,
+    surroundingVenues,
+    pendingAction,
+    setPendingAction,
     processCheckIn
   } = useVenues();
   
-  // UI state
-  const [isCheckInOpen, setIsCheckInOpen] = useState(false);
-  const [selectedVenueDetails, setSelectedVenueDetails] = useState<Venue | null>(null);
-
+  // Updated wrapper function to handle both types correctly
+  const handlePlaceSelection = (placeOrVenue: google.maps.places.PlaceResult | Venue) => {
+    // If it's a Google Place, pass it to the handler
+    if ('place_id' in placeOrVenue) {
+      handlePlaceSelect(placeOrVenue as google.maps.places.PlaceResult);
+    } else {
+      // If it's already a Venue, handle it differently
+      // We need to safely access the id property
+      if ('id' in placeOrVenue) {
+        handleVenueSelect(placeOrVenue.id);
+      }
+    }
+  };
+  
   // Check if we need to select a venue from navigation state
   useEffect(() => {
     if (location.state?.selectedVenueId) {
-      setSelectedVenue(location.state.selectedVenueId);
+      handleVenueSelect(location.state.selectedVenueId);
     }
-  }, [location.state]);
+  }, [location.state, handleVenueSelect]);
   
   // Apply additional filters
   const filteredVenues = filterVenues(venues, filterOptions);
-
-  // Handle venue selection from map or list
-  const handleVenueSelect = async (venueId: string) => {
-    setSelectedVenue(venueId);
-    
-    // Get venue details if not already selected
-    if (!selectedVenueDetails || selectedVenueDetails.id !== venueId) {
-      const venue = venues.find(v => v.id === venueId);
-      
-      if (venue) {
-        setSelectedVenueDetails(venue);
-        // Center map on selected venue
-        setMapCenter(venue.coordinates);
-      } else {
-        // Fetch details if not in our current list
-        try {
-          const { PlacesService } = await import('../services/PlacesService');
-          const details = await PlacesService.getVenueDetails(venueId);
-          if (details) {
-            setSelectedVenueDetails(details);
-            // Center map on selected venue
-            setMapCenter(details.coordinates);
-          }
-        } catch (error) {
-          console.error("Error fetching venue details:", error);
-        }
-      }
-    }
-    
-    // Scroll to the selected venue card if it exists
-    const venueCard = document.getElementById(`venue-${venueId}`);
-    if (venueCard) {
-      venueCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  };
   
-  // Handle check-in
-  const handleCheckIn = () => {
-    if (selectedVenueDetails) {
-      setIsCheckInOpen(true);
-    } else {
+  // Handle check-in with authentication check
+  const handleCheckIn = (venueToCheckIn?: Venue) => {
+    const venue = venueToCheckIn || selectedVenueDetails;
+    
+    if (!venue) {
       toast.error("Please select a venue first");
+      return;
     }
+    
+    if (!isAuthenticated) {
+      setPendingAction({
+        type: 'check-in',
+        venue: venue
+      });
+      setShowAuthModal(true);
+      return;
+    }
+    
+    setIsCheckInOpen(true);
+    setShowVenueSheet(false); // Close sheet when opening check-in form
   };
   
+  // Handle actions after authentication
+  useEffect(() => {
+    if (isAuthenticated && pendingAction) {
+      if (pendingAction.type === 'check-in') {
+        setIsCheckInOpen(true);
+        setShowVenueSheet(false);
+      }
+      
+      // Clear pending action
+      setPendingAction(null);
+    }
+  }, [isAuthenticated, pendingAction, setPendingAction]);
+
   // Process check-in and close dialog
   const handleProcessCheckIn = (visit: any) => {
     processCheckIn(visit);
     setIsCheckInOpen(false);
   };
 
+  // Close venue details sheet
+  const handleCloseVenueSheet = () => {
+    setShowVenueSheet(false);
+  };
+
   return (
-    <div className="h-[calc(100vh-132px)] flex flex-col md:flex-row">
-      {/* Map Area - Left side */}
-      <MapArea
-        venues={filteredVenues}
-        userLocation={userLocation}
-        selectedVenue={selectedVenue}
-        showSearchThisArea={showSearchThisArea}
-        onVenueSelect={handleVenueSelect}
-        onMapMove={handleMapMove}
-        onSearchArea={handleSearchThisArea}
-      />
+    <div className="flex flex-col h-[calc(100vh-132px)] md:flex-row">
+      {/* Map Area */}
+      <div className={`${isMobile ? 'h-[50vh]' : ''} w-full md:w-1/2 lg:w-3/5 md:h-full`}>
+        <MapArea
+          venues={venues}
+          userLocation={userLocation}
+          selectedVenue={selectedVenue}
+          showSearchThisArea={showSearchThisArea}
+          onVenueSelect={handleVenueSelect}
+          onMapMove={handleMapMove}
+          onSearchArea={handleSearchThisArea}
+        />
+      </div>
       
-      {/* Right side - Search, Filters and Venue List */}
-      <div className="w-full md:w-1/2 lg:w-2/5 md:h-full md:overflow-y-auto p-4 md:order-2">
+      {/* Search and Venue List */}
+      <div className="w-full md:w-1/2 lg:w-2/5 flex flex-col md:h-full md:overflow-y-auto p-4">
         {/* Search with filters */}
         <SearchBar
           venues={venues}
           userLocation={userLocation}
           onFilterChange={setFilterOptions}
-          onPlaceSelect={handlePlaceSelect}
+          onPlaceSelect={handlePlaceSelection}
           className="mb-4"
         />
         
-        {/* Selected venue details if available */}
-        {selectedVenueDetails && (
+        {/* Selected venue details on desktop */}
+        {!isMobile && selectedVenueDetails && (
           <SelectedVenueDetails
             venue={selectedVenueDetails}
-            onCheckIn={handleCheckIn}
+            onCheckIn={() => handleCheckIn(selectedVenueDetails)}
+            onClose={() => handleVenueSelect('')}
           />
         )}
         
-        {/* Venues list */}
-        <VenueList
-          venues={filteredVenues}
-          isLoading={isLoading}
-          usingMockData={usingMockData}
-          selectedVenue={selectedVenue}
-          nextPageToken={nextPageToken}
-          onVenueSelect={handleVenueSelect}
-          onLoadMore={handleLoadMore}
-        />
+        {/* Mobile venue list toggle */}
+        {renderMobileVenueListToggle()}
+        
+        {/* Venue list content */}
+        {renderVenueListContent()}
       </div>
+
+      {/* Mobile bottom sheet for selected venue */}
+      {renderMobileVenueDetails()}
 
       {/* Floating check-in button */}
       <CheckInButton 
-        className="fixed right-6 bottom-24 w-14 h-14"
-        onClick={handleCheckIn}
+        className={`fixed ${isMobile ? 'right-4 bottom-20' : 'right-6 bottom-24'} w-14 h-14`}
+        onClick={() => handleCheckIn()}
       />
 
       {/* Check-in form dialog */}
@@ -163,8 +193,149 @@ const MapView = () => {
           onCheckIn={handleProcessCheckIn}
         />
       )}
+      
+      {/* Authentication modal */}
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+      />
     </div>
   );
+  
+  // Helper rendering functions
+  function renderMobileVenueListToggle() {
+    if (!isMobile) return null;
+    
+    return (
+      <Sheet>
+        <SheetTrigger asChild>
+          <Button 
+            className="mb-2 w-full bg-white border border-gray-200 text-gray-700 hover:bg-gray-100 flex justify-between items-center"
+            variant="outline"
+          >
+            <span>View All Venues ({filteredVenues.length})</span>
+            <ArrowUp className="h-4 w-4" />
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="bottom" className="h-[85vh] pt-6">
+          <SheetHeader>
+            <SheetTitle>Food Venues</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto py-4">
+            <VenueList
+              venues={filteredVenues}
+              isLoading={isLoading}
+              usingMockData={usingMockData}
+              selectedVenue={selectedVenue}
+              nextPageToken={nextPageToken}
+              onVenueSelect={handleVenueSelect}
+              onLoadMore={handleLoadMore}
+              onCheckIn={handleCheckIn}
+              useEnhancedCard={true}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+  
+  function renderVenueListContent() {
+    if (isMobile && showVenueSheet) return null;
+    
+    return (
+      <div className={`${isMobile ? 'max-h-[35vh] overflow-y-auto' : ''}`}>
+        {/* Selected venue at the top if available */}
+        {selectedVenueDetails && renderSelectedVenue()}
+        
+        {/* Nearby venues if available */}
+        {surroundingVenues.length > 0 && renderNearbyVenues()}
+        
+        {/* All venues list */}
+        <VenueList
+          venues={filteredVenues.filter(v => 
+            v.id !== selectedVenueDetails?.id && 
+            !surroundingVenues.some(sv => sv.id === v.id)
+          )}
+          isLoading={isLoading}
+          usingMockData={usingMockData}
+          selectedVenue={selectedVenue}
+          nextPageToken={nextPageToken}
+          onVenueSelect={handleVenueSelect}
+          onLoadMore={handleLoadMore}
+          onCheckIn={handleCheckIn}
+          useEnhancedCard={true}
+        />
+      </div>
+    );
+  }
+  
+  function renderSelectedVenue() {
+    if (!selectedVenueDetails) return null;
+    
+    return (
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold mb-2">Selected Venue</h2>
+        <div 
+          key={selectedVenueDetails.id}
+          id={`venue-${selectedVenueDetails.id}`}
+          className="transition-all duration-200 ring-2 ring-visitvibe-primary ring-offset-2"
+        >
+          <EnhancedVenueCard
+            venue={selectedVenueDetails}
+            lastVisit={selectedVenueDetails.lastVisit}
+            onClick={() => handleVenueSelect(selectedVenueDetails.id)}
+            onCheckIn={() => handleCheckIn(selectedVenueDetails)}
+          />
+        </div>
+      </div>
+    );
+  }
+  
+  function renderNearbyVenues() {
+    return (
+      <div className="mb-4">
+        <div className="flex items-center mb-2">
+          <MapPin className="h-4 w-4 mr-1 text-visitvibe-primary" />
+          <h2 className="text-lg font-semibold">Nearby Places</h2>
+        </div>
+        <div className="grid grid-cols-1 gap-3">
+          {surroundingVenues.map(venue => (
+            <div 
+              key={venue.id}
+              id={`venue-${venue.id}`}
+              className="transition-all duration-200"
+            >
+              <EnhancedVenueCard
+                venue={venue}
+                lastVisit={venue.lastVisit}
+                onClick={() => handleVenueSelect(venue.id)}
+                onCheckIn={() => handleCheckIn(venue)}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  
+  function renderMobileVenueDetails() {
+    if (!isMobile || !selectedVenueDetails) return null;
+    
+    return (
+      <Sheet open={showVenueSheet} onOpenChange={setShowVenueSheet}>
+        <SheetContent side="bottom" className="max-h-[75vh] overflow-y-auto">
+          <SheetHeader className="mb-2">
+            <SheetTitle>{selectedVenueDetails.name}</SheetTitle>
+          </SheetHeader>
+          <SelectedVenueDetails
+            venue={selectedVenueDetails}
+            onCheckIn={() => handleCheckIn(selectedVenueDetails)}
+            onClose={handleCloseVenueSheet}
+          />
+        </SheetContent>
+      </Sheet>
+    );
+  }
 };
 
 export default MapView;
