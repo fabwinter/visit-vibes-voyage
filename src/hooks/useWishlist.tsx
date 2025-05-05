@@ -3,12 +3,12 @@ import { useState, useEffect } from 'react';
 import { WishlistItem, Venue } from '@/types';
 import * as WishlistService from '@/services/wishlistService';
 
-// Define a type that represents what the filtered venues actually look like
-type WishlistVenue = Venue & { 
+// Define a type that accurately represents what the filtered venues look like
+interface WishlistVenue extends Venue { 
   inWishlist: true; 
   wishlistTags: string[]; 
   wishlistCategory?: string;
-};
+}
 
 export const useWishlist = () => {
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
@@ -36,10 +36,10 @@ export const useWishlist = () => {
               inWishlist: true as const,
               wishlistTags: item.tags,
               wishlistCategory: item.category
-            };
+            } as WishlistVenue;
           }
           return null;
-        }).filter((v): v is WishlistVenue => v !== null);
+        }).filter(Boolean) as WishlistVenue[];
         
         setWishlistVenues(wishlistVenues);
       }
@@ -74,7 +74,7 @@ export const useWishlist = () => {
           inWishlist: true as const,
           wishlistTags: tags,
           wishlistCategory: category
-        }];
+        } as WishlistVenue];
       }
       return prev.map(v => {
         if (v.id === venue.id) {
@@ -83,7 +83,7 @@ export const useWishlist = () => {
             inWishlist: true,
             wishlistTags: tags,
             wishlistCategory: category
-          };
+          } as WishlistVenue;
         }
         return v;
       });
@@ -132,7 +132,7 @@ export const useWishlist = () => {
           ...v,
           wishlistTags: updates.tags || v.wishlistTags || [],
           wishlistCategory: updates.category || v.wishlistCategory
-        };
+        } as WishlistVenue;
       }
       return v;
     }));
