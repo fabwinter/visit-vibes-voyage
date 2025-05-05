@@ -32,9 +32,9 @@ export const useWishlist = () => {
             };
           }
           return null;
-        }).filter((v): v is Venue => v !== null);
+        }).filter((v): v is Venue & { inWishlist: true; wishlistTags: string[]; wishlistCategory?: string } => v !== null);
         
-        setWishlistVenues(wishlistVenues);
+        setWishlistVenues(wishlistVenues as Venue[]);
       }
     };
     
