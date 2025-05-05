@@ -1,126 +1,135 @@
 
-import React from 'react';
-import { Venue, Visit } from '@/types';
-import { Badge } from './ui/badge';
-import { cn } from '@/lib/utils';
-import { CalendarIcon, Clock, Phone, Globe, MapPin, Star } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { MapPin, Utensils, Coffee, Share2 } from 'lucide-react';
 import StarRating from './StarRating';
-import { formatDistanceToNow } from 'date-fns';
+import { Venue, Visit } from '../types';
+import { toast } from "sonner";
 
 interface VenueCardProps {
   venue: Venue;
   lastVisit?: Visit;
-  onClick?: () => void;
   className?: string;
+  onClick?: () => void;
 }
 
-const VenueCard: React.FC<VenueCardProps> = ({
-  venue,
-  lastVisit,
-  onClick,
-  className
-}) => {
-  // Format visit date as "X days/months ago"
-  const getLastVisitText = () => {
-    if (!lastVisit) return null;
+const VenueCard = ({ venue, lastVisit, className = '', onClick }: VenueCardProps) => {
+  // Function to determine venue icon based on categories
+  const getVenueIcon = () => {
+    const categories = venue.category?.map(c => c.toLowerCase()) || [];
     
-    try {
-      return formatDistanceToNow(new Date(lastVisit.timestamp), { addSuffix: true });
-    } catch (e) {
-      console.error("Invalid date format:", lastVisit.timestamp);
-      return "recently";
+    if (categories.some(c => c.includes('cafe') || c.includes('coffee'))) {
+      return <Coffee className="w-4 h-4 mr-1" />;
+    }
+    
+    return <Utensils className="w-4 h-4 mr-1" />;
+  };
+  
+  // Format category names for display
+  const formatCategory = (category: string) => {
+    return category
+      .replace(/_/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+  
+  // Handle share action
+  const handleShare = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent navigation
+    e.stopPropagation(); // Prevent triggering the card click
+    
+    if (navigator.share) {
+      navigator.share({
+        title: venue.name,
+        text: `Check out ${venue.name} at ${venue.address}`,
+        url: window.location.href
+      })
+      .then(() => toast.success("Shared successfully"))
+      .catch(error => console.error('Error sharing', error));
+    } else {
+      toast("Sharing not supported on this browser", {
+        description: "Try copying the link directly"
+      });
     }
   };
-  
-  // Determine card accent color based on rating
-  const getRatingColor = () => {
-    if (!lastVisit) return "bg-gray-200";
-    
-    const rating = lastVisit.rating.overall;
-    if (rating >= 4) return "bg-green-500";
-    if (rating >= 3) return "bg-yellow-500";
-    return "bg-red-500";
-  };
-  
+
   return (
-    <div 
-      className={cn(
-        "bg-white rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow relative",
-        className
-      )}
-      onClick={onClick}
-    >
-      {/* Left accent bar showing rating color */}
-      {lastVisit && (
-        <div className={`absolute left-0 top-0 bottom-0 w-1 ${getRatingColor()}`}></div>
-      )}
-      
-      {/* Main card content */}
-      <div className="flex p-4">
-        {/* Venue image */}
-        <div className="w-24 h-24 bg-gray-200 rounded-md overflow-hidden flex-shrink-0 mr-4">
-          {venue.photos && venue.photos.length > 0 ? (
-            <img 
-              src={venue.photos[0]} 
-              alt={venue.name} 
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = "/placeholder.svg";
-              }}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400">
-              <MapPin className="w-8 h-8" />
+    <div onClick={onClick} className="cursor-pointer">
+      <Link 
+        to={`/venue/${venue.id}`}
+        className={`block rounded-lg overflow-hidden shadow-md bg-white transition-transform hover:scale-[1.02] ${className}`}
+        onClick={(e) => {
+          if (onClick) {
+            e.preventDefault(); // Prevent navigation when used with onClick
+            onClick();
+          }
+        }}
+      >
+        <div className="relative h-40">
+          <img
+            src={venue.photos?.[0] || 'https://placehold.co/600x400?text=No+Image'}
+            alt={venue.name}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=No+Image';
+            }}
+          />
+          
+          {venue.priceLevel !== undefined && (
+            <div className="absolute top-3 right-3 bg-black bg-opacity-50 text-white px-2 py-1 rounded">
+              {'$'.repeat(venue.priceLevel)}
             </div>
           )}
+          
+          {lastVisit && (
+            <div className="absolute bottom-3 right-3 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+              Last visited: {new Date(lastVisit.timestamp).toLocaleDateString()}
+            </div>
+          )}
+          
+          {/* Share button */}
+          <button
+            onClick={handleShare}
+            className="absolute top-3 left-3 bg-black/50 rounded-full p-2 text-white hover:bg-black/70 transition-all"
+            aria-label="Share this venue"
+          >
+            <Share2 size={16} />
+          </button>
         </div>
         
-        {/* Venue details */}
-        <div className="flex-1">
-          <h3 className="text-lg font-bold line-clamp-1">{venue.name}</h3>
+        <div className="p-4">
+          <h3 className="text-lg font-semibold">{venue.name}</h3>
           
-          <p className="text-gray-500 text-sm mb-1 line-clamp-1">{venue.address}</p>
-          
-          {/* Price level and category */}
-          <div className="flex flex-wrap gap-1 mb-1">
-            {venue.priceLevel && (
-              <Badge variant="secondary" className="text-xs">
-                {"$".repeat(venue.priceLevel)}
-              </Badge>
-            )}
-            
-            {venue.category && venue.category.length > 0 && (
-              <Badge variant="outline" className="text-xs">
-                {venue.category[0].split('_').join(' ')}
-              </Badge>
-            )}
-            
-            {venue.googleRating && (
-              <Badge variant="secondary" className="text-xs flex items-center gap-1">
-                <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" /> 
-                {venue.googleRating.toFixed(1)}
-              </Badge>
-            )}
+          <div className="flex items-center text-gray-600 text-sm mt-1">
+            <MapPin className="w-4 h-4 mr-1" />
+            <span className="truncate">{venue.address}</span>
           </div>
           
-          {/* Last visit info */}
           {lastVisit && (
-            <div className="mt-2 flex items-center text-xs text-gray-500">
-              <CalendarIcon className="w-3 h-3 mr-1" />
-              <span>Visited {getLastVisitText()}</span>
-              
-              {lastVisit.rating && (
-                <div className="ml-2 flex items-center">
-                  <StarRating
-                    rating={lastVisit.rating.overall}
-                    size="xs"
-                  />
+            <div className="mt-2">
+              <StarRating rating={lastVisit.rating.overall} size="md" />
+              {lastVisit.wouldVisitAgain !== undefined && (
+                <div className={`text-xs mt-1 ${lastVisit.wouldVisitAgain ? 'text-green-600' : 'text-red-600'}`}>
+                  {lastVisit.wouldVisitAgain ? 'Would visit again' : 'Would not visit again'}
                 </div>
               )}
             </div>
           )}
+          
+          {venue.category && venue.category.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1">
+              {venue.category.slice(0, 3).map((cat) => (
+                <span key={cat} className="tag-badge">
+                  {formatCategory(cat)}
+                </span>
+              ))}
+              {venue.category.length > 3 && (
+                <span className="text-xs text-gray-500">+{venue.category.length - 3} more</span>
+              )}
+            </div>
+          )}
         </div>
-      </div>
+      </Link>
     </div>
   );
 };

@@ -18,10 +18,6 @@ export interface Venue {
   priceLevel?: number; // 1-4 representing $ to $$$$
   category?: string[];
   lastVisit?: Visit; // Added lastVisit for quick access to latest visit data
-  googleRating?: number; // Added for Google rating
-  inWishlist?: boolean; // Track wishlist status
-  wishlistTags?: string[]; // Tags specific to wishlist
-  wishlistCategory?: string; // Category in wishlist
 }
 
 export interface DishRating {
@@ -32,8 +28,6 @@ export interface DishRating {
   rating: number; // 1-5
   tags: string[];
   notes?: string;
-  type: "dish" | "drink"; // Added type to distinguish between dishes and drinks
-  quantity?: number; // Added quantity for multiple items
 }
 
 export interface VisitRating {
@@ -54,9 +48,6 @@ export interface Visit {
   notes?: string;
   tags: string[];
   wouldVisitAgain?: boolean;
-  totalBill?: number; // Added total bill amount
-  visitType?: 'eat-in' | 'takeaway'; // Added visit type
-  partySize?: number; // Added party size
 }
 
 export type RatingLevel = "good" | "mid" | "bad";
@@ -75,7 +66,6 @@ export interface UserProfile {
   visits: Visit[];
   savedVenues: Venue[];
   tags: string[]; // User's custom tags
-  wishlistCategories: string[]; // Added wishlist categories
   // New fields for profile customization
   displayName?: string;
   bio?: string;
@@ -87,14 +77,4 @@ export interface UserProfile {
       shareLocation?: boolean;
     }
   };
-}
-
-// New interface for wishlist
-export interface WishlistItem {
-  venueId: string;
-  addedAt: string; // ISO date string
-  category?: string;
-  tags: string[];
-  notes?: string;
-  priority?: "high" | "medium" | "low";
 }

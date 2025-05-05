@@ -1,10 +1,8 @@
 
 import { Button } from '@/components/ui/button';
 import { Search } from 'lucide-react';
-import GoogleMapComponent from './GoogleMapComponent';
+import MapComponent from '../MapComponent';
 import { Venue } from '@/types';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { SEARCH_RADIUS } from '@/services/places/config';
 
 interface MapAreaProps {
   venues: Venue[];
@@ -25,20 +23,16 @@ const MapArea = ({
   onMapMove,
   onSearchArea
 }: MapAreaProps) => {
-  const isMobile = useIsMobile();
-  
   return (
-    <div className={`w-full ${isMobile ? 'h-full' : 'md:h-full md:order-1'} p-2 relative`}>
+    <div className="w-full md:w-1/2 lg:w-3/5 h-[350px] md:h-full md:order-1 p-4 relative">
       <div className="h-full rounded-lg overflow-hidden border border-gray-200 shadow-md">
-        <GoogleMapComponent 
+        <MapComponent 
           venues={venues} 
           onVenueSelect={onVenueSelect}
           userLocation={userLocation}
           selectedVenue={selectedVenue}
           onMapMove={onMapMove}
           className="w-full h-full"
-          searchRadius={SEARCH_RADIUS}
-          mapStyle="grayscale"
         />
       </div>
       

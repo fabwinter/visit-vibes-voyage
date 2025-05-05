@@ -1,22 +1,18 @@
 import { useState, useEffect } from "react";
 import { Compass, Award, BookOpen, MapPin } from "lucide-react";
+import { mockVenues, mockVisits } from "../data/mockData";
 import VenueCard from "../components/VenueCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlacesService } from "@/services/PlacesService";
 import { Venue } from "@/types";
 import { toast } from "sonner";
-import WishlistButton from "@/components/WishlistButton";
-import { mockVenues, mockVisits } from "../data/mockData";
-import EnhancedVenueCard from '@/components/EnhancedVenueCard';
-import { useVisitData } from "@/hooks/useVisitData";
 
 const ExploreView = () => {
   const [activeTab, setActiveTab] = useState<string>("featured");
   const [topRatedVenues, setTopRatedVenues] = useState<Venue[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [usingMockData, setUsingMockData] = useState<boolean>(false);
-  const { processCheckIn } = useVisitData();
 
   // Fetch real restaurant data on component mount
   useEffect(() => {
@@ -39,10 +35,9 @@ const ExploreView = () => {
       
       if (result.venues && result.venues.length > 0) {
         console.log(`Fetched ${result.venues.length} venues for Explore view`);
-        // Sort by Google rating
-        const sortedVenues = [...result.venues].sort((a, b) => 
-          (b.googleRating || 0) - (a.googleRating || 0)
-        ).slice(0, 5);
+        // Sort by mock rating just for display purposes
+        // In a real app we'd have real ratings from the API
+        const sortedVenues = result.venues.sort(() => Math.random() - 0.5).slice(0, 5);
         setTopRatedVenues(sortedVenues);
         setUsingMockData(false);
       } else {
@@ -88,58 +83,32 @@ const ExploreView = () => {
     setTopRatedVenues(venuesWithLastVisit);
   };
 
-  // Handle check-in for venues
-  const handleCheckIn = (venue: Venue) => {
-    // Create a simple check-in record
-    const visit = {
-      id: crypto.randomUUID(),
-      venueId: venue.id,
-      timestamp: new Date().toISOString(),
-      rating: {
-        food: 0,
-        ambiance: 0,
-        service: 0,
-        value: 0,
-        overall: 0
-      },
-      dishes: [],
-      photos: [],
-      tags: []
-    };
-    
-    processCheckIn(visit);
-    toast.success(`Checked in at ${venue.name}`);
-  };
-
-  // Featured Australian food articles (updated with real content)
+  // Featured Australian food culture articles
   const featuredArticles = [
     {
       id: "1",
       title: "Sydney's Best Coffee Roasters",
       description: "Discover the artisanal coffee scene that's making Sydney a global coffee destination",
       image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=2070&auto=format&fit=crop",
-      tag: "Coffee",
-      link: "https://www.broadsheet.com.au/sydney/guides/best-coffee-roasteries"
+      tag: "Coffee"
     },
     {
       id: "2",
       title: "Farm to Table in New South Wales",
       description: "Meet the local producers transforming Sydney's restaurant scene",
       image: "https://images.unsplash.com/photo-1595187139760-5cedf9d51617?q=80&w=2031&auto=format&fit=crop",
-      tag: "Food",
-      link: "https://www.timeout.com/sydney/restaurants/the-best-farm-to-table-restaurants-in-sydney"
+      tag: "Food"
     },
     {
       id: "3",
       title: "Ultimate Sydney Brunch Guide",
       description: "The best spots for a long Australian brunch with friends and family",
       image: "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?q=80&w=2070&auto=format&fit=crop",
-      tag: "Brunch",
-      link: "https://www.goodfood.com.au/eat-out/news/good-food-guide-sydneys-best-breakfasts-20220406-h239sv"
+      tag: "Brunch"
     }
   ];
 
-  // Australian city suggestions with real venue counts
+  // Australian city suggestions
   const citySuggestions = [
     {
       name: "Sydney",
@@ -172,11 +141,6 @@ const ExploreView = () => {
       venues: 45
     }
   ];
-
-  // Handle opening external article links
-  const openArticleLink = (url: string) => {
-    window.open(url, '_blank');
-  };
 
   return (
     <div className="px-4 pt-6 pb-24">
@@ -228,23 +192,11 @@ const ExploreView = () => {
               <div className="overflow-x-auto pb-4">
                 <div className="flex gap-4" style={{ minWidth: 'max-content' }}>
                   {topRatedVenues.map((venue) => (
-                    <div key={venue.id} className="w-64 relative">
-                      <EnhancedVenueCard
+                    <div key={venue.id} className="w-64">
+                      <VenueCard
                         venue={venue}
                         lastVisit={venue.lastVisit}
-                        onCheckIn={handleCheckIn}
                       />
-                      {/* Google rating badge */}
-                      {venue.googleRating && (
-                        <div className="absolute top-4 left-4 bg-black bg-opacity-60 rounded-full px-2 py-1 flex items-center">
-                          <span className="text-yellow-400 mr-1">★</span>
-                          <span className="text-white text-sm">{venue.googleRating.toFixed(1)}</span>
-                        </div>
-                      )}
-                      {/* Add to wishlist button */}
-                      <div className="absolute top-4 right-4">
-                        <WishlistButton venue={venue} type="icon" className="bg-white" />
-                      </div>
                     </div>
                   ))}
                 </div>
@@ -252,7 +204,7 @@ const ExploreView = () => {
             )}
           </section>
 
-          {/* Featured Articles section */}
+          {/* Keep existing code (Featured Articles section) */}
           <section>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-xl font-bold">Featured Articles</h2>
@@ -285,7 +237,7 @@ const ExploreView = () => {
                       <CardDescription>{article.description}</CardDescription>
                     </CardContent>
                     <CardFooter className="p-3 pt-0">
-                      <Button size="sm" variant="outline" className="w-full" onClick={() => openArticleLink(article.link)}>
+                      <Button size="sm" variant="outline" className="w-full">
                         <BookOpen className="mr-2 h-4 w-4" />
                         Read More
                       </Button>
@@ -296,7 +248,7 @@ const ExploreView = () => {
             </div>
           </section>
 
-          {/* Explore Cities section */}
+          {/* Keep existing code (Explore Cities section) */}
           <section>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-xl font-bold">Explore Cities</h2>
@@ -335,7 +287,7 @@ const ExploreView = () => {
         </div>
       )}
 
-      {/* Top rated section */}
+      {/* Keep existing code (Top rated section, Articles section, and Cities section) */}
       {activeTab === "top rated" && (
         <div>
           <div className="flex items-center mb-4">
@@ -350,32 +302,19 @@ const ExploreView = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {topRatedVenues.map((venue) => (
-                <div key={venue.id} className="relative">
-                  <EnhancedVenueCard
-                    venue={venue}
-                    lastVisit={venue.lastVisit}
-                    onCheckIn={handleCheckIn}
-                  />
-                  {/* Google rating badge */}
-                  {venue.googleRating && (
-                    <div className="absolute top-4 left-4 bg-black bg-opacity-60 rounded-full px-2 py-1 flex items-center">
-                      <span className="text-yellow-400 mr-1">★</span>
-                      <span className="text-white text-sm">{venue.googleRating.toFixed(1)}</span>
-                    </div>
-                  )}
-                  {/* Add to wishlist button */}
-                  <div className="absolute top-4 right-4">
-                    <WishlistButton venue={venue} type="icon" className="bg-white" />
-                  </div>
-                </div>
+                <VenueCard
+                  key={venue.id}
+                  venue={venue}
+                  lastVisit={venue.lastVisit}
+                />
               ))}
             </div>
           )}
         </div>
       )}
 
-      {/* Articles section */}
       {activeTab === "articles" && (
+        // Keep existing code (Articles section)
         <div>
           <div className="flex items-center mb-4">
             <BookOpen className="text-visitvibe-primary mr-2" />
@@ -401,7 +340,7 @@ const ExploreView = () => {
                   <CardDescription>{article.description}</CardDescription>
                 </CardContent>
                 <CardFooter>
-                  <Button onClick={() => openArticleLink(article.link)}>Read Article</Button>
+                  <Button>Read Article</Button>
                 </CardFooter>
               </Card>
             ))}
@@ -409,8 +348,8 @@ const ExploreView = () => {
         </div>
       )}
 
-      {/* Cities section */}
       {activeTab === "cities" && (
+        // Keep existing code (Cities section)
         <div>
           <div className="flex items-center mb-4">
             <Compass className="text-visitvibe-primary mr-2" />

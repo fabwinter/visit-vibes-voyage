@@ -92,23 +92,6 @@
 
   body {
     @apply bg-background text-foreground;
-    /* Prevent overscroll on iOS */
-    overscroll-behavior-y: none;
-  }
-  
-  /* Improve tap targets on mobile */
-  @media (max-width: 768px) {
-    button, 
-    a, 
-    [role="button"] {
-      min-height: 44px;
-      min-width: 44px;
-    }
-  }
-  
-  /* Improve input experience on mobile */
-  input, select, textarea {
-    font-size: 16px; /* Prevents zoom on iOS */
   }
 }
 
@@ -161,42 +144,4 @@
   [cmdk-input-wrapper] {
     @apply relative;
   }
-
-  /* Mobile touch feedback */
-  @media (max-width: 768px) {
-    .active-scale {
-      @apply transition-transform active:scale-95;
-    }
-    
-    .active-opacity {
-      @apply transition-opacity active:opacity-70;
-    }
-    
-    /* Better scrolling experience */
-    .smooth-scroll {
-      @apply overflow-y-auto overscroll-behavior-y-contain;
-      -webkit-overflow-scrolling: touch;
-    }
-  }
-}
-
-/* Bottom sheet styles */
-.vaul-drawer {
-  overflow-y: auto !important;
-}
-
-.vaul-drawer-handle {
-  @apply bg-gray-300 w-12 h-1.5 rounded-full mx-auto;
-}
-
-/* Better touch target around navigation icons */
-@media (max-width: 768px) {
-  .navigation-link {
-    @apply p-3;
-  }
-}
-
-/* Fix Safari iOS height issues */
-html, body, #root {
-  height: -webkit-fill-available;
 }

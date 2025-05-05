@@ -5,7 +5,6 @@ import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, Command
 import { PlacesService } from '@/services/PlacesService';
 import { Venue } from '@/types';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
 
 interface PlaceSearchInputProps {
   onSelect: (venue: Venue) => void;
@@ -24,7 +23,6 @@ const PlaceSearchInput = ({
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Venue[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   
   // Handle click outside to close dropdown
@@ -50,21 +48,11 @@ const PlaceSearchInput = ({
       }
       
       setIsLoading(true);
-      setApiError(null);
-      
       try {
-        // Check if Google Maps API is loaded
-        if (typeof window.google === 'undefined' || !window.google.maps) {
-          throw new Error("Google Maps API not loaded");
-        }
-        
         const venues = await PlacesService.searchPlaces(query, userLocation);
         setResults(venues);
       } catch (error) {
         console.error('Error searching places:', error);
-        setApiError("Failed to search places. Please try again.");
-        toast.error("Failed to search places");
-        setResults([]);
       } finally {
         setIsLoading(false);
       }
@@ -80,11 +68,6 @@ const PlaceSearchInput = ({
     
     // Get full details when a place is selected
     try {
-      // Check if Google Maps API is loaded
-      if (typeof window.google === 'undefined' || !window.google.maps) {
-        throw new Error("Google Maps API not loaded");
-      }
-      
       const details = await PlacesService.getVenueDetails(venue.id);
       if (details) {
         onSelect(details);
@@ -93,7 +76,6 @@ const PlaceSearchInput = ({
       }
     } catch (error) {
       console.error('Error fetching venue details:', error);
-      toast.error("Failed to get venue details");
       onSelect(venue);
     }
   };
@@ -124,9 +106,7 @@ const PlaceSearchInput = ({
         <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white rounded-md shadow-lg overflow-hidden border">
           <Command className="rounded-lg border shadow-md">
             <CommandList>
-              {apiError ? (
-                <CommandEmpty>{apiError}</CommandEmpty>
-              ) : results.length === 0 && !isLoading ? (
+              {results.length === 0 && !isLoading ? (
                 <CommandEmpty>{query.length < 2 ? 'Type to search...' : 'No results found'}</CommandEmpty>
               ) : (
                 <CommandGroup heading="Suggestions">

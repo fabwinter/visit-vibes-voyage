@@ -1,301 +1,281 @@
-
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Venue } from '@/types';
-import { nearbySearch } from '@/services/places/placesService';
-import { FOOD_PLACE_TYPES } from '@/services/places/config';
-import mockData from '../mock_data.json';
-import { useJsApiLoader } from '@react-google-maps/api';
-import { useDebounce } from './useDebounce';
-import { useSearchParams } from 'react-router-dom';
-import { SEARCH_RADIUS } from '@/services/places/config';
+import { useState, useEffect } from 'react';
+import { Venue, Visit } from '@/types';
+import { PlacesService } from '@/services/PlacesService';
 import { toast } from 'sonner';
+import { mockVenues } from '@/data/mockData';
 
-// Define the proper type for libraries
-const libraries: ["places"] = ['places'];
+interface UseVenuesProps {
+  initialLocation?: { lat: number; lng: number };
+}
 
-// Use import.meta.env instead of process.env
-const useMockData = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_DATA === 'true';
-
-const mapResponseToVenues = (results: google.maps.places.PlaceResult[]): Venue[] => {
-  return results.map(place => {
-    const photoUrls = place.photos ? place.photos.map(photo => photo.getUrl({ maxWidth: 500, maxHeight: 500 })) : [];
-
-    return {
-      id: place.place_id || 'unknown',
-      name: place.name || 'Unknown',
-      address: place.formatted_address || 'No Address',
-      coordinates: {
-        lat: place.geometry?.location?.lat() || 0,
-        lng: place.geometry?.location?.lng() || 0
-      },
-      photos: photoUrls,
-      website: place.website || undefined,
-      hours: place.opening_hours?.weekday_text?.join('\n') || undefined,
-      phoneNumber: place.formatted_phone_number || undefined,
-      priceLevel: place.price_level || undefined,
-      category: place.types || [],
-      googleRating: place.rating || undefined,
-      inWishlist: false,
-      wishlistTags: [],
-      wishlistCategory: ''
-    };
-  });
-};
-
-export const useVenues = () => {
+export const useVenues = ({ initialLocation }: UseVenuesProps = {}) => {
+  // Default to Sydney CBD, but this will be updated with user location
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number }>(
+    initialLocation || { lat: -33.8688, lng: 151.2093 }
+  );
+  
   const [venues, setVenues] = useState<Venue[]>([]);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number }>({ lat: 0, lng: 0 });
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [nextPageToken, setNextPageToken] = useState<string | undefined>();
   const [usingMockData, setUsingMockData] = useState(false);
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
-  const [mapCenter, setMapCenter] = useState<google.maps.LatLngLiteral | null>(null);
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [showSearchThisArea, setShowSearchThisArea] = useState(false);
-  const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
-  const [selectedVenueDetails, setSelectedVenueDetails] = useState<Venue | null>(null);
-  const debouncedCenter = useDebounce(mapCenter, 500);
-  
-  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
-  
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: googleMapsApiKey,
-    libraries: libraries,
-  });
-
-  useEffect(() => {
-    if (loadError) {
-      console.error("Google Maps API failed to load:", loadError);
-      toast.error("Failed to load Google Maps API. Using mock data instead.");
-      prepareMockData();
-      setUsingMockData(true);
-    }
-  }, [loadError]);
-
-  // Function to prepare mock data
-  const prepareMockData = () => {
-    console.log("Preparing mock data");
-    const mockVenues = mockData.venues.map(venue => ({
-      ...venue,
-      coordinates: {
-        lat: venue.coordinates.lat + (Math.random() - 0.5) * 0.01,
-        lng: venue.coordinates.lng + (Math.random() - 0.5) * 0.01
-      }
-    }));
-    setVenues(mockVenues);
-    setUsingMockData(true);
-  };
-
-  // Get initial location from params
-  useEffect(() => {
-    const lat = searchParams.get("lat");
-    const lng = searchParams.get("lng");
-
-    if (lat && lng) {
-      const latitude = parseFloat(lat);
-      const longitude = parseFloat(lng);
-
-      setUserLocation({ lat: latitude, lng: longitude });
-    }
-  }, [searchParams]);
+  const [visits, setVisits] = useState<Visit[]>([]);
 
   // Get user's current location
   useEffect(() => {
-    if (!navigator.geolocation) {
-      console.warn("Geolocation is not supported by this browser.");
-      return;
-    }
-
-    const success = (position: GeolocationPosition) => {
-      const { latitude, longitude } = position.coords;
-      setUserLocation({ lat: latitude, lng: longitude });
-    };
-
-    const error = () => {
-      console.warn("Unable to retrieve your location.");
-    };
-
-    navigator.geolocation.getCurrentPosition(success, error);
-  }, []);
-
-  // Function to handle map move and update the map center
-  const handleMapMove = useCallback((center: { lat: number; lng: number }) => {
-    setMapCenter(center);
-    setShowSearchThisArea(true);
-  }, []);
-
-  // Function to handle place selection from the search bar
-  const handlePlaceSelect = useCallback((place: google.maps.places.PlaceResult) => {
-    if (place && place.geometry && place.geometry.location) {
-      const newLocation = {
-        lat: place.geometry.location.lat(),
-        lng: place.geometry.location.lng(),
-      };
-      setUserLocation(newLocation);
-      setMapCenter(newLocation);
-    }
-  }, []);
-
-  // Function to handle venue selection
-  const handleVenueSelect = useCallback((venueId: string) => {
-    setSelectedVenue(venueId);
-    const venue = venues.find(v => v.id === venueId);
-    setSelectedVenueDetails(venue || null);
-  }, [venues]);
-
-  // Modified search function to enforce the 2km radius
-  const searchNearbyVenues = useCallback(async (location: google.maps.LatLngLiteral) => {
-    if (!isLoaded) {
-      console.warn("Google Maps API not loaded yet");
-      prepareMockData();
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    try {
-      const response = await nearbySearch({
-        location: location,
-        radius: SEARCH_RADIUS, // Use the 2km radius constant
-        types: FOOD_PLACE_TYPES,
-        pageToken: null
+    if (navigator.geolocation) {
+      // Show loading toast
+      const loadingToastId = toast.loading("Getting your current location...");
+      
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserLocation({ lat: latitude, lng: longitude });
+          setMapCenter({ lat: latitude, lng: longitude });
+          console.log("User location detected:", latitude, longitude);
+          toast.dismiss(loadingToastId);
+          toast.success("Location found", {
+            description: "Showing food venues near you"
+          });
+        },
+        (error) => {
+          console.error("Error getting user location:", error);
+          toast.dismiss(loadingToastId);
+          toast.error("Could not access your location", {
+            description: "Using default location. Check browser permissions."
+          });
+        },
+        // Options for better geolocation
+        { 
+          enableHighAccuracy: true, 
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
+    } else {
+      toast("Geolocation is not supported by this browser", {
+        description: "Using default location."
       });
-      
-      if (response.results) {
-        const newVenues = mapResponseToVenues(response.results);
-        setVenues(newVenues);
-        setNextPageToken(response.next_page_token || null);
-      }
-    } catch (error) {
-      console.error('Failed to search nearby venues:', error);
-      
-      // If real API fails, use mock data
-      toast.error("Failed to search nearby venues. Using mock data instead.");
-      prepareMockData();
-    } finally {
-      setIsLoading(false);
     }
-  }, [isLoaded]);
-
-  // Filter venues to those within the search radius
-  const filterVenuesWithinRadius = useCallback((center: google.maps.LatLngLiteral, venues: Venue[], radius: number) => {
-    return venues.filter(venue => {
-      const distance = getDistanceBetweenPoints(
-        center.lat, center.lng,
-        venue.coordinates.lat, venue.coordinates.lng
-      );
-      return distance <= radius;
-    });
   }, []);
 
-  // Calculate distance between two points using Haversine formula
-  const getDistanceBetweenPoints = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
-    const R = 6371000; // Earth radius in meters
-    const φ1 = lat1 * Math.PI/180;
-    const φ2 = lat2 * Math.PI/180;
-    const Δφ = (lat2-lat1) * Math.PI/180;
-    const Δλ = (lng2-lng1) * Math.PI/180;
-
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-    return R * c; // Distance in meters
-  };
-
-  // Calculate surrounding venues (close to selected venue)
-  const calculateSurroundingVenues = useCallback(() => {
-    if (!selectedVenue || !selectedVenueDetails) return [];
-    
-    const nearbyVenues = venues.filter(venue => {
-      if (venue.id === selectedVenue) return false;
-      
-      const distance = getDistanceBetweenPoints(
-        selectedVenueDetails.coordinates.lat, selectedVenueDetails.coordinates.lng,
-        venue.coordinates.lat, venue.coordinates.lng
-      );
-      
-      // Return venues within 500 meters of selected venue
-      return distance <= 500;
-    });
-    
-    // Sort by proximity
-    return nearbyVenues.sort((a, b) => {
-      const distanceA = getDistanceBetweenPoints(
-        selectedVenueDetails.coordinates.lat, selectedVenueDetails.coordinates.lng,
-        a.coordinates.lat, a.coordinates.lng
-      );
-      const distanceB = getDistanceBetweenPoints(
-        selectedVenueDetails.coordinates.lat, selectedVenueDetails.coordinates.lng,
-        b.coordinates.lat, b.coordinates.lng
-      );
-      return distanceA - distanceB;
-    }).slice(0, 5); // Only show the 5 closest venues
-  }, [selectedVenue, selectedVenueDetails, venues]);
-
-  // Load initial venues or when the location changes
+  // Load visits from localStorage
   useEffect(() => {
-    if (userLocation.lat && userLocation.lng) {
-      if (isLoaded) {
-        searchNearbyVenues(userLocation);
-      } else if (loadError) {
-        prepareMockData();
-      }
+    const storedVisits = localStorage.getItem('visits');
+    if (storedVisits) {
+      setVisits(JSON.parse(storedVisits));
     }
-  }, [userLocation, isLoaded, loadError, searchNearbyVenues]);
+  }, []);
+  
+  // Save visits to localStorage when they change
+  useEffect(() => {
+    if (visits.length > 0) {
+      localStorage.setItem('visits', JSON.stringify(visits));
+    }
+  }, [visits]);
 
-  // Load more venues
-  const handleLoadMore = useCallback(async () => {
-    if (!nextPageToken) return;
+  // Fetch venues when user location or map center changes
+  useEffect(() => {
+    if (mapCenter) {
+      fetchVenues(undefined, mapCenter);
+    } else if (userLocation.lat !== -33.8688 || userLocation.lng !== 151.2093) {
+      // Only fetch if we have a real user location (not the default)
+      fetchVenues();
+    }
+  }, [userLocation, mapCenter]);
 
+  // Function to fetch venues from Places API
+  const fetchVenues = async (pageToken?: string, searchLocation?: { lat: number; lng: number }) => {
     setIsLoading(true);
+    
     try {
-      const response = await nearbySearch({
-        location: userLocation,
-        radius: 2000,
-        types: FOOD_PLACE_TYPES,
-        pageToken: nextPageToken
+      console.log("Attempting to fetch venues from API...");
+      const result = await PlacesService.searchNearbyVenues({
+        location: searchLocation || userLocation,
+        radius: 5000, // 5km radius
+        type: "restaurant", // Default to food venues
+        pageToken: pageToken
       });
-
-      if (response.results) {
-        const newVenues = mapResponseToVenues(response.results);
-        setVenues(prevVenues => [...prevVenues, ...newVenues]);
-        setNextPageToken(response.next_page_token || null);
+      
+      if (result.venues.length === 0 && !pageToken) {
+        // If no results and it's the initial fetch, fall back to mock data
+        console.log("No venues returned from API, falling back to mock data");
+        prepareMockData();
+        setUsingMockData(true);
+      } else if (result.venues.length > 0) {
+        console.log(`Fetched ${result.venues.length} venues from API`);
+        
+        // Enhanced to properly save venues with visit data
+        const venuesWithVisitData = result.venues.map(venue => {
+          // Find all visits for this venue
+          const venueVisits = visits.filter(visit => visit.venueId === venue.id);
+          
+          // Sort by date (newest first)
+          if (venueVisits.length > 0) {
+            venueVisits.sort((a, b) => 
+              new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+            );
+            
+            // Add the latest visit to the venue
+            return {
+              ...venue,
+              lastVisit: venueVisits[0]
+            };
+          }
+          return venue;
+        });
+        
+        if (pageToken) {
+          setVenues(prevVenues => [...prevVenues, ...venuesWithVisitData]);
+        } else {
+          setVenues(venuesWithVisitData);
+        }
+        setNextPageToken(result.nextPageToken);
+        setUsingMockData(false);
+        
+        // Store venues in localStorage for other views
+        localStorage.setItem('venues', JSON.stringify(venuesWithVisitData));
       }
     } catch (error) {
-      console.error('Failed to load more venues:', error);
-      toast.error("Failed to load more venues");
+      console.error("Error fetching venues:", error);
+      toast("Error fetching venues. Using mock data instead.", {
+        description: error instanceof Error ? error.message : undefined
+      });
+      prepareMockData();
       setUsingMockData(true);
     } finally {
       setIsLoading(false);
+      // Hide the "Search This Area" button after search is complete
+      setShowSearchThisArea(false);
     }
-  }, [nextPageToken, userLocation]);
-  
-  // Modified handleSearchThisArea to enforce radius
-  const handleSearchThisArea = useCallback(() => {
-    if (!mapCenter) return;
-    
-    searchNearbyVenues(mapCenter);
-    setShowSearchThisArea(false);
-  }, [mapCenter, searchNearbyVenues]);
+  };
 
-  // Process the check-in data
-  const processCheckIn = (visit: any) => {
-    // Add the new visit
-    // const updatedVisits = [visit, ...visits];
-    // setVisits(updatedVisits);
+  // Prepare mock data by adding last visit information
+  const prepareMockData = () => {
+    const venuesWithLastVisit = mockVenues.map(venue => {
+      // Find all visits for this venue
+      const venueVisits = visits.filter(visit => visit.venueId === venue.id);
+      
+      // Sort by date (newest first)
+      venueVisits.sort((a, b) => 
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+      
+      // Add the latest visit to the venue
+      return {
+        ...venue,
+        lastVisit: venueVisits[0]
+      };
+    });
     
-    // Save visits to localStorage
-    // localStorage.setItem('visits', JSON.stringify(updatedVisits));
+    setVenues(venuesWithLastVisit);
     
-    // toast.success("Check-in successful!");
+    // Store venues in localStorage for other views
+    localStorage.setItem('venues', JSON.stringify(venuesWithLastVisit));
+  };
+
+  // Handle map move to show "Search this area" button
+  const handleMapMove = (newCenter: { lat: number; lng: number }) => {
+    // Only show the button if the center has moved significantly
+    if (mapCenter) {
+      const distance = calculateDistance(mapCenter, newCenter);
+      if (distance > 1) { // If moved more than 1km
+        setShowSearchThisArea(true);
+      }
+    }
   };
   
-  // Compute surrounding venues on selected venue change
-  const surroundingVenues = useMemo(() => calculateSurroundingVenues(), [selectedVenue, calculateSurroundingVenues]);
+  // Calculate distance between two points in km
+  const calculateDistance = (point1: { lat: number; lng: number }, point2: { lat: number; lng: number }) => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (point2.lat - point1.lat) * Math.PI / 180;
+    const dLon = (point2.lng - point1.lng) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(point1.lat * Math.PI / 180) * Math.cos(point2.lat * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
   
-  // Return all necessary values
+  // Handle search this area
+  const handleSearchThisArea = () => {
+    if (mapCenter) {
+      fetchVenues(undefined, mapCenter);
+    }
+  };
+
+  // Process the check-in data
+  const processCheckIn = (visit: Visit) => {
+    // Add the new visit
+    const updatedVisits = [visit, ...visits];
+    setVisits(updatedVisits);
+    
+    // Save visits to localStorage
+    localStorage.setItem('visits', JSON.stringify(updatedVisits));
+    
+    // Update the venue with the new visit
+    setVenues(prev => 
+      prev.map(venue => 
+        venue.id === visit.venueId 
+          ? { ...venue, lastVisit: visit } 
+          : venue
+      )
+    );
+    
+    toast.success("Check-in successful!");
+  };
+
+  // Handle place selection from autocomplete - enhanced to center map
+  const handlePlaceSelect = async (venue: Venue) => {
+    console.log("Selected venue:", venue);
+    
+    // If we already have coordinates, update the selected venue right away
+    if (venue.coordinates.lat !== 0 && venue.coordinates.lng !== 0) {
+      // Center map on the selected venue
+      setMapCenter(venue.coordinates);
+      
+      // Add this venue to our list if it's not there already
+      setVenues(prevVenues => {
+        const exists = prevVenues.some(v => v.id === venue.id);
+        if (!exists) {
+          return [venue, ...prevVenues];
+        }
+        return prevVenues;
+      });
+    } 
+    // Otherwise fetch details to get coordinates
+    else {
+      try {
+        const details = await PlacesService.getVenueDetails(venue.id);
+        if (details) {
+          // Center map on the selected venue
+          setMapCenter(details.coordinates);
+          
+          // Add this venue to our list if it's not there already
+          setVenues(prevVenues => {
+            const exists = prevVenues.some(v => v.id === details.id);
+            if (!exists) {
+              return [details, ...prevVenues];
+            }
+            return prevVenues;
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching venue details:", error);
+        toast.error("Could not get details for this venue");
+      }
+    }
+  };
+
+  // Load more venues
+  const handleLoadMore = () => {
+    if (nextPageToken) {
+      fetchVenues(nextPageToken);
+    }
+  };
+
   return {
     venues,
     userLocation,
@@ -303,15 +283,12 @@ export const useVenues = () => {
     usingMockData,
     nextPageToken,
     showSearchThisArea,
-    selectedVenue,
-    selectedVenueDetails,
-    surroundingVenues,
     setMapCenter,
     handleMapMove,
     handleSearchThisArea,
     handlePlaceSelect,
-    handleVenueSelect,
     handleLoadMore,
-    processCheckIn
+    processCheckIn,
+    visits
   };
 };
