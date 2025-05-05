@@ -1,10 +1,11 @@
 
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Clock, Camera, Share2, ArrowRight, Check, X, Globe } from 'lucide-react';
+import { Clock, Camera, Share2, ArrowRight, Check, X, Globe, ArrowUpRight } from 'lucide-react';
 import StarRating from './StarRating';
 import { Visit, Venue } from '../types';
 import { toast } from 'sonner';
+import { Button } from './ui/button';
 
 interface VisitCardProps {
   visit: Visit;
@@ -85,19 +86,23 @@ const VisitCard = ({ visit, venueName, venueDetails, className = '' }: VisitCard
       </div>
       
       <div className="p-4">
-        {/* Venue website if available */}
+        {/* Venue website if available - enhanced with button */}
         {venueDetails?.website && (
           <div className="mb-3">
-            <a 
-              href={venueDetails.website}
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-visitvibe-primary flex items-center gap-1 hover:underline text-sm"
-              onClick={(e) => e.stopPropagation()}
+            <Button 
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-1 w-full"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.open(venueDetails.website, '_blank');
+              }}
             >
               <Globe size={14} />
-              Visit Website
-            </a>
+              <span className="flex-1 text-left">Visit Website</span>
+              <ArrowUpRight size={14} />
+            </Button>
           </div>
         )}
       

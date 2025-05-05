@@ -21,16 +21,29 @@ export const useVisitData = () => {
     }
   }, [visits]);
 
-  // Process the check-in data
+  // Process the check-in data - now handles both new and edited visits
   const processCheckIn = (visit: Visit) => {
-    // Add the new visit
-    const updatedVisits = [visit, ...visits];
+    // Check if this is an edit of an existing visit
+    const existingVisitIndex = visits.findIndex(v => v.id === visit.id);
+    
+    let updatedVisits;
+    if (existingVisitIndex !== -1) {
+      // Update the existing visit
+      updatedVisits = [...visits];
+      updatedVisits[existingVisitIndex] = visit;
+      toast.success("Check-in updated!");
+    } else {
+      // Add the new visit
+      updatedVisits = [visit, ...visits];
+      toast.success("Check-in successful!");
+    }
+    
     setVisits(updatedVisits);
     
     // Save visits to localStorage
     localStorage.setItem('visits', JSON.stringify(updatedVisits));
     
-    toast.success("Check-in successful!");
+    return visit;
   };
 
   return {

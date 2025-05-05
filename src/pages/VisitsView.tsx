@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Visit, Venue } from '@/types';
 import { useNavigate } from 'react-router-dom';
-import { Edit, Trash, Search, Filter, Plus } from 'lucide-react';
+import { Edit, Trash, Search, Filter, Plus, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import CheckInButton from '@/components/CheckInButton';
@@ -11,6 +11,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useVenues } from '@/hooks/useVenues';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { format } from 'date-fns';
 
 const VisitsView = () => {
   const [visits, setVisits] = useState<Visit[]>([]);
@@ -77,17 +78,15 @@ const VisitsView = () => {
   
   // Handle check-in form submission
   const handleCheckIn = (visit: Visit) => {
-    processCheckIn(visit);
+    const result = processCheckIn(visit);
     setIsCheckInOpen(false);
     
     // Update local state
     if (editingVisit) {
       setVisits(prev => prev.map(v => v.id === visit.id ? visit : v));
       setEditingVisit(null);
-      toast.success("Check-in updated!");
     } else {
       setVisits(prev => [visit, ...prev]);
-      toast.success("Check-in added!");
     }
   };
   
@@ -102,6 +101,18 @@ const VisitsView = () => {
     if (venue) {
       setSelectedVenue(venue);
       setEditingVisit(visit);
+      setIsCheckInOpen(true);
+    } else {
+      toast.error("Could not find venue information");
+    }
+  };
+  
+  // Visit again
+  const visitAgain = (visit: Visit) => {
+    const venue = venues.find(v => v.id === visit.venueId);
+    if (venue) {
+      setSelectedVenue(venue);
+      setEditingVisit(null); // Not editing, creating new
       setIsCheckInOpen(true);
     } else {
       toast.error("Could not find venue information");
@@ -140,17 +151,19 @@ const VisitsView = () => {
   // Format date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    }).format(date);
+    return format(date, 'MMM d, yyyy');
   };
   
   // Find venue name
   const getVenueName = (venueId: string) => {
     const venue = venues.find(v => v.id === venueId);
     return venue?.name || 'Unknown Venue';
+  };
+  
+  // Get venue website
+  const getVenueWebsite = (venueId: string) => {
+    const venue = venues.find(v => v.id === venueId);
+    return venue?.website;
   };
   
   // Group visits by month
@@ -202,6 +215,7 @@ const VisitsView = () => {
               <div className="space-y-3">
                 {monthVisits.map(visit => {
                   const venueName = getVenueName(visit.venueId);
+                  const venueWebsite = getVenueWebsite(visit.venueId);
                   
                   return (
                     <div 
@@ -211,10 +225,37 @@ const VisitsView = () => {
                     >
                       <div className="flex justify-between">
                         <div>
-                          <h3 className="font-medium text-lg">{venueName}</h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium text-lg">{venueName}</h3>
+                            {venueWebsite && (
+                              <a 
+                                href={venueWebsite} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="text-blue-500 hover:text-blue-700"
+                                onClick={(e) => {
+                                  e.stopPropagation(); // Prevent triggering the parent click
+                                }}
+                              >
+                                <ArrowRight className="h-4 w-4" />
+                              </a>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-500">{formatDate(visit.timestamp)}</p>
                         </div>
                         <div className="flex items-start space-x-1">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              visitAgain(visit);
+                            }}
+                            title="Visit Again"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
                           <Button 
                             variant="ghost" 
                             size="icon" 

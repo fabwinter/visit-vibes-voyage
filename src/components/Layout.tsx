@@ -2,7 +2,7 @@
 import { ReactNode, useState, useEffect } from 'react';
 import NavigationBar from './NavigationBar';
 import { Button } from './ui/button';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, Database } from 'lucide-react';
 import AuthModal from './auth/AuthModal';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
@@ -15,6 +15,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useNavigate } from 'react-router-dom';
+import SupabaseConnectionPrompt from './SupabaseConnectionPrompt';
+import { toast } from 'sonner';
 
 interface LayoutProps {
   children: ReactNode;
@@ -23,8 +25,23 @@ interface LayoutProps {
 const Layout = ({ children }: LayoutProps) => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authType, setAuthType] = useState<'signin' | 'signup'>('signin');
+  const [supabasePromptOpen, setSupabasePromptOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
+  
+  // Check if we've shown the Supabase prompt before
+  useEffect(() => {
+    const hasShownPrompt = localStorage.getItem('supabase_prompt_shown');
+    if (!hasShownPrompt && isAuthenticated) {
+      // Set a timeout to show the prompt after a delay
+      const timer = setTimeout(() => {
+        setSupabasePromptOpen(true);
+        localStorage.setItem('supabase_prompt_shown', 'true');
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated]);
   
   const openSignIn = () => {
     setAuthType('signin');
@@ -38,10 +55,20 @@ const Layout = ({ children }: LayoutProps) => {
 
   const handleLogout = () => {
     logout();
+    toast.success("Logged out successfully");
   };
 
   const navigateToProfile = () => {
     navigate('/profile');
+  };
+  
+  const openSupabasePrompt = () => {
+    setSupabasePromptOpen(true);
+  };
+
+  const getInitials = (name: string) => {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   return (
@@ -51,6 +78,16 @@ const Layout = ({ children }: LayoutProps) => {
           VisitVibe
         </h1>
         <div className="flex items-center gap-2">
+          {/* Supabase Button */}
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="border-blue-500 text-blue-500"
+            onClick={openSupabasePrompt}
+          >
+            <Database className="h-4 w-4" />
+          </Button>
+
           {isAuthenticated ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -60,14 +97,14 @@ const Layout = ({ children }: LayoutProps) => {
                       <AvatarImage src={user.photo} alt={user.name} />
                     ) : (
                       <AvatarFallback className="bg-visitvibe-primary text-white">
-                        {user?.name.substring(0, 2).toUpperCase()}
+                        {getInitials(user?.name || 'User')}
                       </AvatarFallback>
                     )}
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>{user?.name}</DropdownMenuLabel>
+                <DropdownMenuLabel>{user?.name || 'User'}</DropdownMenuLabel>
                 <DropdownMenuItem onClick={navigateToProfile}>
                   <User className="mr-2 h-4 w-4" />
                   Profile
@@ -99,6 +136,10 @@ const Layout = ({ children }: LayoutProps) => {
         isOpen={authModalOpen} 
         onClose={() => setAuthModalOpen(false)}
         initialView={authType}
+      />
+      <SupabaseConnectionPrompt
+        isOpen={supabasePromptOpen}
+        onClose={() => setSupabasePromptOpen(false)}
       />
     </div>
   );
