@@ -32,9 +32,10 @@ export const useWishlist = () => {
             };
           }
           return null;
-        }).filter((v): v is Venue & { inWishlist: true; wishlistTags: string[]; wishlistCategory?: string } => v !== null);
+        // Fix type predicate to match actual structure (wishlistCategory is optional)
+        }).filter((v): v is (Venue & { inWishlist: true; wishlistTags: string[]; wishlistCategory?: string }) => v !== null);
         
-        setWishlistVenues(wishlistVenues as Venue[]);
+        setWishlistVenues(wishlistVenues);
       }
     };
     
