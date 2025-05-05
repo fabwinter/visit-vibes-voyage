@@ -1,4 +1,3 @@
-
 import { Venue, Visit, VisitRating, DishRating } from "../types";
 
 export const mockVenues: Venue[] = [
