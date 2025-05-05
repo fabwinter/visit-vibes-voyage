@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Search, Navigation } from 'lucide-react';
 import MapComponent from '../MapComponent';
 import { Venue } from '@/types';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface MapAreaProps {
   venues: Venue[];
@@ -12,7 +13,7 @@ interface MapAreaProps {
   onVenueSelect: (venueId: string) => void;
   onMapMove: (center: { lat: number; lng: number }) => void;
   onSearchArea: () => void;
-  onCenterToUserLocation?: () => void; // New prop for centering on user location
+  onCenterToUserLocation?: () => void;
 }
 
 const MapArea = ({
@@ -25,8 +26,10 @@ const MapArea = ({
   onSearchArea,
   onCenterToUserLocation
 }: MapAreaProps) => {
+  const isMobile = useIsMobile();
+
   return (
-    <div className="w-full md:w-1/2 lg:w-3/5 h-[350px] md:h-full md:order-1 p-4 relative">
+    <div className="w-full md:w-1/2 lg:w-3/5 h-[300px] md:h-full md:order-1 p-2 md:p-4 relative">
       <div className="h-full rounded-lg overflow-hidden border border-gray-200 shadow-md">
         <MapComponent 
           venues={venues} 
@@ -42,21 +45,23 @@ const MapArea = ({
       {showSearchThisArea && (
         <Button 
           onClick={onSearchArea}
-          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 bg-visitvibe-primary text-white shadow-lg flex items-center gap-2"
+          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 bg-visitvibe-primary text-white shadow-lg flex items-center gap-1 py-1 px-3 h-9"
+          size={isMobile ? "sm" : "default"}
         >
           <Search className="h-4 w-4" />
-          Search this area
+          {!isMobile && "Search this area"}
+          {isMobile && "Search here"}
         </Button>
       )}
 
       {/* Center on my location button */}
       <Button
         onClick={onCenterToUserLocation}
-        className="absolute bottom-6 right-6 z-10 bg-white text-visitvibe-primary border border-gray-200 shadow-lg hover:bg-gray-100"
+        className="absolute bottom-4 right-4 z-10 bg-white text-visitvibe-primary border border-gray-200 shadow-lg hover:bg-gray-100"
         size="icon"
         title="Center on my location"
       >
-        <Navigation className="h-5 w-5" />
+        <Navigation className="h-4 w-4" />
       </Button>
     </div>
   );

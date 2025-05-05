@@ -7,6 +7,7 @@ import CheckInForm from '../components/CheckInForm';
 import { FilterOptions } from '../components/VenueFilters';
 import { Venue } from '@/types';
 import { toast } from "sonner";
+import { useIsMobile } from '../hooks/use-mobile';
 
 // Import refactored components
 import SearchBar from '../components/map/SearchBar';
@@ -17,6 +18,7 @@ import { useVenues } from '../hooks/useVenues';
 
 const MapView = () => {
   const location = useLocation();
+  const isMobile = useIsMobile();
   const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
     rating: 'all',
@@ -91,8 +93,12 @@ const MapView = () => {
   };
   
   // Handle check-in
-  const handleCheckIn = () => {
-    if (selectedVenueDetails) {
+  const handleCheckIn = (venue?: Venue) => {
+    if (venue) {
+      setSelectedVenue(venue.id);
+      setSelectedVenueDetails(venue);
+      setIsCheckInOpen(true);
+    } else if (selectedVenueDetails) {
       setIsCheckInOpen(true);
     } else {
       toast.error("Please select a venue first");
@@ -112,8 +118,8 @@ const MapView = () => {
   };
 
   return (
-    <div className="h-[calc(100vh-132px)] flex flex-col md:flex-row">
-      {/* Map Area - Left side */}
+    <div className={`h-[calc(100vh-132px)] flex flex-col md:flex-row`}>
+      {/* Map Area */}
       <MapArea
         venues={filteredVenues}
         userLocation={userLocation}
@@ -126,14 +132,14 @@ const MapView = () => {
       />
       
       {/* Right side - Search, Filters and Venue List */}
-      <div className="w-full md:w-1/2 lg:w-2/5 md:h-full md:overflow-y-auto p-4 md:order-2">
+      <div className="w-full md:w-1/2 lg:w-2/5 md:h-full md:overflow-y-auto p-3 md:p-4 md:order-2">
         {/* Search with filters */}
         <SearchBar
           venues={venues}
           userLocation={userLocation}
           onFilterChange={setFilterOptions}
           onPlaceSelect={handlePlaceSelect}
-          className="mb-4"
+          className="mb-3"
         />
         
         {/* Selected venue details if available */}
@@ -154,14 +160,17 @@ const MapView = () => {
           nextPageToken={nextPageToken}
           onVenueSelect={handleVenueSelect}
           onLoadMore={handleLoadMore}
+          onCheckInClick={(venue) => handleCheckIn(venue)}
         />
       </div>
 
-      {/* Floating check-in button */}
-      <CheckInButton 
-        className="fixed right-6 bottom-24 w-14 h-14"
-        onClick={handleCheckIn}
-      />
+      {/* Floating check-in button - only show if no venue is selected on mobile */}
+      {isMobile && !selectedVenueDetails && (
+        <CheckInButton 
+          className="fixed right-4 bottom-20 w-12 h-12 shadow-lg"
+          onClick={() => handleCheckIn()}
+        />
+      )}
 
       {/* Check-in form dialog */}
       {selectedVenueDetails && (
