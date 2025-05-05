@@ -1,10 +1,12 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { toast } from 'sonner';
 
-interface User {
+export interface User {
   id: string;
   name: string;
   email: string;
+  photo?: string;
 }
 
 interface AuthContextType {
@@ -14,6 +16,7 @@ interface AuthContextType {
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
+  updateUserProfile: (updates: Partial<User>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,7 +29,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const storedUser = localStorage.getItem('visitvibe_user');
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error("Failed to parse stored user", error);
+      }
     }
     setLoading(false);
   }, []);
@@ -34,51 +41,74 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Mock login function - in a real app, this would call an API
   const login = async (email: string, password: string) => {
     // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    setLoading(true);
     
-    // Simple validation - in a real app, this would verify credentials with a server
-    if (!email.includes('@') || password.length < 6) {
-      throw new Error('Invalid credentials');
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Simple validation - in a real app, this would verify credentials with a server
+      if (!email.includes('@') || password.length < 6) {
+        throw new Error('Invalid credentials');
+      }
+      
+      // Create a mock user
+      const newUser = {
+        id: Date.now().toString(),
+        name: email.split('@')[0],
+        email
+      };
+      
+      setUser(newUser);
+      localStorage.setItem('visitvibe_user', JSON.stringify(newUser));
+    } finally {
+      setLoading(false);
     }
-    
-    // Create a mock user
-    const newUser = {
-      id: Date.now().toString(),
-      name: email.split('@')[0],
-      email
-    };
-    
-    setUser(newUser);
-    localStorage.setItem('visitvibe_user', JSON.stringify(newUser));
-    return;
   };
   
   // Mock register function
   const register = async (name: string, email: string, password: string) => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    setLoading(true);
     
-    // Simple validation
-    if (!email.includes('@') || password.length < 6) {
-      throw new Error('Invalid input');
+    try {
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Simple validation
+      if (!email.includes('@') || password.length < 6) {
+        throw new Error('Invalid input');
+      }
+      
+      // Create a new user
+      const newUser = {
+        id: Date.now().toString(),
+        name,
+        email
+      };
+      
+      setUser(newUser);
+      localStorage.setItem('visitvibe_user', JSON.stringify(newUser));
+    } finally {
+      setLoading(false);
     }
-    
-    // Create a new user
-    const newUser = {
-      id: Date.now().toString(),
-      name,
-      email
-    };
-    
-    setUser(newUser);
-    localStorage.setItem('visitvibe_user', JSON.stringify(newUser));
-    return;
   };
   
   // Logout function
   const logout = () => {
     setUser(null);
     localStorage.removeItem('visitvibe_user');
+    toast.success("Logged out successfully");
+  };
+  
+  // Update user profile
+  const updateUserProfile = async (updates: Partial<User>) => {
+    if (!user) {
+      throw new Error("User not logged in");
+    }
+    
+    const updatedUser = { ...user, ...updates };
+    setUser(updatedUser);
+    localStorage.setItem('visitvibe_user', JSON.stringify(updatedUser));
+    return;
   };
   
   return (
@@ -88,7 +118,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       login,
       register,
       logout,
-      isAuthenticated: !!user
+      isAuthenticated: !!user,
+      updateUserProfile
     }}>
       {children}
     </AuthContext.Provider>

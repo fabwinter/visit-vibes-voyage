@@ -1,9 +1,20 @@
 
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import NavigationBar from './NavigationBar';
 import { Button } from './ui/button';
-import { UserIcon } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
 import AuthModal from './auth/AuthModal';
+import { useAuth } from '@/hooks/useAuth';
+import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useNavigate } from 'react-router-dom';
 
 interface LayoutProps {
   children: ReactNode;
@@ -12,6 +23,8 @@ interface LayoutProps {
 const Layout = ({ children }: LayoutProps) => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authType, setAuthType] = useState<'signin' | 'signup'>('signin');
+  const { user, isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
   
   const openSignIn = () => {
     setAuthType('signin');
@@ -23,6 +36,14 @@ const Layout = ({ children }: LayoutProps) => {
     setAuthModalOpen(true);
   };
 
+  const handleLogout = () => {
+    logout();
+  };
+
+  const navigateToProfile = () => {
+    navigate('/profile');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <header className="bg-white p-3 shadow-sm fixed top-0 left-0 right-0 z-40 flex items-center justify-between">
@@ -30,12 +51,44 @@ const Layout = ({ children }: LayoutProps) => {
           VisitVibe
         </h1>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={openSignIn}>
-            Sign In
-          </Button>
-          <Button size="sm" onClick={openSignUp}>
-            Sign Up
-          </Button>
+          {isAuthenticated ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full" aria-label="User menu">
+                  <Avatar className="h-8 w-8">
+                    {user?.photo ? (
+                      <AvatarImage src={user.photo} alt={user.name} />
+                    ) : (
+                      <AvatarFallback className="bg-visitvibe-primary text-white">
+                        {user?.name.substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>{user?.name}</DropdownMenuLabel>
+                <DropdownMenuItem onClick={navigateToProfile}>
+                  <User className="mr-2 h-4 w-4" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <>
+              <Button variant="outline" size="sm" onClick={openSignIn}>
+                Sign In
+              </Button>
+              <Button size="sm" onClick={openSignUp}>
+                Sign Up
+              </Button>
+            </>
+          )}
         </div>
       </header>
       <main className="flex-1 pt-14 pb-16 overflow-y-auto">

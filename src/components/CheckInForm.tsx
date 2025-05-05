@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -11,11 +12,23 @@ import { v4 as uuidv4 } from 'uuid';
 import { predefinedTags } from '@/data/mockData';
 import { toast } from 'sonner';
 
+// Define dish-specific tags
+const FOOD_TAGS = [
+  'Delicious', 'Spicy', 'Sweet', 'Savory', 'Fresh', 
+  'Overpriced', 'Worth It', 'Healthy', 'Indulgent', 'Authentic'
+];
+
+const DRINK_TAGS = [
+  'Refreshing', 'Strong', 'Sweet', 'Bitter', 'Balanced',
+  'Overpriced', 'Worth It', 'Unique', 'Smooth', 'Well-presented'
+];
+
 interface CheckInFormProps {
   venue: Venue;
   isOpen: boolean;
   onClose: () => void;
   onCheckIn: (visit: Visit) => void;
+  initialVisit?: Visit; // For editing existing check-ins
 }
 
 const CheckInForm: React.FC<CheckInFormProps> = ({
@@ -23,6 +36,7 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
   isOpen,
   onClose,
   onCheckIn,
+  initialVisit
 }) => {
   const [photos, setPhotos] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
@@ -33,6 +47,7 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
   const [occasion, setOccasion] = useState<string>('');
   const [isTakeaway, setIsTakeaway] = useState<boolean>(false);
   const [totalBill, setTotalBill] = useState<string>('');
+  const [isEditing, setIsEditing] = useState(false);
   
   // New state for ratings
   const [rating, setRating] = useState<VisitRating>({
@@ -62,6 +77,36 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
   // Hidden file input ref
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dishFileInputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
+
+  // Initialize form with existing data if editing
+  useEffect(() => {
+    if (initialVisit) {
+      setIsEditing(true);
+      setPhotos(initialVisit.photos || []);
+      setNotes(initialVisit.notes || '');
+      setSelectedTags(initialVisit.tags || []);
+      setWouldVisitAgain(initialVisit.wouldVisitAgain);
+      setIsTakeaway(initialVisit.isTakeaway || false);
+      
+      // Restore dishes if available
+      if (initialVisit.dishes && initialVisit.dishes.length > 0) {
+        setDishes(initialVisit.dishes);
+      }
+      
+      // Restore rating
+      if (initialVisit.rating) {
+        setRating(initialVisit.rating);
+      }
+      
+      // Restore other fields if available
+      if (initialVisit.totalBill) {
+        setTotalBill(initialVisit.totalBill.toString());
+      }
+    } else {
+      setIsEditing(false);
+      resetForm();
+    }
+  }, [initialVisit]);
   
   // Calculate overall rating
   useEffect(() => {
@@ -197,6 +242,20 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
     setCustomTag('');
   };
   
+  // Add custom tag to dish
+  const addCustomTagToDish = (dishId: string, tag: string) => {
+    if (tag.trim() === '') return;
+    
+    setDishes(prev => 
+      prev.map(dish => {
+        if (dish.id === dishId && !dish.tags.includes(tag)) {
+          return { ...dish, tags: [...dish.tags, tag] };
+        }
+        return dish;
+      })
+    );
+  };
+  
   // Trigger file input click
   const triggerFileInput = () => {
     if (fileInputRef.current) {
@@ -223,11 +282,16 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
     // Filter out empty dishes
     const validDishes = dishes.filter(dish => dish.name.trim() !== '');
     
+    if (validDishes.length === 0) {
+      toast.error("Please add at least one dish or drink");
+      return;
+    }
+    
     // Create the visit object
     const visit: Visit = {
-      id: uuidv4(),
+      id: initialVisit?.id || uuidv4(),
       venueId: venue.id,
-      timestamp: new Date().toISOString(),
+      timestamp: initialVisit?.timestamp || new Date().toISOString(),
       dishes: validDishes,
       rating,
       tags: selectedTags,
@@ -306,6 +370,8 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
 
   // Dish component
   const DishForm = ({ dish, index }: { dish: DishRating; index: number }) => {
+    const [customDishTag, setCustomDishTag] = useState('');
+    
     // Set up the file input ref for this dish
     useEffect(() => {
       const input = document.createElement('input');
@@ -325,6 +391,16 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
         dishFileInputRefs.current.delete(dish.id);
       };
     }, [dish.id]);
+    
+    // Get tags based on dish type
+    const dishTypeTags = dish.type === 'drink' ? DRINK_TAGS : FOOD_TAGS;
+    
+    // Handle adding custom tag
+    const handleAddCustomTag = () => {
+      if (customDishTag.trim() === '') return;
+      addCustomTagToDish(dish.id, customDishTag);
+      setCustomDishTag('');
+    };
     
     return (
       <div className="border rounded-md p-4 mb-4">
@@ -413,11 +489,11 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
             />
           </div>
           
-          {/* Tags */}
+          {/* Tags - dynamic based on dish type */}
           <div>
             <Label>Tags</Label>
             <div className="flex flex-wrap gap-2 my-2">
-              {['Delicious', 'Spicy', 'Sweet', 'Savory', 'Fresh', 'Overpriced', 'Worth It'].map(tag => (
+              {dishTypeTags.map(tag => (
                 <Button
                   key={tag}
                   type="button"
@@ -432,6 +508,44 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
                 </Button>
               ))}
             </div>
+            
+            {/* Custom tag input for this dish */}
+            <div className="flex gap-2 mt-2">
+              <Input
+                value={customDishTag}
+                onChange={(e) => setCustomDishTag(e.target.value)}
+                placeholder="Add custom tag"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddCustomTag();
+                  }
+                }}
+              />
+              <Button type="button" onClick={handleAddCustomTag}>Add</Button>
+            </div>
+            
+            {/* Show applied custom tags */}
+            {dish.tags.filter(tag => !dishTypeTags.includes(tag)).length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {dish.tags
+                  .filter(tag => !dishTypeTags.includes(tag))
+                  .map(tag => (
+                    <div key={tag} className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs flex items-center">
+                      {tag}
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-4 w-4 p-0 ml-1"
+                        onClick={() => removeTagFromDish(dish.id, tag)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
           
           {/* Photos */}
@@ -473,7 +587,7 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
       <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex justify-between items-center">
-            <span>Check In at {venue.name}</span>
+            <span>{isEditing ? "Edit Check-in at" : "Check In at"} {venue.name}</span>
             <Button
               variant="outline"
               size="sm"
@@ -599,7 +713,7 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
           
           {/* Tags */}
           <div>
-            <Label className="mb-2 block">Tags</Label>
+            <Label className="mb-2 block">Visit Tags</Label>
             <div className="flex flex-wrap gap-2 mb-2">
               {predefinedTags.map(tag => (
                 <Button
@@ -619,10 +733,37 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
                 value={customTag}
                 onChange={(e) => setCustomTag(e.target.value)}
                 placeholder="Add a custom tag"
-                onKeyDown={(e) => e.key === 'Enter' && addCustomTag()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addCustomTag();
+                  }
+                }}
               />
               <Button type="button" onClick={addCustomTag}>Add</Button>
             </div>
+            
+            {/* Show applied custom tags */}
+            {selectedTags.filter(tag => !predefinedTags.includes(tag)).length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {selectedTags
+                  .filter(tag => !predefinedTags.includes(tag))
+                  .map(tag => (
+                    <div key={tag} className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs flex items-center">
+                      {tag}
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-4 w-4 p-0 ml-1"
+                        onClick={() => toggleTag(tag)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
           
           {/* Visit photos */}
@@ -701,7 +842,7 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
             Cancel
           </Button>
           <Button type="button" onClick={handleSubmit}>
-            Check In
+            {isEditing ? "Save Changes" : "Check In"}
           </Button>
         </div>
       </DialogContent>

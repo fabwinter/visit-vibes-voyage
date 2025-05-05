@@ -1,214 +1,344 @@
 
 import { useState, useEffect } from 'react';
-import { mockVisits, mockVenues } from '../data/mockData';
-import VisitCard from '../components/VisitCard';
-import VisitCalendar from '../components/VisitCalendar';
-import { format, isAfter, isBefore } from 'date-fns';
 import { Visit, Venue } from '@/types';
 import { useNavigate } from 'react-router-dom';
+import { Edit, Trash, Search, Filter, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { MapPin, Share2 } from 'lucide-react';
-import { toast } from "sonner";
+import { Input } from '@/components/ui/input';
+import CheckInButton from '@/components/CheckInButton';
+import CheckInForm from '@/components/CheckInForm';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useVenues } from '@/hooks/useVenues';
+import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 const VisitsView = () => {
-  const navigate = useNavigate();
-  const [selectedFilter, setSelectedFilter] = useState('all');
-  const [dateFilter, setDateFilter] = useState<{ from?: Date; to?: Date }>({});
-  
-  // Use state for visits to allow for new check-ins
   const [visits, setVisits] = useState<Visit[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
+  const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
+  const [isCheckInOpen, setIsCheckInOpen] = useState(false);
+  const [editingVisit, setEditingVisit] = useState<Visit | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [visitToDelete, setVisitToDelete] = useState<string | null>(null);
   
-  // Load visits from localStorage if available
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const { processCheckIn } = useVenues();
+  
+  // Load visits and venues from localStorage
   useEffect(() => {
     const storedVisits = localStorage.getItem('visits');
     if (storedVisits) {
-      setVisits(JSON.parse(storedVisits));
-    } else {
-      // If no stored visits, use empty array
-      setVisits([]);
+      try {
+        const parsedVisits = JSON.parse(storedVisits);
+        setVisits(parsedVisits);
+      } catch (error) {
+        console.error("Failed to parse visits", error);
+        toast.error("Failed to load visits");
+      }
     }
     
-    // Get venues from localStorage or fallback to mock data
     const storedVenues = localStorage.getItem('venues');
     if (storedVenues) {
-      setVenues(JSON.parse(storedVenues));
-    } else {
-      setVenues(mockVenues);
+      try {
+        setVenues(JSON.parse(storedVenues));
+      } catch (error) {
+        console.error("Failed to parse venues", error);
+        toast.error("Failed to load venues");
+      }
     }
   }, []);
-
-  const getVenueName = (venueId: string) => {
-    const venue = venues.find(v => v.id === venueId);
-    return venue ? venue.name : 'Unknown Venue';
-  };
-
-  const getVenueDetails = (venueId: string) => {
-    return venues.find(v => v.id === venueId);
-  };
-
-  // Apply both filter and date filter
+  
+  // Filter visits based on search term
   const filteredVisits = visits.filter(visit => {
-    const visitDate = new Date(visit.timestamp);
-    let passesDateFilter = true;
-
-    if (dateFilter.from) {
-      // If we only have a "from" date, show visits on or after that date
-      passesDateFilter = isAfter(visitDate, new Date(dateFilter.from.setHours(0, 0, 0, 0))) || 
-                       visit.timestamp.startsWith(format(dateFilter.from, 'yyyy-MM-dd'));
-    }
-
-    if (dateFilter.to) {
-      // Also filter by "to" date if it exists
-      passesDateFilter = passesDateFilter && 
-                      (isBefore(visitDate, new Date(dateFilter.to.setHours(23, 59, 59, 999))) || 
-                       visit.timestamp.startsWith(format(dateFilter.to, 'yyyy-MM-dd')));
-    }
-
-    // Apply the selected filter
-    switch (selectedFilter) {
-      case 'recent':
-        return passesDateFilter && new Date(visit.timestamp) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      case 'highest rated':
-        return passesDateFilter && visit.rating.overall >= 4;
-      case 'lowest rated':
-        return passesDateFilter && visit.rating.overall <= 2;
-      case 'would visit again':
-        return passesDateFilter && visit.wouldVisitAgain === true;
-      case 'would not visit again':
-        return passesDateFilter && visit.wouldVisitAgain === false;
-      default:
-        return passesDateFilter;
-    }
-  });
-
-  // Group visits by month
-  const groupedVisits = filteredVisits.reduce((acc, visit) => {
-    const date = new Date(visit.timestamp);
-    const monthYear = format(date, 'MMMM yyyy');
+    if (!searchTerm) return true;
+    const searchLower = searchTerm.toLowerCase();
     
-    if (!acc[monthYear]) {
-      acc[monthYear] = [];
-    }
+    // Find the venue for this visit
+    const venue = venues.find(v => v.id === visit.venueId);
     
-    acc[monthYear].push(visit);
-    return acc;
-  }, {} as Record<string, Visit[]>);
-
-  // Order the months chronologically (most recent first)
-  const orderedMonths = Object.keys(groupedVisits).sort((a, b) => {
-    const dateA = new Date(a);
-    const dateB = new Date(b);
-    return dateB.getTime() - dateA.getTime();
+    // Check if venue name, address, or visit tags match search
+    return (
+      venue?.name?.toLowerCase().includes(searchLower) ||
+      venue?.address?.toLowerCase().includes(searchLower) ||
+      visit.tags?.some(tag => tag.toLowerCase().includes(searchLower)) ||
+      visit.dishes?.some(dish => 
+        dish.name.toLowerCase().includes(searchLower) ||
+        dish.tags?.some(tag => tag.toLowerCase().includes(searchLower))
+      )
+    );
   });
   
-  // Navigate to visit details
-  const handleVisitClick = (visitId: string) => {
+  // Sort visits by date (newest first)
+  const sortedVisits = [...filteredVisits].sort((a, b) => {
+    return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+  });
+  
+  // Handle check-in form submission
+  const handleCheckIn = (visit: Visit) => {
+    processCheckIn(visit);
+    setIsCheckInOpen(false);
+    
+    // Update local state
+    if (editingVisit) {
+      setVisits(prev => prev.map(v => v.id === visit.id ? visit : v));
+      setEditingVisit(null);
+      toast.success("Check-in updated!");
+    } else {
+      setVisits(prev => [visit, ...prev]);
+      toast.success("Check-in added!");
+    }
+  };
+  
+  // View visit details
+  const viewVisitDetails = (visitId: string) => {
     navigate(`/visit/${visitId}`);
   };
   
-  // Share all visits
-  const handleShareAllVisits = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: "My Food Venue Visits",
-        text: `I've visited ${visits.length} food venues. Check out my collection!`,
-        url: window.location.href
-      })
-      .then(() => toast.success("Shared successfully"))
-      .catch(error => console.error('Error sharing', error));
+  // Edit visit
+  const editVisit = (visit: Visit) => {
+    const venue = venues.find(v => v.id === visit.venueId);
+    if (venue) {
+      setSelectedVenue(venue);
+      setEditingVisit(visit);
+      setIsCheckInOpen(true);
     } else {
-      toast("Sharing not supported on this browser", {
-        description: "Try copying the link directly"
-      });
+      toast.error("Could not find venue information");
     }
   };
-
+  
+  // Confirm delete visit
+  const confirmDeleteVisit = (visitId: string) => {
+    setVisitToDelete(visitId);
+    setDeleteConfirmOpen(true);
+  };
+  
+  // Delete visit
+  const deleteVisit = () => {
+    if (!visitToDelete) return;
+    
+    const updatedVisits = visits.filter(visit => visit.id !== visitToDelete);
+    setVisits(updatedVisits);
+    
+    // Update localStorage
+    localStorage.setItem('visits', JSON.stringify(updatedVisits));
+    
+    setDeleteConfirmOpen(false);
+    setVisitToDelete(null);
+    toast.success("Visit deleted successfully");
+  };
+  
+  // Open check-in form for a new visit
+  const openNewCheckIn = () => {
+    // This will be implemented once we have a venue search component
+    toast.info("Feature coming soon", {
+      description: "You'll be able to add check-ins directly from here soon"
+    });
+  };
+  
+  // Format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    }).format(date);
+  };
+  
+  // Find venue name
+  const getVenueName = (venueId: string) => {
+    const venue = venues.find(v => v.id === venueId);
+    return venue?.name || 'Unknown Venue';
+  };
+  
+  // Group visits by month
+  const groupedVisits: Record<string, Visit[]> = {};
+  
+  sortedVisits.forEach(visit => {
+    const date = new Date(visit.timestamp);
+    const monthYear = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    
+    if (!groupedVisits[monthYear]) {
+      groupedVisits[monthYear] = [];
+    }
+    
+    groupedVisits[monthYear].push(visit);
+  });
+  
   return (
-    <div className="px-4 pt-6 pb-24">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Visit History</h1>
-        {visits.length > 0 && (
+    <div className="container px-4 py-6 md:py-8">
+      <header className="mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-2xl font-bold">Your Visits</h1>
           <Button 
             variant="outline" 
             size="sm"
-            onClick={handleShareAllVisits}
+            onClick={openNewCheckIn}
             className="flex items-center gap-1"
           >
-            <Share2 className="w-4 h-4" />
-            Share
+            <Plus className="h-4 w-4" />
+            <span>New</span>
           </Button>
-        )}
-      </div>
-
-      {/* Filter tabs */}
-      <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
-        {['all', 'recent', 'highest rated', 'lowest rated', 'would visit again', 'would not visit again'].map((filter) => (
-          <button
-            key={filter}
-            className={`px-4 py-2 rounded-full whitespace-nowrap ${
-              selectedFilter === filter
-                ? 'bg-visitvibe-primary text-white'
-                : 'bg-gray-100 text-gray-700'
-            }`}
-            onClick={() => setSelectedFilter(filter)}
-          >
-            {filter.charAt(0).toUpperCase() + filter.slice(1)}
-          </button>
-        ))}
-      </div>
-
-      {/* Visit calendar */}
-      <div className="mb-6">
-        <VisitCalendar visits={visits} onDateFilterChange={setDateFilter} />
-      </div>
-
-      {/* Visit timeline */}
-      <div className="space-y-8">
-        {orderedMonths.length > 0 ? (
-          orderedMonths.map((month) => (
-            <div key={month}>
-              <h2 className="text-lg font-semibold mb-3 border-b pb-2">{month}</h2>
-              <div className="space-y-4">
-                {groupedVisits[month].map((visit) => {
+        </div>
+        
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input 
+            className="pl-9 pr-4" 
+            placeholder="Search visits..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </header>
+      
+      {Object.keys(groupedVisits).length > 0 ? (
+        <div className="space-y-6">
+          {Object.entries(groupedVisits).map(([monthYear, monthVisits]) => (
+            <div key={monthYear}>
+              <h2 className="text-lg font-semibold mb-3">{monthYear}</h2>
+              <div className="space-y-3">
+                {monthVisits.map(visit => {
                   const venueName = getVenueName(visit.venueId);
-                  const venueDetails = getVenueDetails(visit.venueId);
                   
                   return (
                     <div 
-                      key={visit.id}
-                      onClick={() => handleVisitClick(visit.id)}
-                      className="cursor-pointer"
+                      key={visit.id} 
+                      className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow"
+                      onClick={() => viewVisitDetails(visit.id)}
                     >
-                      <VisitCard
-                        visit={visit}
-                        venueName={venueName}
-                        venueDetails={venueDetails}
-                      />
+                      <div className="flex justify-between">
+                        <div>
+                          <h3 className="font-medium text-lg">{venueName}</h3>
+                          <p className="text-sm text-gray-500">{formatDate(visit.timestamp)}</p>
+                        </div>
+                        <div className="flex items-start space-x-1">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              editVisit(visit);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-red-500"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              confirmDeleteVisit(visit.id);
+                            }}
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      {/* Visit rating */}
+                      <div className="flex items-center mt-1">
+                        <div className="flex items-center">
+                          <div className="bg-yellow-100 text-yellow-700 font-medium px-2 py-1 rounded text-sm">
+                            {visit.rating.overall.toFixed(1)}★
+                          </div>
+                        </div>
+                        
+                        {/* Dishes count */}
+                        <div className="ml-3 text-sm text-gray-500">
+                          {visit.dishes?.length || 0} item{visit.dishes?.length !== 1 ? 's' : ''}
+                        </div>
+                        
+                        {/* Would go again */}
+                        {visit.wouldVisitAgain !== undefined && (
+                          <div className={`ml-3 text-sm px-2 py-0.5 rounded-full ${
+                            visit.wouldVisitAgain 
+                              ? 'bg-green-100 text-green-700' 
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {visit.wouldVisitAgain ? 'Would go again' : 'Would not return'}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Tags */}
+                      {visit.tags && visit.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {visit.tags.slice(0, 3).map(tag => (
+                            <span 
+                              key={tag} 
+                              className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                          {visit.tags.length > 3 && (
+                            <span className="text-xs text-gray-500">
+                              +{visit.tags.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
             </div>
-          ))
-        ) : (
-          <div className="text-center py-12">
-            <div className="flex flex-col items-center max-w-md mx-auto">
-              <MapPin className="w-16 h-16 text-gray-300 mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No visits yet</h3>
-              <p className="text-gray-500 mb-6 text-center">
-                You haven't checked in anywhere yet. Start by finding a place on the map and checking in.
-              </p>
-              <Button 
-                onClick={() => navigate('/')}
-                className="bg-visitvibe-primary hover:bg-visitvibe-primary/90"
-              >
-                Find Places to Visit
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-10">
+          <p className="text-gray-500 mb-4">No visits yet. Start checking in to places you visit!</p>
+          <Button onClick={() => navigate('/')}>Discover Places</Button>
+        </div>
+      )}
+      
+      {/* Floating button for mobile */}
+      {isMobile && (
+        <CheckInButton 
+          className="fixed right-4 bottom-20 w-12 h-12 shadow-lg"
+          onClick={openNewCheckIn}
+        />
+      )}
+      
+      {/* Check-in form */}
+      {selectedVenue && (
+        <CheckInForm
+          venue={selectedVenue}
+          isOpen={isCheckInOpen}
+          onClose={() => {
+            setIsCheckInOpen(false);
+            setSelectedVenue(null);
+            setEditingVisit(null);
+          }}
+          onCheckIn={handleCheckIn}
+          initialVisit={editingVisit || undefined}
+        />
+      )}
+      
+      {/* Delete confirmation dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Visit</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this visit? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={deleteVisit}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

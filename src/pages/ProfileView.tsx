@@ -1,16 +1,22 @@
+
 import { useState, useEffect, useRef } from 'react';
-import { mockUserProfile, predefinedTags } from '../data/mockData';
+import { predefinedTags } from '../data/mockData';
 import StarRating from '../components/StarRating';
-import { Star, Award, MapPin, LogOut, Camera, Edit } from 'lucide-react';
-import { Visit, UserProfile, Venue } from '@/types';
+import { Star, Award, MapPin, LogOut, Camera, Edit, UserRound } from 'lucide-react';
+import { Visit, Venue } from '@/types';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { useAuth } from '@/hooks/useAuth';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const ProfileView = () => {
-  const [userProfile, setUserProfile] = useState<UserProfile>(mockUserProfile);
+  const { user, isAuthenticated, logout, updateUserProfile } = useAuth();
   const [visits, setVisits] = useState<Visit[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
+  const [name, setName] = useState('');
+  const [editMode, setEditMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load data from localStorage
@@ -18,31 +24,29 @@ const ProfileView = () => {
     // Load visits
     const storedVisits = localStorage.getItem('visits');
     if (storedVisits) {
-      const parsedVisits = JSON.parse(storedVisits);
-      setVisits(parsedVisits);
+      try {
+        const parsedVisits = JSON.parse(storedVisits);
+        setVisits(parsedVisits);
+      } catch (error) {
+        console.error("Failed to parse visits", error);
+      }
     }
 
     // Load venues
     const storedVenues = localStorage.getItem('venues');
     if (storedVenues) {
-      setVenues(JSON.parse(storedVenues));
+      try {
+        setVenues(JSON.parse(storedVenues));
+      } catch (error) {
+        console.error("Failed to parse venues", error);
+      }
     }
-
-    // Create profile from real data, or use mock as fallback
-    const userName = localStorage.getItem('userName') || mockUserProfile.name;
-    const userEmail = localStorage.getItem('userEmail') || mockUserProfile.email;
-    const userPhoto = localStorage.getItem('userPhoto') || mockUserProfile.photo;
-
-    setUserProfile({
-      ...mockUserProfile,
-      name: userName,
-      email: userEmail,
-      photo: userPhoto,
-      visits: [],  // We'll calculate stats from the actual visits array
-      savedVenues: [], // Not implemented yet
-      wishlistCategories: []
-    });
-  }, []);
+    
+    // Initialize name from user
+    if (user) {
+      setName(user.name);
+    }
+  }, [user]);
 
   // Extract all tags from visits
   const allTags = visits.reduce((tags, visit) => {
@@ -93,18 +97,24 @@ const ProfileView = () => {
   ];
 
   const handleLogout = () => {
-    toast("This is a demo app", {
-      description: "Logout functionality would be implemented with auth integration"
-    });
+    logout();
   };
 
-  const handleEditProfile = () => {
-    // Simple profile editing
-    const newName = prompt("Enter your name:", userProfile.name);
-    if (newName && newName.trim() !== '') {
-      localStorage.setItem('userName', newName);
-      setUserProfile(prev => ({ ...prev, name: newName }));
+  const toggleEditMode = () => {
+    setEditMode(!editMode);
+    if (editMode && user && name !== user.name) {
+      saveProfileChanges();
+    }
+  };
+
+  const saveProfileChanges = async () => {
+    try {
+      await updateUserProfile({ name });
       toast.success("Profile updated");
+      setEditMode(false);
+    } catch (error) {
+      toast.error("Failed to update profile");
+      console.error("Update profile error:", error);
     }
   };
   
@@ -114,7 +124,7 @@ const ProfileView = () => {
   };
   
   // Process the uploaded photo
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     
@@ -126,13 +136,15 @@ const ProfileView = () => {
     
     // Create a FileReader to read the image as a data URL
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const photoDataUrl = e.target?.result as string;
       if (photoDataUrl) {
-        // Save to localStorage and update state
-        localStorage.setItem('userPhoto', photoDataUrl);
-        setUserProfile(prev => ({ ...prev, photo: photoDataUrl }));
-        toast.success("Profile photo updated");
+        try {
+          await updateUserProfile({ photo: photoDataUrl });
+          toast.success("Profile photo updated");
+        } catch (error) {
+          toast.error("Failed to update profile photo");
+        }
       }
     };
     reader.onerror = () => {
@@ -141,6 +153,19 @@ const ProfileView = () => {
     reader.readAsDataURL(file);
   };
 
+  if (!isAuthenticated) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-132px)] p-4">
+        <UserRound className="w-16 h-16 text-gray-400 mb-4" />
+        <h1 className="text-xl font-semibold mb-2">Not Signed In</h1>
+        <p className="text-gray-500 mb-6 text-center">
+          Please sign in to view your profile
+        </p>
+        <Button onClick={() => {}}>Sign In</Button>
+      </div>
+    );
+  }
+
   return (
     <div className="px-4 pt-6 pb-24">
       {/* Profile header */}
@@ -148,12 +173,12 @@ const ProfileView = () => {
         <div className="relative">
           <Avatar className="w-20 h-20 border-2 border-visitvibe-primary">
             <AvatarImage 
-              src={userProfile.photo || undefined}
-              alt={userProfile.name} 
+              src={user?.photo || undefined}
+              alt={user?.name || ''} 
               className="object-cover"
             />
             <AvatarFallback>
-              {userProfile.name.slice(0, 2).toUpperCase()}
+              {user?.name.slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
           
@@ -175,22 +200,39 @@ const ProfileView = () => {
           />
         </div>
         
-        <div className="ml-4">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">{userProfile.name}</h1>
-            <button 
-              onClick={handleEditProfile}
-              className="text-visitvibe-primary"
-              aria-label="Edit profile"
-            >
-              <Edit size={16} />
-            </button>
-          </div>
-          <p className="text-gray-500 text-sm">{userProfile.email}</p>
+        <div className="ml-4 flex-1">
+          {editMode ? (
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="max-w-[200px]"
+              />
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold">{user?.name}</h1>
+              <button 
+                onClick={toggleEditMode}
+                className="text-visitvibe-primary"
+                aria-label="Edit profile"
+              >
+                <Edit size={16} />
+              </button>
+            </div>
+          )}
+          <p className="text-gray-500 text-sm">{user?.email}</p>
           <div className="flex items-center mt-1">
             <StarRating rating={averageRating} size="sm" />
             <span className="text-gray-500 text-sm ml-2">Average rating</span>
           </div>
+          {editMode && (
+            <Button size="sm" onClick={toggleEditMode} className="mt-2">
+              Save
+            </Button>
+          )}
         </div>
       </div>
       
@@ -271,7 +313,7 @@ const ProfileView = () => {
         <div className="bg-white rounded-lg shadow divide-y">
           <button 
             className="w-full text-left py-3 px-4"
-            onClick={handleEditProfile}
+            onClick={toggleEditMode}
           >
             Edit Profile
           </button>
