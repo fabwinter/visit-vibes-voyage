@@ -25,12 +25,23 @@ export const useVenues = () => {
   const venueSearch = useVenueSearch();
   const selectedVenueState = useSelectedVenue(venueSearch.venues);
   
+  // Log when isLoaded state changes
+  useEffect(() => {
+    console.log("Google Maps API loaded:", isLoaded);
+    console.log("API Key available:", !!import.meta.env.VITE_GOOGLE_MAPS_API_KEY);
+  }, [isLoaded]);
+  
   // Load initial venues when the location or API changes
   useEffect(() => {
     if (!isLoaded) return;
 
     if (locationState.userLocation.lat && locationState.userLocation.lng) {
-      venueSearch.searchNearbyVenues(locationState.userLocation);
+      console.log("Loading venues with location:", locationState.userLocation);
+      venueSearch.searchNearbyVenues(locationState.userLocation)
+        .catch(error => {
+          console.error("Failed to search venues:", error);
+          toast.error("Failed to load venues. Using mock data instead.");
+        });
     }
   }, [locationState.userLocation, isLoaded, venueSearch.searchNearbyVenues]);
   
@@ -40,6 +51,8 @@ export const useVenues = () => {
       toast.error("Invalid place selection");
       return;
     }
+
+    console.log("Place selected:", place);
 
     // Extract location from place
     const newLocation = {
@@ -51,21 +64,46 @@ export const useVenues = () => {
     locationState.setMapCenter(newLocation);
 
     // If the place has a place_id, try to find it in existing venues
-    // or fetch details and add it to venues
     if (place.place_id) {
       // Check if we already have this venue
       const existingVenue = venueSearch.venues.find(v => v.id === place.place_id);
       
       if (existingVenue) {
         // If we have it, select it
+        console.log("Selecting existing venue:", existingVenue.name);
         selectedVenueState.handleVenueSelect(existingVenue.id);
       } else {
         // If not, we might want to fetch its details and add it to venues
-        // This would depend on your implementation needs
         console.log("New place selected, may need to fetch details:", place);
+        
+        // If we have a name and place_id, we can create a temporary venue
+        if (place.name) {
+          // Fix: Use getUrl method for photo references instead of direct access
+          const photos = place.photos ? 
+            place.photos.map(p => {
+              // Use getUrl() method instead of accessing photo_reference directly
+              return p.getUrl({ maxWidth: 400 });
+            }) : [];
+            
+          const tempVenue: Venue = {
+            id: place.place_id,
+            name: place.name,
+            address: place.vicinity || place.formatted_address || "",
+            coordinates: {
+              lat: newLocation.lat,
+              lng: newLocation.lng
+            },
+            category: place.types || [],
+            photos: photos
+          };
+          
+          // Add this venue to our list and select it
+          venueSearch.setVenues(prev => [...prev, tempVenue]);
+          selectedVenueState.handleVenueSelect(tempVenue.id);
+        }
       }
     }
-  }, [locationState, venueSearch.venues, selectedVenueState]);
+  }, [locationState, venueSearch.venues, selectedVenueState, venueSearch.setVenues]);
   
   // Handle check-in with auth
   const handleCheckIn = useCallback((venue: Venue) => {

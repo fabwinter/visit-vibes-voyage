@@ -5,6 +5,7 @@ import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, Command
 import { PlacesService } from '@/services/PlacesService';
 import { Venue } from '@/types';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface PlaceSearchInputProps {
   onSelect: (venue: Venue | google.maps.places.PlaceResult) => void;
@@ -41,6 +42,11 @@ const PlaceSearchInput = ({
   
   // Search places when query changes
   useEffect(() => {
+    if (!userLocation.lat || !userLocation.lng) {
+      console.log('Waiting for valid user location...');
+      return;
+    }
+    
     const searchPlaces = async () => {
       if (query.length < 2) {
         setResults([]);
@@ -50,9 +56,12 @@ const PlaceSearchInput = ({
       setIsLoading(true);
       try {
         const venues = await PlacesService.searchPlaces(query, userLocation);
+        console.log('Search results:', venues);
         setResults(venues);
       } catch (error) {
         console.error('Error searching places:', error);
+        toast.error('Search failed. Please try again.');
+        setResults([]);
       } finally {
         setIsLoading(false);
       }
@@ -65,17 +74,20 @@ const PlaceSearchInput = ({
   const handleSelect = async (venue: Venue) => {
     setQuery(venue.name);
     setIsOpen(false);
+    console.log('Selected venue:', venue);
     
     // Get full details when a place is selected
     try {
       const details = await PlacesService.getVenueDetails(venue.id);
       if (details) {
+        console.log('Fetched venue details:', details);
         onSelect(details);
       } else {
         onSelect(venue);
       }
     } catch (error) {
       console.error('Error fetching venue details:', error);
+      // If details fetch fails, still use the basic venue info
       onSelect(venue);
     }
   };
@@ -93,7 +105,7 @@ const PlaceSearchInput = ({
           }}
           onFocus={() => setIsOpen(true)}
           placeholder={placeholder}
-          className="w-full pl-10 pr-4 py-6 rounded-full border border-input bg-background"
+          className="w-full pl-10 pr-4 py-3 rounded-full border border-input bg-background"
         />
         {isLoading && (
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -102,7 +114,7 @@ const PlaceSearchInput = ({
         )}
       </div>
       
-      {isOpen && (
+      {isOpen && (query.length > 0) && (
         <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white rounded-md shadow-lg overflow-hidden border">
           <Command className="rounded-lg border shadow-md">
             <CommandList>

@@ -1,37 +1,12 @@
 
 import { useState, useCallback } from 'react';
 import { Venue } from '@/types';
-import { nearbySearch } from '@/services/places/placesService';
-import { FOOD_PLACE_TYPES, SEARCH_RADIUS } from '@/services/places/config';
+import { PlacesService } from '@/services/places';
+import { SEARCH_RADIUS } from '@/services/places/config';
 import mockData from '../mock_data.json';
+import { toast } from 'sonner';
 
-// Map Google Places API results to our Venue type
-const mapResponseToVenues = (results: google.maps.places.PlaceResult[]): Venue[] => {
-  return results.map(place => {
-    const photoUrls = place.photos ? place.photos.map(photo => photo.getUrl({ maxWidth: 500, maxHeight: 500 })) : [];
-
-    return {
-      id: place.place_id || 'unknown',
-      name: place.name || 'Unknown',
-      address: place.formatted_address || 'No Address',
-      coordinates: {
-        lat: place.geometry?.location?.lat() || 0,
-        lng: place.geometry?.location?.lng() || 0
-      },
-      photos: photoUrls,
-      website: place.website || undefined,
-      hours: place.opening_hours?.weekday_text?.join('\n') || undefined,
-      phoneNumber: place.formatted_phone_number || undefined,
-      priceLevel: place.price_level || undefined,
-      category: place.types || [],
-      googleRating: place.rating || undefined,
-      inWishlist: false,
-      wishlistTags: [],
-      wishlistCategory: ''
-    };
-  });
-};
-
+// Use mock data flag for development
 const useMockData = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_DATA === 'true';
 
 export const useVenueSearch = () => {
@@ -39,64 +14,86 @@ export const useVenueSearch = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [usingMockData, setUsingMockData] = useState(false);
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   
   // Function to search nearby venues
-  const searchNearbyVenues = useCallback(async (location: google.maps.LatLngLiteral) => {
+  const searchNearbyVenues = useCallback(async (location: {lat: number, lng: number}) => {
+    // Skip if location is not valid
+    if (!location.lat || !location.lng) {
+      console.warn('Invalid location provided to searchNearbyVenues');
+      return;
+    }
+
+    console.log('Searching venues near', location);
     setIsLoading(true);
+    setError(null);
     
     try {
-      const response = await nearbySearch({
-        location: location,
+      // Using the restructured PlacesService from services/places/index.ts
+      const response = await PlacesService.searchNearbyVenues({
+        location,
         radius: SEARCH_RADIUS,
-        types: FOOD_PLACE_TYPES,
-        pageToken: null
+        type: 'restaurant'
       });
       
-      if (response.results) {
-        const newVenues = mapResponseToVenues(response.results);
-        setVenues(newVenues);
-        setNextPageToken(response.next_page_token || null);
+      if (response.venues) {
+        console.log(`Found ${response.venues.length} venues from Places API`);
+        setVenues(response.venues);
+        setNextPageToken(response.nextPageToken || null);
+        setUsingMockData(false);
+      } else {
+        // If no venues were returned but API call was successful
+        console.warn('No venues returned from Places API');
+        toast.info("No venues found in this area. Using mock data instead.");
+        useMockFallback(location);
       }
     } catch (error) {
       console.error('Failed to search nearby venues:', error);
+      toast.error('Failed to load venues. Using mock data instead.');
       
-      // If real API fails, use mock data
-      if (useMockData) {
-        const mockVenues = mockData.venues.map(venue => ({
-          ...venue,
-          coordinates: {
-            lat: venue.coordinates.lat + (Math.random() - 0.5) * 0.01,
-            lng: venue.coordinates.lng + (Math.random() - 0.5) * 0.01
-          }
-        }));
-        setVenues(mockVenues);
-        setUsingMockData(true);
-      }
+      useMockFallback(location);
     } finally {
       setIsLoading(false);
     }
   }, []);
   
+  // Function to use mock data as fallback
+  const useMockFallback = (location: {lat: number, lng: number}) => {
+    // Use mock data as fallback
+    if (useMockData || true) { // Always use mock data on error for now
+      console.log('Using mock data for venues');
+      const mockVenues = mockData.venues.map(venue => ({
+        ...venue,
+        coordinates: {
+          lat: location.lat + (Math.random() - 0.5) * 0.01,
+          lng: location.lng + (Math.random() - 0.5) * 0.01
+        }
+      }));
+      setVenues(mockVenues);
+      setUsingMockData(true);
+    }
+  };
+  
   // Load more venues with pagination
-  const handleLoadMore = useCallback(async (userLocation: google.maps.LatLngLiteral) => {
+  const handleLoadMore = useCallback(async (userLocation: {lat: number, lng: number}) => {
     if (!nextPageToken) return;
 
     setIsLoading(true);
     try {
-      const response = await nearbySearch({
+      const response = await PlacesService.searchNearbyVenues({
         location: userLocation,
         radius: SEARCH_RADIUS,
-        types: FOOD_PLACE_TYPES,
+        type: 'restaurant',
         pageToken: nextPageToken
       });
 
-      if (response.results) {
-        const newVenues = mapResponseToVenues(response.results);
-        setVenues(prevVenues => [...prevVenues, ...newVenues]);
-        setNextPageToken(response.next_page_token || null);
+      if (response.venues) {
+        setVenues(prevVenues => [...prevVenues, ...response.venues]);
+        setNextPageToken(response.nextPageToken || null);
       }
     } catch (error) {
       console.error('Failed to load more venues:', error);
+      setError('Failed to load more venues.');
       setUsingMockData(true);
     } finally {
       setIsLoading(false);
@@ -109,6 +106,7 @@ export const useVenueSearch = () => {
     isLoading,
     usingMockData,
     nextPageToken,
+    error,
     searchNearbyVenues,
     handleLoadMore
   };

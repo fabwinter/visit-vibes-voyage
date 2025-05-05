@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Venue } from '@/types';
-import MapMarker from './MapMarker';
+import MapBoxMarker from './MapBoxMarker';
 import MapTokenInput from './MapTokenInput';
 
 interface MapBoxProps {
@@ -30,6 +30,7 @@ const MapBox = ({
   const [token, setToken] = useState<string>(mapboxToken || 'pk.eyJ1IjoiZmFiaWFud2ludGVyYmluZSIsImEiOiJjbWE2OWNuNG0wbzFuMmtwb3czNHB4cGJwIn0.KdxkppXglJrOwuBnqcYBqA');
   const [showTokenInput, setShowTokenInput] = useState<boolean>(false);
   const moveEndTimeout = useRef<number | null>(null);
+  const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
 
   // Initialize map
   useEffect(() => {
@@ -55,6 +56,8 @@ const MapBox = ({
     map.current.on('load', () => {
       if (!map.current) return;
       
+      setMapInstance(map.current);
+      
       // Add grayscale filter to the map
       const mapStyle = map.current.getStyle();
       if (mapStyle && mapStyle.layers) {
@@ -67,7 +70,7 @@ const MapBox = ({
     });
 
     // Add user location marker if available
-    if (userLocation) {
+    if (userLocation && userLocation.lat && userLocation.lng) {
       new mapboxgl.Marker({ color: '#3BB2D0' })
         .setLngLat([userLocation.lng, userLocation.lat])
         .addTo(map.current);
@@ -85,11 +88,13 @@ const MapBox = ({
         
         // Set a small debounce to avoid excessive callbacks
         moveEndTimeout.current = window.setTimeout(() => {
-          const center = map.current!.getCenter();
-          onMapMove({ 
-            lat: center.lat, 
-            lng: center.lng 
-          });
+          if (map.current) {
+            const center = map.current.getCenter();
+            onMapMove({ 
+              lat: center.lat, 
+              lng: center.lng 
+            });
+          }
         }, 300);
       });
     }
@@ -121,6 +126,7 @@ const MapBox = ({
     });
   }, [selectedVenue, venues]);
 
+  // Token management handlers
   const handleTokenChange = (newToken: string) => {
     setToken(newToken);
   };
@@ -147,11 +153,11 @@ const MapBox = ({
           )}
           
           {/* Render markers for venues */}
-          {map.current && venues.map(venue => (
-            <MapMarker 
+          {mapInstance && venues.map(venue => (
+            <MapBoxMarker 
               key={venue.id}
               venue={venue}
-              map={map.current!}
+              map={mapInstance}
               isSelected={selectedVenue === venue.id}
               onMarkerClick={onVenueSelect}
             />
