@@ -9,7 +9,7 @@ import Layout from "./components/Layout";
 import MapView from "./pages/MapView";
 import ExploreView from "./pages/ExploreView";
 import VisitsView from "./pages/VisitsView";
-import RatingsView from "./pages/RatingsView";
+import WishlistView from "./pages/WishlistView";
 import ProfileView from "./pages/ProfileView";
 import VisitDetailsView from "./pages/VisitDetailsView";
 import NotFound from "./pages/NotFound";
@@ -28,7 +28,7 @@ const App = () => (
             <Route path="/explore" element={<ExploreView />} />
             <Route path="/visits" element={<VisitsView />} />
             <Route path="/visit/:visitId" element={<VisitDetailsView />} />
-            <Route path="/ratings" element={<RatingsView />} />
+            <Route path="/wishlist" element={<WishlistView />} />
             <Route path="/profile" element={<ProfileView />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
