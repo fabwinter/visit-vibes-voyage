@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Venue, Visit, VisitRating, DishRating } from '@/types';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { Camera, Plus, X, Trash, Edit, TakeAway, Facilities, Cleanliness } from 'lucide-react';
+import { Camera, Plus, X, Trash, Edit, ShoppingBag, Building2, Sparkles } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { predefinedTags } from '@/data/mockData';
 import { toast } from 'sonner';
@@ -288,7 +287,7 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
   }: { 
     value: number; 
     onChange: (value: number) => void; 
-    label: string;
+    label: React.ReactNode; // Changed from string to ReactNode to accept JSX elements
   }) => (
     <div className="mb-6">
       <div className="flex justify-between items-center mb-2">
@@ -314,9 +313,13 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
       input.multiple = true;
       input.accept = 'image/*';
       input.style.display = 'none';
-      input.addEventListener('change', (e) => handleDishPhotoUpload(dish.id, e as any));
+      input.addEventListener('change', (e) => {
+        if (e.target instanceof HTMLInputElement && e.target.files) {
+          handleDishPhotoUpload(dish.id, e as unknown as React.ChangeEvent<HTMLInputElement>);
+        }
+      });
       
-      dishFileInputRefs.current.set(dish.id, input as HTMLInputElement);
+      dishFileInputRefs.current.set(dish.id, input);
       
       return () => {
         dishFileInputRefs.current.delete(dish.id);
@@ -477,7 +480,7 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
               className="flex items-center gap-1"
               onClick={() => setIsTakeaway(!isTakeaway)}
             >
-              <TakeAway className="h-4 w-4" />
+              <ShoppingBag className="h-4 w-4" />
               {isTakeaway ? "Take-away" : "Dine-in"}
             </Button>
           </DialogTitle>
@@ -513,13 +516,13 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
                 />
                 
                 <RatingSlider
-                  label={<div className="flex items-center gap-1"><Facilities className="h-4 w-4" /> Facilities</div>}
+                  label={<div className="flex items-center gap-1"><Building2 className="h-4 w-4" /> Facilities</div>}
                   value={rating.facilities || 3}
                   onChange={(value) => setRating(prev => ({ ...prev, facilities: value }))}
                 />
                 
                 <RatingSlider
-                  label={<div className="flex items-center gap-1"><Cleanliness className="h-4 w-4" /> Cleanliness</div>}
+                  label={<div className="flex items-center gap-1"><Sparkles className="h-4 w-4" /> Cleanliness</div>}
                   value={rating.cleanliness || 3}
                   onChange={(value) => setRating(prev => ({ ...prev, cleanliness: value }))}
                 />
