@@ -3,9 +3,16 @@ import { useState, useEffect } from 'react';
 import { WishlistItem, Venue } from '@/types';
 import * as WishlistService from '@/services/wishlistService';
 
+// Define a type that represents what the filtered venues actually look like
+type WishlistVenue = Venue & { 
+  inWishlist: true; 
+  wishlistTags: string[]; 
+  wishlistCategory?: string;
+};
+
 export const useWishlist = () => {
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
-  const [wishlistVenues, setWishlistVenues] = useState<Venue[]>([]);
+  const [wishlistVenues, setWishlistVenues] = useState<WishlistVenue[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   
@@ -26,13 +33,13 @@ export const useWishlist = () => {
           if (venue) {
             return {
               ...venue,
-              inWishlist: true,
+              inWishlist: true as const,
               wishlistTags: item.tags,
               wishlistCategory: item.category
             };
           }
           return null;
-        }).filter((v): v is Venue => v !== null);
+        }).filter((v): v is WishlistVenue => v !== null);
         
         setWishlistVenues(wishlistVenues);
       }
@@ -64,7 +71,7 @@ export const useWishlist = () => {
       if (!exists) {
         return [...prev, { 
           ...venue, 
-          inWishlist: true,
+          inWishlist: true as const,
           wishlistTags: tags,
           wishlistCategory: category
         }];
