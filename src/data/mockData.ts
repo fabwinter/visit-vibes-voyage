@@ -69,6 +69,7 @@ export const mockDishRatings: Record<string, DishRating[]> = {
       price: 16.99,
       rating: 4.5,
       tags: ["Crunchy", "Fresh", "Filling"],
+      type: "dish"
     },
     {
       id: "d2",
@@ -77,6 +78,7 @@ export const mockDishRatings: Record<string, DishRating[]> = {
       price: 5.50,
       rating: 5,
       tags: ["Perfect", "Creamy", "Strong"],
+      type: "drink"
     },
   ],
   v2: [
@@ -87,6 +89,7 @@ export const mockDishRatings: Record<string, DishRating[]> = {
       price: 45.99,
       rating: 4,
       tags: ["Fresh", "Melt-in-mouth", "Beautiful presentation"],
+      type: "dish"
     },
     {
       id: "d4",
@@ -95,6 +98,7 @@ export const mockDishRatings: Record<string, DishRating[]> = {
       price: 52.99,
       rating: 5,
       tags: ["Delicate", "Creamy", "Worth it"],
+      type: "dish"
     },
   ],
 };
@@ -207,4 +211,5 @@ export const mockUserProfile = {
   visits: mockVisits,
   savedVenues: [mockVenues[0], mockVenues[2]],
   tags: predefinedTags,
+  wishlistCategories: [] // Add this missing property
 };

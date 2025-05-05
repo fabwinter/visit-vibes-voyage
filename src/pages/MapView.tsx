@@ -103,6 +103,12 @@ const MapView = () => {
     processCheckIn(visit);
     setIsCheckInOpen(false);
   };
+  
+  // Close selected venue details
+  const handleCloseVenueDetails = () => {
+    setSelectedVenueDetails(null);
+    setSelectedVenue(null);
+  };
 
   return (
     <div className="h-[calc(100vh-132px)] flex flex-col md:flex-row">
@@ -132,6 +138,7 @@ const MapView = () => {
         {selectedVenueDetails && (
           <SelectedVenueDetails
             venue={selectedVenueDetails}
+            onClose={handleCloseVenueDetails}
             onCheckIn={handleCheckIn}
           />
         )}

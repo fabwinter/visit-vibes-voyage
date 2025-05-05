@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { mockUserProfile, predefinedTags } from '../data/mockData';
 import StarRating from '../components/StarRating';
@@ -41,6 +40,7 @@ const ProfileView = () => {
       photo: userPhoto,
       visits: [],  // We'll calculate stats from the actual visits array
       savedVenues: [], // Not implemented yet
+      wishlistCategories: []
     });
   }, []);
 

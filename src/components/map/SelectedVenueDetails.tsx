@@ -108,7 +108,7 @@ const SelectedVenueDetails: React.FC<SelectedVenueDetailsProps> = ({
       </div>
 
       <div className="mt-4 flex justify-between">
-        <CheckInButton venue={venue} onCheckIn={onCheckIn} />
+        <Button onClick={() => onCheckIn(venue)}>Check In</Button>
         <WishlistButton venue={venue} />
       </div>
     </div>

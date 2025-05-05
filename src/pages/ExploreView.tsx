@@ -4,9 +4,10 @@ import VenueCard from "../components/VenueCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlacesService } from "@/services/PlacesService";
-import { Venue } from "@/types";
+import { Venue, Visit } from "@/types";
 import { toast } from "sonner";
 import WishlistButton from "@/components/WishlistButton";
+import { mockVenues, mockVisits } from "../data/mockData";
 
 const ExploreView = () => {
   const [activeTab, setActiveTab] = useState<string>("featured");
@@ -82,6 +83,14 @@ const ExploreView = () => {
       .slice(0, 5);
       
     setTopRatedVenues(venuesWithLastVisit);
+  };
+
+  // Handle check-in for a venue
+  const handleCheckIn = (venue: Venue) => {
+    // This is a placeholder function for now
+    toast.info(`Check in at ${venue.name}`, {
+      description: "Check-in functionality will be implemented soon."
+    });
   };
 
   // Featured Australian food articles (updated with real content)
@@ -205,6 +214,7 @@ const ExploreView = () => {
                       <VenueCard
                         venue={venue}
                         lastVisit={venue.lastVisit}
+                        onClick={() => handleCheckIn(venue)}
                       />
                       {/* Google rating badge */}
                       {venue.googleRating && (
@@ -326,6 +336,7 @@ const ExploreView = () => {
                   <VenueCard
                     venue={venue}
                     lastVisit={venue.lastVisit}
+                    onClick={() => handleCheckIn(venue)}
                   />
                   {/* Google rating badge */}
                   {venue.googleRating && (

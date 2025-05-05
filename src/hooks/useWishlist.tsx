@@ -123,7 +123,7 @@ export const useWishlist = () => {
       if (v.id === venueId) {
         return {
           ...v,
-          wishlistTags: updates.tags || v.wishlistTags,
+          wishlistTags: updates.tags || v.wishlistTags || [],
           wishlistCategory: updates.category || v.wishlistCategory
         };
       }

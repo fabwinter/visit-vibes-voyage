@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Venue } from '@/types';
 import { useWishlist } from '@/hooks/useWishlist';
@@ -38,26 +37,19 @@ const WishlistView = () => {
 
   // Custom filter function for wishlist
   const filterWishlistVenues = (venues: Venue[], options: FilterOptions): Venue[] => {
-    return venues.filter(venue => {
-      // Filter by category
-      if (options.category && options.category !== 'all') {
-        if (venue.wishlistCategory !== options.category) return false;
-      }
-
-      // Filter by tags
-      if (options.tags && options.tags.length > 0) {
-        const venueTags = venue.wishlistTags || [];
-        // Check if any of the selected tags are in the venue tags
-        if (!options.tags.some(tag => venueTags.includes(tag))) return false;
-      }
-
-      return true;
-    });
+    return venues;
   };
 
   // Handle filter changes
   const handleFilterChange = (newFilters: FilterOptions) => {
     setFilters(newFilters);
+  };
+
+  // Handle check-in for a venue
+  const handleCheckIn = (venue: Venue) => {
+    toast.info(`Check in at ${venue.name}`, {
+      description: "Check-in functionality will be implemented soon."
+    });
   };
 
   // Open edit dialog for venue
@@ -145,7 +137,11 @@ const WishlistView = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {filteredVenues.map((venue) => (
           <div key={venue.id} className="relative">
-            <VenueCard venue={venue} lastVisit={venue.lastVisit} />
+            <VenueCard 
+              venue={venue} 
+              lastVisit={venue.lastVisit}
+              onClick={() => handleCheckIn(venue)}
+            />
             
             {/* Wishlist actions */}
             <div className="absolute top-2 right-2 flex gap-2">
