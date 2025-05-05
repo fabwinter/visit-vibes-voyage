@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
-import { CalendarIcon, Clock, Plus, X, Share2, DollarSign } from 'lucide-react';
+import { CalendarIcon, Clock, Plus, X, Share2, DollarSign, Camera } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from "sonner";
 import { Visit, Venue, DishRating, VisitRating } from '@/types';
@@ -32,7 +32,7 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
   const [partySize, setPartySize] = useState<number>(1);
   const [notes, setNotes] = useState<string>('');
   const [dishes, setDishes] = useState<DishRating[]>([
-    { id: uuidv4(), name: '', rating: 0, tags: [], type: 'dish', price: 0 }
+    { id: uuidv4(), name: '', rating: 0, tags: [], type: 'dish', price: 0, quantity: 1, photos: [] }
   ]);
   const [photos, setPhotos] = useState<string[]>([]);
   const [ratings, setRatings] = useState<VisitRating>({
@@ -40,17 +40,22 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
     ambiance: 0,
     service: 0,
     value: 0,
-    overall: 0
+    overall: 0,
+    facilities: 0,
+    cleanliness: 0
   });
   const [wouldVisitAgain, setWouldVisitAgain] = useState<boolean>(true);
   const [totalBill, setTotalBill] = useState<number>(0);
   const [manualBillEntry, setManualBillEntry] = useState<boolean>(false);
   const [manualBillAmount, setManualBillAmount] = useState<string>('');
+  const [isTakeaway, setIsTakeaway] = useState<boolean>(false);
   
   // Calculate total bill whenever dishes change
   useEffect(() => {
     if (!manualBillEntry) {
-      const calculatedTotal = dishes.reduce((sum, dish) => sum + (dish.price || 0), 0);
+      const calculatedTotal = dishes.reduce((sum, dish) => {
+        return sum + ((dish.price || 0) * (dish.quantity || 1));
+      }, 0);
       setTotalBill(calculatedTotal);
     }
   }, [dishes, manualBillEntry]);
@@ -63,16 +68,30 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
   }, [manualBillAmount, manualBillEntry]);
   
   // Handle photo upload
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>, dishIndex?: number) => {
     if (e.target.files && e.target.files.length > 0) {
-      const newPhotos = [...photos];
+      const uploadedPhotos: string[] = [];
+      let processedCount = 0;
       
       Array.from(e.target.files).forEach(file => {
         const reader = new FileReader();
         reader.onloadend = () => {
           if (typeof reader.result === 'string') {
-            newPhotos.push(reader.result);
-            setPhotos([...newPhotos]);
+            uploadedPhotos.push(reader.result);
+            processedCount++;
+            
+            if (processedCount === e.target.files!.length) {
+              if (dishIndex !== undefined) {
+                // Add photos to a specific dish
+                const newDishes = [...dishes];
+                const dishPhotos = newDishes[dishIndex].photos || [];
+                newDishes[dishIndex].photos = [...dishPhotos, ...uploadedPhotos];
+                setDishes(newDishes);
+              } else {
+                // Add photos to the visit
+                setPhotos([...photos, ...uploadedPhotos]);
+              }
+            }
           }
         };
         reader.readAsDataURL(file);
@@ -87,9 +106,27 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
     setPhotos(newPhotos);
   };
   
+  // Remove a dish photo
+  const removeDishPhoto = (dishIndex: number, photoIndex: number) => {
+    const newDishes = [...dishes];
+    const dishPhotos = newDishes[dishIndex].photos || [];
+    dishPhotos.splice(photoIndex, 1);
+    newDishes[dishIndex].photos = dishPhotos;
+    setDishes(newDishes);
+  };
+  
   // Add a new dish
   const addDish = () => {
-    setDishes([...dishes, { id: uuidv4(), name: '', rating: 0, tags: [], type: 'dish', price: 0 }]);
+    setDishes([...dishes, { 
+      id: uuidv4(), 
+      name: '', 
+      rating: 0, 
+      tags: [], 
+      type: 'dish', 
+      price: 0,
+      quantity: 1,
+      photos: []
+    }]);
   };
   
   // Update dish information
@@ -100,6 +137,11 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
     // Convert price to number when updating price field
     if (field === 'price') {
       newDishes[index].price = value !== '' ? parseFloat(value) : 0;
+    }
+    
+    // Convert quantity to number when updating quantity field
+    if (field === 'quantity') {
+      newDishes[index].quantity = value !== '' ? parseInt(value) : 1;
     }
     
     setDishes(newDishes);
@@ -153,11 +195,7 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
   
   // Submit check-in
   const handleSubmit = () => {
-    // Validate required fields
-    if (dishes.some(dish => !dish.name)) {
-      toast.error("Please enter a name for each dish/drink");
-      return;
-    }
+    // We're making all fields optional, so no validation needed
     
     // Create timestamp from date and time
     const visitDate = new Date(date);
@@ -175,7 +213,8 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
       notes: notes,
       photos: photos,
       wouldVisitAgain: wouldVisitAgain,
-      totalBill: totalBill
+      totalBill: totalBill,
+      isTakeaway: isTakeaway
     };
     
     // Pass the visit to parent component
@@ -198,8 +237,16 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+        <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle>Check In at {venue.name}</DialogTitle>
+          <div className="flex items-center">
+            <Label htmlFor="takeaway" className="mr-2 text-sm">Takeaway</Label>
+            <Switch
+              id="takeaway"
+              checked={isTakeaway}
+              onCheckedChange={setIsTakeaway}
+            />
+          </div>
         </DialogHeader>
         
         <div className="grid gap-4 py-4">
@@ -251,8 +298,8 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
             </div>
           </div>
           
-          {/* Party Size and Occasion */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Party Size and Occasion - disable if takeaway */}
+          <div className={`grid grid-cols-2 gap-4 ${isTakeaway ? 'opacity-50' : ''}`}>
             <div className="flex flex-col space-y-1.5">
               <Label htmlFor="partySize">Party Size</Label>
               <Input
@@ -261,6 +308,7 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
                 min="1"
                 value={partySize}
                 onChange={(e) => setPartySize(parseInt(e.target.value) || 1)}
+                disabled={isTakeaway}
               />
             </div>
             
@@ -271,6 +319,7 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
                 placeholder="Business, Date, Family..."
                 value={occasion}
                 onChange={(e) => setOccasion(e.target.value)}
+                disabled={isTakeaway}
               />
             </div>
           </div>
@@ -317,18 +366,32 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
                   </Select>
                 </div>
                 
-                <div className="flex flex-col space-y-1.5">
-                  <Label htmlFor={`dish-price-${index}`}>Price</Label>
-                  <div className="flex items-center">
-                    <span className="text-gray-500 mr-2">$</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex flex-col space-y-1.5">
+                    <Label htmlFor={`dish-price-${index}`}>Price</Label>
+                    <div className="flex items-center">
+                      <span className="text-gray-500 mr-2">$</span>
+                      <Input
+                        id={`dish-price-${index}`}
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={dish.price || ""}
+                        onChange={(e) => updateDish(index, 'price', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col space-y-1.5">
+                    <Label htmlFor={`dish-quantity-${index}`}>Quantity</Label>
                     <Input
-                      id={`dish-price-${index}`}
+                      id={`dish-quantity-${index}`}
                       type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="0.00"
-                      value={dish.price || ""}
-                      onChange={(e) => updateDish(index, 'price', e.target.value)}
+                      min="1"
+                      placeholder="1"
+                      value={dish.quantity || 1}
+                      onChange={(e) => updateDish(index, 'quantity', e.target.value)}
                     />
                   </div>
                 </div>
@@ -348,6 +411,55 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
                       </Button>
                     ))}
                   </div>
+                </div>
+                
+                {/* Dish Photos */}
+                <div className="flex flex-col space-y-1.5 mt-2">
+                  <Label htmlFor={`dish-photos-${index}`}>Add Photos for This Item</Label>
+                  <div className="flex items-center">
+                    <Input
+                      id={`dish-photos-${index}`}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={(e) => handlePhotoUpload(e, index)}
+                      className="flex-1"
+                    />
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="icon"
+                      className="ml-2"
+                      onClick={() => {
+                        document.getElementById(`dish-photos-${index}`)?.click();
+                      }}
+                    >
+                      <Camera className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  {/* Display dish photos */}
+                  {dish.photos && dish.photos.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2 mt-2">
+                      {dish.photos.map((photo, photoIndex) => (
+                        <div key={photoIndex} className="relative">
+                          <img 
+                            src={photo} 
+                            alt={`${dish.name || 'Dish'} photo ${photoIndex + 1}`}
+                            className="w-full h-20 object-cover rounded" 
+                          />
+                          <Button 
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => removeDishPhoto(index, photoIndex)}
+                            className="absolute top-1 right-1 h-6 w-6 p-0"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -480,6 +592,43 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
               </div>
             </div>
             
+            {/* New ratings: facilities and cleanliness */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col space-y-1.5">
+                <Label htmlFor="facilities-rating">Facilities</Label>
+                <div className="flex gap-1">
+                  {ratingOptions.map(option => (
+                    <Button
+                      key={option.value}
+                      variant={ratings.facilities === option.value ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => updateRating('facilities', option.value)}
+                      className="flex-1"
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="flex flex-col space-y-1.5">
+                <Label htmlFor="cleanliness-rating">Cleanliness</Label>
+                <div className="flex gap-1">
+                  {ratingOptions.map(option => (
+                    <Button
+                      key={option.value}
+                      variant={ratings.cleanliness === option.value ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => updateRating('cleanliness', option.value)}
+                      className="flex-1"
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
             <div className="flex flex-col space-y-1.5 pt-2">
               <Label>Overall Rating: {ratings.overall}</Label>
             </div>
@@ -497,14 +646,27 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
           
           {/* Photo Upload */}
           <div className="flex flex-col space-y-1.5">
-            <Label>Add Photos</Label>
-            <Input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handlePhotoUpload}
-              className="flex h-10 w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium"
-            />
+            <Label>Add Photos of Your Visit</Label>
+            <div className="flex items-center">
+              <Input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handlePhotoUpload}
+                className="flex-1"
+              />
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="icon"
+                className="ml-2"
+                onClick={() => {
+                  document.querySelector('input[type="file"]')?.click();
+                }}
+              >
+                <Camera className="h-4 w-4" />
+              </Button>
+            </div>
             
             {photos.length > 0 && (
               <div className="grid grid-cols-3 gap-2 mt-2">

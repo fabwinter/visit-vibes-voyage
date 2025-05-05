@@ -1,10 +1,10 @@
 
 // API configuration for Google Places API
 
-// Using the provided Google Places API key
+// Using the provided Google Places API key - NOTE: This is being deprecated in favor of Mapbox
 export const API_KEY = "AIzaSyAoqbocwE83Z3REe60z7dhN3Z2_aKnSJxc"; 
 
-// Mapbox API key - updated to the new public token
+// Mapbox API key - updated to the latest key
 export const MAPBOX_TOKEN = "pk.eyJ1IjoiZmFiaWFud2ludGVyYmluZSIsImEiOiJjbWFiMjU4NWgyNmhiMmxwdzFndzZpaWtsIn0.qip66iHah8qFMj1lrp2cpQ";
 
 // Use a proper CORS proxy

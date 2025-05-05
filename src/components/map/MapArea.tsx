@@ -29,7 +29,7 @@ const MapArea = ({
   const isMobile = useIsMobile();
 
   return (
-    <div className="w-full md:w-1/2 lg:w-3/5 h-[300px] md:h-full md:order-1 p-2 md:p-4 relative">
+    <div className="w-full md:w-1/2 lg:w-2/5 h-[250px] md:h-[400px] md:order-1 p-2 md:p-4 relative">
       <div className="h-full rounded-lg overflow-hidden border border-gray-200 shadow-md">
         <MapComponent 
           venues={venues} 

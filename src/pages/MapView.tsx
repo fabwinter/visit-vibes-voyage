@@ -119,7 +119,7 @@ const MapView = () => {
 
   return (
     <div className={`h-[calc(100vh-132px)] flex flex-col md:flex-row`}>
-      {/* Map Area */}
+      {/* Map Area - reduced height on mobile */}
       <MapArea
         venues={filteredVenues}
         userLocation={userLocation}
@@ -132,7 +132,7 @@ const MapView = () => {
       />
       
       {/* Right side - Search, Filters and Venue List */}
-      <div className="w-full md:w-1/2 lg:w-2/5 md:h-full md:overflow-y-auto p-3 md:p-4 md:order-2">
+      <div className="w-full md:w-1/2 lg:w-3/5 md:h-full md:overflow-y-auto p-3 md:p-4 md:order-2 flex-1">
         {/* Search with filters */}
         <SearchBar
           venues={venues}

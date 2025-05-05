@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import { Venue } from '@/types';
 import { getRatingLevel } from '@/types';
-import MarkerPopup from './MarkerPopup';
 
 interface MapMarkerProps {
   venue: Venue;
@@ -68,33 +67,17 @@ const MapMarker = ({
       onMarkerClick(venue.id);
     });
 
-    // Create a popup with venue info
+    // Create a simplified popup with venue name only
     const newPopup = new mapboxgl.Popup({ 
       offset: 25, 
       closeButton: false,
       className: isSelected ? 'venue-popup-selected' : 'venue-popup',
-      maxWidth: '300px'
-    }).setHTML(document.createElement('div').innerHTML);
-
-    // Add the React component to the popup
-    const popupEl = newPopup.getElement();
-    const reactContainer = document.createElement('div');
-    popupEl?.appendChild(reactContainer);
-
-    // Render the popup content using the MarkerPopup component
-    const popupContent = document.createElement('div');
-    popupContent.innerHTML = `
-      <div class="p-3 max-w-xs">
-        ${venue.photos && venue.photos.length > 0 ? 
-          `<img src="${venue.photos[0]}" alt="${venue.name}" 
-          class="w-full h-32 object-cover mb-2 rounded" 
-          onerror="this.onerror=null;this.src='https://placehold.co/600x400?text=No+Image';">` : ''}
-        <h3 class="font-semibold text-base">${venue.name}</h3>
-        <p class="text-sm text-gray-600">${venue.address}</p>
-        ${venue.category ? `<p class="text-xs text-gray-500 mt-1">${venue.category.join(', ').replace(/_/g, ' ')}</p>` : ''}
+      maxWidth: '200px'
+    }).setHTML(`
+      <div class="p-2 max-w-xs">
+        <h3 class="font-medium text-sm">${venue.name}</h3>
       </div>
-    `;
-    reactContainer.appendChild(popupContent);
+    `);
 
     // Set popup on marker
     newMarker.setPopup(newPopup);
