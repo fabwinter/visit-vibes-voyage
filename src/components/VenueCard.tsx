@@ -107,7 +107,7 @@ const VenueCard = ({ venue, lastVisit, className = '', onClick }: VenueCardProps
           
           {lastVisit && (
             <div className="mt-2">
-              <StarRating rating={lastVisit.rating.overall} size="md" />
+              <StarRating rating={lastVisit.rating.overall} size="sm" />
               {lastVisit.wouldVisitAgain !== undefined && (
                 <div className={`text-xs mt-1 ${lastVisit.wouldVisitAgain ? 'text-green-600' : 'text-red-600'}`}>
                   {lastVisit.wouldVisitAgain ? 'Would visit again' : 'Would not visit again'}

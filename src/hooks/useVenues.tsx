@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Venue } from '@/types';
 import { PlacesService } from '@/services/PlacesService';
@@ -24,20 +25,28 @@ export const useVenues = ({ initialLocation }: UseVenuesProps = {}) => {
 
   // Enhanced place selection handler that also centers the map
   const handlePlaceSelect = async (venue: Venue) => {
+    console.log("handlePlaceSelect called with venue:", venue);
+    
     // If we already have coordinates, update the selected venue right away
-    if (venue.coordinates.lat !== 0 && venue.coordinates.lng !== 0) {
+    if (venue.coordinates && venue.coordinates.lat !== 0 && venue.coordinates.lng !== 0) {
+      console.log("Using existing coordinates:", venue.coordinates);
       // Center map on the selected venue
       setMapCenter(venue.coordinates);
       originalHandlePlaceSelect(venue);
     } 
     // Otherwise fetch details to get coordinates
     else {
+      console.log("Fetching venue details to get coordinates");
       try {
         const details = await PlacesService.getVenueDetails(venue.id);
         if (details) {
+          console.log("Got venue details with coordinates:", details.coordinates);
           // Center map on the selected venue
           setMapCenter(details.coordinates);
           originalHandlePlaceSelect(details);
+        } else {
+          console.error("Could not get valid venue details");
+          toast.error("Could not get details for this venue");
         }
       } catch (error) {
         console.error("Error fetching venue details:", error);

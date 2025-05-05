@@ -4,6 +4,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Venue } from '@/types';
 import { getRatingLevel } from '@/types';
+import { MAPBOX_TOKEN } from '@/services/places/config';
 
 interface MapComponentProps {
   venues: Venue[];
@@ -26,7 +27,7 @@ const MapComponent = ({
 }: MapComponentProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  const [token, setToken] = useState<string>(mapboxToken || 'pk.eyJ1IjoiZmFiaWFud2ludGVyYmluZSIsImEiOiJjbWE2OWNuNG0wbzFuMmtwb3czNHB4cGJwIn0.KdxkppXglJrOwuBnqcYBqA');
+  const [token, setToken] = useState<string>(mapboxToken || MAPBOX_TOKEN);
   const [showTokenInput, setShowTokenInput] = useState<boolean>(false);
   const markers = useRef<{ [key: string]: mapboxgl.Marker }>({});
   const moveEndTimeout = useRef<number | null>(null);
@@ -55,14 +56,18 @@ const MapComponent = ({
     map.current.on('load', () => {
       if (!map.current) return;
       
-      // Add grayscale filter to the map
-      const mapStyle = map.current.getStyle();
-      if (mapStyle && mapStyle.layers) {
-        mapStyle.layers.forEach(layer => {
-          if (layer.id !== 'background' && map.current) {
-            map.current.setPaintProperty(layer.id, 'raster-saturation', -1);
-          }
-        });
+      try {
+        // Add grayscale filter to the map
+        const mapStyle = map.current.getStyle();
+        if (mapStyle && mapStyle.layers) {
+          mapStyle.layers.forEach(layer => {
+            if (layer.id !== 'background' && map.current && layer.type === 'raster') {
+              map.current.setPaintProperty(layer.id, 'raster-saturation', -1);
+            }
+          });
+        }
+      } catch (error) {
+        console.warn("Error applying grayscale filter:", error);
       }
     });
 
@@ -253,11 +258,6 @@ const MapComponent = ({
     e.preventDefault();
     setShowTokenInput(false);
   };
-
-  // Update styles for index.css to add shadow to selected popups
-  useEffect(() => {
-    // This is handled in index.css already
-  }, []);
 
   return (
     <div className={`relative w-full h-full ${className}`}>

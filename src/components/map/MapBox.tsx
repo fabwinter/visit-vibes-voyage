@@ -5,6 +5,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { Venue } from '@/types';
 import MapMarker from './MapMarker';
 import MapTokenInput from './MapTokenInput';
+import { MAPBOX_TOKEN } from '@/services/places/config';
 
 interface MapBoxProps {
   venues: Venue[];
@@ -27,7 +28,7 @@ const MapBox = ({
 }: MapBoxProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  const [token, setToken] = useState<string>(mapboxToken || 'pk.eyJ1IjoiZmFiaWFud2ludGVyYmluZSIsImEiOiJjbWE2OWNuNG0wbzFuMmtwb3czNHB4cGJwIn0.KdxkppXglJrOwuBnqcYBqA');
+  const [token, setToken] = useState<string>(mapboxToken || MAPBOX_TOKEN);
   const [showTokenInput, setShowTokenInput] = useState<boolean>(false);
   const moveEndTimeout = useRef<number | null>(null);
 
@@ -55,14 +56,18 @@ const MapBox = ({
     map.current.on('load', () => {
       if (!map.current) return;
       
-      // Add grayscale filter to the map
-      const mapStyle = map.current.getStyle();
-      if (mapStyle && mapStyle.layers) {
-        mapStyle.layers.forEach(layer => {
-          if (layer.id !== 'background' && map.current) {
-            map.current.setPaintProperty(layer.id, 'raster-saturation', -1);
-          }
-        });
+      try {
+        // Add grayscale filter to the map
+        const mapStyle = map.current.getStyle();
+        if (mapStyle && mapStyle.layers) {
+          mapStyle.layers.forEach(layer => {
+            if (layer.id !== 'background' && map.current && layer.type === 'raster') {
+              map.current.setPaintProperty(layer.id, 'raster-saturation', -1);
+            }
+          });
+        }
+      } catch (error) {
+        console.warn("Error applying grayscale filter:", error);
       }
     });
 

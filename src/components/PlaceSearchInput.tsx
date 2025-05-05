@@ -5,6 +5,8 @@ import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, Command
 import { PlacesService } from '@/services/PlacesService';
 import { Venue } from '@/types';
 import { cn } from '@/lib/utils';
+import { mockVenues } from '@/data/mockData';
+import { toast } from 'sonner';
 
 interface PlaceSearchInputProps {
   onSelect: (venue: Venue) => void;
@@ -50,9 +52,26 @@ const PlaceSearchInput = ({
       setIsLoading(true);
       try {
         const venues = await PlacesService.searchPlaces(query, userLocation);
-        setResults(venues);
+        if (venues && venues.length > 0) {
+          setResults(venues);
+        } else {
+          console.log("No venues found, falling back to mock data");
+          // Filter mock data based on query
+          const filteredMockVenues = mockVenues.filter(venue => 
+            venue.name.toLowerCase().includes(query.toLowerCase()) || 
+            venue.address.toLowerCase().includes(query.toLowerCase())
+          );
+          setResults(filteredMockVenues);
+        }
       } catch (error) {
         console.error('Error searching places:', error);
+        toast.error('Error searching places, using mock data');
+        // Filter mock data based on query
+        const filteredMockVenues = mockVenues.filter(venue => 
+          venue.name.toLowerCase().includes(query.toLowerCase()) || 
+          venue.address.toLowerCase().includes(query.toLowerCase())
+        );
+        setResults(filteredMockVenues);
       } finally {
         setIsLoading(false);
       }
@@ -63,19 +82,29 @@ const PlaceSearchInput = ({
   }, [query, userLocation]);
   
   const handleSelect = async (venue: Venue) => {
+    console.log("Selected venue:", venue);
     setQuery(venue.name);
     setIsOpen(false);
+    
+    // If venue already has valid coordinates, use it directly
+    if (venue.coordinates && venue.coordinates.lat !== 0 && venue.coordinates.lng !== 0) {
+      onSelect(venue);
+      return;
+    }
     
     // Get full details when a place is selected
     try {
       const details = await PlacesService.getVenueDetails(venue.id);
       if (details) {
+        console.log("Got venue details:", details);
         onSelect(details);
       } else {
+        console.log("No details found, using original venue");
         onSelect(venue);
       }
     } catch (error) {
       console.error('Error fetching venue details:', error);
+      toast.error('Error fetching venue details');
       onSelect(venue);
     }
   };

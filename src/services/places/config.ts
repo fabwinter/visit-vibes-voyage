@@ -4,6 +4,9 @@
 // Using the provided Google Places API key
 export const API_KEY = "AIzaSyAoqbocwE83Z3REe60z7dhN3Z2_aKnSJxc"; 
 
+// Mapbox API key - using the correct public token (not the secret key)
+export const MAPBOX_TOKEN = "pk.eyJ1IjoiZmFiaWFud2ludGVyYmluZSIsImEiOiJjbWE2OWNuNG0wbzFuMmtwb3czNHB4cGJwIn0.KdxkppXglJrOwuBnqcYBqA";
+
 // Use a proper CORS proxy
 // Note: For production, you should use your own proxy or Google Maps JavaScript API directly
 export const PROXY_URL = "https://corsproxy.io/?";
