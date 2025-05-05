@@ -65,7 +65,7 @@ export const mockDishRatings: Record<string, DishRating[]> = {
     {
       id: "d1",
       name: "Avocado Toast with Vegemite",
-      photo: "https://images.unsplash.com/photo-1603046891744-1f76eb10aec3?q=80&w=2087&auto=format&fit=crop",
+      photos: ["https://images.unsplash.com/photo-1603046891744-1f76eb10aec3?q=80&w=2087&auto=format&fit=crop"],
       price: 16.99,
       rating: 4.5,
       tags: ["Crunchy", "Fresh", "Filling"],
@@ -74,7 +74,7 @@ export const mockDishRatings: Record<string, DishRating[]> = {
     {
       id: "d2",
       name: "Flat White",
-      photo: "https://images.unsplash.com/photo-1577968897966-3d4325b36b61?q=80&w=1974&auto=format&fit=crop",
+      photos: ["https://images.unsplash.com/photo-1577968897966-3d4325b36b61?q=80&w=1974&auto=format&fit=crop"],
       price: 5.50,
       rating: 5,
       tags: ["Perfect", "Creamy", "Strong"],
@@ -85,7 +85,7 @@ export const mockDishRatings: Record<string, DishRating[]> = {
     {
       id: "d3",
       name: "Tasmanian Ocean Trout",
-      photo: "https://images.unsplash.com/photo-1580476262798-bddd9f4b7369?q=80&w=2070&auto=format&fit=crop",
+      photos: ["https://images.unsplash.com/photo-1580476262798-bddd9f4b7369?q=80&w=2070&auto=format&fit=crop"],
       price: 45.99,
       rating: 4,
       tags: ["Fresh", "Melt-in-mouth", "Beautiful presentation"],
@@ -94,7 +94,7 @@ export const mockDishRatings: Record<string, DishRating[]> = {
     {
       id: "d4",
       name: "Mud Crab Congee",
-      photo: "https://images.unsplash.com/photo-1626545212217-d169043d4bf1?q=80&w=2071&auto=format&fit=crop",
+      photos: ["https://images.unsplash.com/photo-1626545212217-d169043d4bf1?q=80&w=2071&auto=format&fit=crop"],
       price: 52.99,
       rating: 5,
       tags: ["Delicate", "Creamy", "Worth it"],

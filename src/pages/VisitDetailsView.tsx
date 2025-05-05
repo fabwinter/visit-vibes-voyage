@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Visit, Venue } from '@/types';
@@ -273,10 +272,10 @@ const VisitDetailsView = () => {
                       <StarRating rating={dish.rating} size="sm" />
                     </div>
                   </div>
-                  {dish.photo && (
+                  {dish.photos && dish.photos.length > 0 && (
                     <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0">
                       <img 
-                        src={dish.photo} 
+                        src={dish.photos[0]} 
                         alt={dish.name} 
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -297,9 +296,6 @@ const VisitDetailsView = () => {
                   </div>
                 )}
                 
-                {dish.notes && (
-                  <p className="mt-2 text-sm text-gray-600">{dish.notes}</p>
-                )}
               </div>
             ))}
           </div>
