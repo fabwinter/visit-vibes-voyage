@@ -3,7 +3,8 @@ import { Star as StarIcon } from 'lucide-react';
 import { getRatingLevel } from '../types';
 
 interface StarRatingProps {
-  value: number;
+  rating?: number;  // Changed from value to rating for backward compatibility
+  value?: number;   // Keep value as an alias to rating
   size?: 'sm' | 'md' | 'lg';
   showValue?: boolean;
   className?: string;
@@ -12,6 +13,7 @@ interface StarRatingProps {
 }
 
 const StarRating = ({ 
+  rating,
   value, 
   size = 'md', 
   showValue = true, 
@@ -19,7 +21,10 @@ const StarRating = ({
   readOnly = false,
   onChange
 }: StarRatingProps) => {
-  const ratingLevel = getRatingLevel(value);
+  // Use rating if provided, otherwise fall back to value
+  const actualRating = rating !== undefined ? rating : (value !== undefined ? value : 0);
+  
+  const ratingLevel = getRatingLevel(actualRating);
   
   // Determine star size
   const starSize = {
@@ -47,7 +52,7 @@ const StarRating = ({
         <StarIcon 
           key={star} 
           className={`${starSize} ${
-            star <= Math.round(value) 
+            star <= Math.round(actualRating) 
               ? `rating-${ratingLevel} fill-current` 
               : 'text-gray-300'
           } ${!readOnly ? 'cursor-pointer' : ''}`}
@@ -57,7 +62,7 @@ const StarRating = ({
       
       {showValue && (
         <span className={`ml-1 font-medium rating-${ratingLevel} ${textSize}`}>
-          {value.toFixed(1)}
+          {actualRating.toFixed(1)}
         </span>
       )}
     </div>

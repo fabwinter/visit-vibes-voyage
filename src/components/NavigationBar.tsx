@@ -1,4 +1,3 @@
-
 import { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -30,6 +29,7 @@ const NavigationBar = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [authType, setAuthType] = useState<'signin' | 'signup'>('signin');
 
   // Check if user is authenticated
   useEffect(() => {
@@ -37,6 +37,7 @@ const NavigationBar = () => {
   }, [user]);
 
   const handleLoginClick = () => {
+    setAuthType('signin');
     setAuthModalOpen(true);
   };
 
@@ -187,6 +188,7 @@ const NavigationBar = () => {
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
+        initialView={authType}
       />
     </div>
   );
