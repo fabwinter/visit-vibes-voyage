@@ -63,17 +63,20 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				// VisitVibe app colors
+				// MunchMapper app colors
 				visitvibe: {
-					primary: '#14b8a6', // teal-500
-					secondary: '#f97316', // orange-500
+					primary: '#ff4d94', // Pink for MunchMapper branding
+					secondary: '#fee440', // Yellow for utensils in logo
 					rating: {
 						good: '#22c55e', // green-500
-						mid: '#eab308', // yellow-500
+						mid: '#f59e0b', // yellow-500
 						bad: '#ef4444', // red-500
 					},
 					tag: '#8b5cf6', // violet-500
 				}
+			},
+			fontFamily: {
+				sans: ['Nunito', 'sans-serif'],
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
