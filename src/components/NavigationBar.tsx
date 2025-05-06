@@ -26,7 +26,7 @@ interface NavItemProps {
 const NavigationBar = () => {
   const { pathname } = useLocation();
   const isMobile = useIsMobile();
-  const { user, openModal } = useAuth();
+  const { user } = useAuth();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -37,11 +37,7 @@ const NavigationBar = () => {
   }, [user]);
 
   const handleLoginClick = () => {
-    if (openModal) {
-      openModal();
-    } else {
-      setAuthModalOpen(true);
-    }
+    setAuthModalOpen(true);
   };
 
   const toggleMobileMenu = () => {
@@ -189,8 +185,8 @@ const NavigationBar = () => {
 
       {/* Auth Modal */}
       <AuthModal
-        open={authModalOpen}
-        onOpenChange={setAuthModalOpen}
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
       />
     </div>
   );
