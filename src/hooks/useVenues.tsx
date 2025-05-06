@@ -1,6 +1,7 @@
+
 import { useState } from 'react';
 import { Venue } from '@/types';
-import { MapboxService } from '@/services/mapbox';
+import { PlacesService } from '@/services/PlacesService';
 import { toast } from 'sonner';
 import { useLocation } from './useLocation';
 import { useMapInteraction } from './useMapInteraction';
@@ -37,7 +38,7 @@ export const useVenues = ({ initialLocation }: UseVenuesProps = {}) => {
     else {
       console.log("Fetching venue details to get coordinates");
       try {
-        const details = await MapboxService.getPlaceDetails(venue.id);
+        const details = await PlacesService.getVenueDetails(venue.id);
         if (details) {
           console.log("Got venue details with coordinates:", details.coordinates);
           // Center map on the selected venue
@@ -66,7 +67,7 @@ export const useVenues = ({ initialLocation }: UseVenuesProps = {}) => {
     toast.success("Map centered on your location");
     
     // If we don't have venues yet, search in this area
-    if (venues.length === 0) {
+    if (venues.length === 0 || usingMockData) {
       handleSearchThisArea();
     }
   };
