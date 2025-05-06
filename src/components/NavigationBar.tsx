@@ -1,3 +1,4 @@
+
 import { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -25,11 +26,10 @@ interface NavItemProps {
 const NavigationBar = () => {
   const { pathname } = useLocation();
   const isMobile = useIsMobile();
-  const { user } = useAuth();
+  const { user, openModal } = useAuth();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [authType, setAuthType] = useState<'signin' | 'signup'>('signin');
 
   // Check if user is authenticated
   useEffect(() => {
@@ -37,8 +37,11 @@ const NavigationBar = () => {
   }, [user]);
 
   const handleLoginClick = () => {
-    setAuthType('signin');
-    setAuthModalOpen(true);
+    if (openModal) {
+      openModal();
+    } else {
+      setAuthModalOpen(true);
+    }
   };
 
   const toggleMobileMenu = () => {
@@ -186,9 +189,8 @@ const NavigationBar = () => {
 
       {/* Auth Modal */}
       <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-        initialView={authType}
+        open={authModalOpen}
+        onOpenChange={setAuthModalOpen}
       />
     </div>
   );
