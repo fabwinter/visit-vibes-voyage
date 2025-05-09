@@ -1,10 +1,7 @@
 
-import { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import { useEffect, useState } from 'react';
 import { Venue } from '@/types';
-import { MAPBOX_TOKEN } from '@/services/foursquare/config';
-import MapMarker from './MapMarker';
+import MapPlaceholder from '../MapPlaceholder';
 import { toast } from 'sonner';
 
 interface MapBoxProps {
@@ -21,149 +18,63 @@ const MapBox = ({
   venues, 
   onVenueSelect, 
   userLocation, 
-  mapboxToken, 
   selectedVenue, 
-  className,
-  onMapMove 
+  className
 }: MapBoxProps) => {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const token = mapboxToken || MAPBOX_TOKEN;
-  const moveEndTimeout = useRef<number | null>(null);
-  const [mapError, setMapError] = useState<string | null>(null);
+  const [selectedVenueObj, setSelectedVenueObj] = useState<Venue | null>(null);
 
-  // Initialize map
+  // Update selected venue when the selectedVenue ID changes
   useEffect(() => {
-    if (!mapContainer.current) return;
-    
-    try {
-      mapboxgl.accessToken = token;
-      
-      if (map.current) return; // Map already initialized
-      
-      const initialLocation = userLocation || { lat: -33.8688, lng: 151.2093 }; // Default to Sydney
-      
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/light-v10', // Use light style for better grayscale effect
-        center: [initialLocation.lng, initialLocation.lat],
-        zoom: 14, // Increased zoom level for better visibility
-      });
-
-      // Add navigation controls
-      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-      
-      // Add user location marker if available
-      if (userLocation) {
-        new mapboxgl.Marker({ color: '#3BB2D0' })
-          .setLngLat([userLocation.lng, userLocation.lat])
-          .addTo(map.current);
-      }
-      
-      // Add map move handler for "search this area" functionality
-      if (onMapMove) {
-        map.current.on('moveend', () => {
-          if (!map.current) return;
-          
-          // Clear previous timeout to prevent multiple rapid calls
-          if (moveEndTimeout.current) {
-            window.clearTimeout(moveEndTimeout.current);
-          }
-          
-          // Set a small debounce to avoid excessive callbacks
-          moveEndTimeout.current = window.setTimeout(() => {
-            const center = map.current!.getCenter();
-            onMapMove({ 
-              lat: center.lat, 
-              lng: center.lng 
-            });
-          }, 300);
-        });
-      }
-
-      // Handle successful map load
-      map.current.on('load', () => {
-        if (mapError) setMapError(null);
-      });
-
-      // Handle map errors
-      map.current.on('error', (e) => {
-        console.error("Mapbox error:", e);
-        setMapError("Map failed to load properly. Please check your connection and try again.");
-      });
-    } catch (error) {
-      console.error("Error initializing map:", error);
-      setMapError("Failed to initialize map. Please check your connection and try again.");
+    if (!selectedVenue) {
+      setSelectedVenueObj(null);
+      return;
     }
-
-    // Clean up on unmount
-    return () => {
-      if (map.current) {
-        map.current.remove();
-        map.current = null;
-      }
-      
-      if (moveEndTimeout.current) {
-        window.clearTimeout(moveEndTimeout.current);
-      }
-    };
-  }, [token, userLocation, onMapMove, mapError]);
-
-  // When selectedVenue changes, center map on it
-  useEffect(() => {
-    if (!map.current || !selectedVenue) return;
     
     const venue = venues.find(v => v.id === selectedVenue);
-    if (!venue) return;
-    
-    try {
-      map.current.flyTo({
-        center: [venue.coordinates.lng, venue.coordinates.lat],
-        zoom: 15,
-        essential: true
-      });
-    } catch (error) {
-      console.error("Error centering map on venue:", error);
+    if (venue) {
+      setSelectedVenueObj(venue);
     }
   }, [selectedVenue, venues]);
 
+  const handleVenueClick = (venueId: string) => {
+    onVenueSelect(venueId);
+    toast.info("Venue selected");
+  };
+
   return (
     <div className={`relative w-full h-full ${className}`}>
-      <div ref={mapContainer} className="w-full h-full rounded-lg" />
-      {!map.current && !mapError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-50">
-          <div className="flex flex-col items-center">
-            <div className="w-8 h-8 border-4 border-visitvibe-primary border-t-transparent rounded-full animate-spin"></div>
-            <p className="mt-2 text-sm text-gray-600">Loading map...</p>
+      <MapPlaceholder className="rounded-lg" />
+      
+      {/* Simple venue list overlay */}
+      {venues.length > 0 && (
+        <div className="absolute bottom-2 left-2 right-2 bg-white/80 backdrop-blur-sm p-2 rounded-md max-h-32 overflow-y-auto shadow-md">
+          <h3 className="text-xs font-medium mb-1">Nearby Places ({venues.length})</h3>
+          <div className="space-y-1">
+            {venues.slice(0, 5).map((venue) => (
+              <button
+                key={venue.id}
+                className={`text-xs text-left block w-full px-2 py-1 rounded ${
+                  selectedVenue === venue.id ? 'bg-visitvibe-primary text-white' : 'hover:bg-gray-100'
+                }`}
+                onClick={() => handleVenueClick(venue.id)}
+              >
+                {venue.name}
+              </button>
+            ))}
           </div>
         </div>
       )}
       
-      {mapError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-          <div className="bg-white p-4 rounded-lg shadow-md max-w-md text-center">
-            <p className="text-red-500 font-medium mb-2">{mapError}</p>
-            <p className="text-gray-600 text-sm mb-4">We're using mock data so you can still explore the app.</p>
-            <button 
-              className="bg-visitvibe-primary text-white px-4 py-2 rounded-md"
-              onClick={() => window.location.reload()}
-            >
-              Reload Map
-            </button>
-          </div>
+      {/* Selected venue info */}
+      {selectedVenueObj && (
+        <div className="absolute top-2 left-2 right-2 bg-white p-2 rounded-md shadow-md">
+          <h3 className="font-medium">{selectedVenueObj.name}</h3>
+          <p className="text-xs text-gray-600">{selectedVenueObj.address}</p>
+          {selectedVenueObj.category && selectedVenueObj.category.length > 0 && (
+            <p className="text-xs text-gray-500">{selectedVenueObj.category[0]}</p>
+          )}
         </div>
       )}
-      
-      {/* Render markers for venues */}
-      {map.current && venues.map(venue => (
-        <MapMarker 
-          key={venue.id}
-          venue={venue}
-          map={map.current!}
-          isSelected={selectedVenue === venue.id}
-          onMarkerClick={onVenueSelect}
-        />
-      ))}
     </div>
   );
 };

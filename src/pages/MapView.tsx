@@ -65,7 +65,9 @@ const MapView = () => {
       if (venue) {
         setSelectedVenueDetails(venue);
         // Center map on selected venue
-        setMapCenter(venue.coordinates);
+        if (venue.coordinates) {
+          setMapCenter(venue.coordinates);
+        }
       } else {
         // Fetch details if not in our current list
         try {
@@ -74,7 +76,9 @@ const MapView = () => {
           if (details) {
             setSelectedVenueDetails(details);
             // Center map on selected venue
-            setMapCenter(details.coordinates);
+            if (details.coordinates) {
+              setMapCenter(details.coordinates);
+            }
           }
         } catch (error) {
           console.error("Error fetching venue details:", error);

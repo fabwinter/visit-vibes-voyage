@@ -21,7 +21,8 @@ export const searchPlaces = async (query: string, location: { lat: number; lng: 
     
     // Build the URL with query parameters
     const queryString = new URLSearchParams(params as any).toString();
-    const url = `${PROXY_URL}${FOURSQUARE_API_URL}/autocomplete?${queryString}`;
+    // Use encoded URI component to prevent proxy issues
+    const url = `${PROXY_URL}${encodeURIComponent(`${FOURSQUARE_API_URL}/autocomplete?${queryString}`)}`;
     
     console.log("Fetching from URL:", url);
     

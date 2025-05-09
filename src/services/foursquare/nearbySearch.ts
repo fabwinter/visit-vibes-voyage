@@ -28,6 +28,12 @@ export const searchNearbyVenues = async (params: {
   try {
     console.log("Searching for nearby venues with params:", params);
     
+    // Check if we're online
+    if (!navigator.onLine) {
+      console.log("Device is offline. Using mock venues.");
+      throw new Error("You're offline. Using saved venues.");
+    }
+    
     // Build search parameters
     const searchParams: FoursquareSearchParams = {
       ll: `${params.location.lat},${params.location.lng}`,
@@ -44,13 +50,13 @@ export const searchNearbyVenues = async (params: {
     
     // Build the URL with query parameters
     const queryString = new URLSearchParams(searchParams as any).toString();
-    const url = `${PROXY_URL}${FOURSQUARE_API_URL}/places/search?${queryString}`;
+    const url = `${PROXY_URL}${encodeURIComponent(`${FOURSQUARE_API_URL}/places/search?${queryString}`)}`;
     
     console.log("Fetching venues from URL:", url);
     
     // Make the API call with timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
     
     // Make the API call
     const response = await fetch(url, {
@@ -80,10 +86,28 @@ export const searchNearbyVenues = async (params: {
     
     console.log(`Found ${venues.length} venues`);
     
+    // Store venues in localStorage for offline use
+    localStorage.setItem('cached_venues', JSON.stringify(venues));
+    
     // Foursquare doesn't support pagination tokens like Google Places
     return { venues };
   } catch (error) {
     console.error("Error searching nearby venues:", error);
+    
+    // Try to load cached venues first
+    try {
+      const cachedVenues = localStorage.getItem('cached_venues');
+      if (cachedVenues) {
+        const parsed = JSON.parse(cachedVenues);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          console.log("Using cached venues from localStorage");
+          toast.info("Using saved venue data");
+          return { venues: parsed };
+        }
+      }
+    } catch (cacheError) {
+      console.error("Error loading cached venues:", cacheError);
+    }
     
     // Only show toast if this isn't an abort error (timeout)
     if (!(error instanceof DOMException && error.name === 'AbortError')) {
@@ -107,6 +131,9 @@ export const searchNearbyVenues = async (params: {
         }
       };
     });
+    
+    // Store these mock venues in localStorage too
+    localStorage.setItem('cached_venues', JSON.stringify(localizedMockVenues));
     
     // Return mock data instead of failing completely
     return { venues: localizedMockVenues };

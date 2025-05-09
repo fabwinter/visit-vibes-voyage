@@ -1,9 +1,9 @@
 
 import { Button } from '@/components/ui/button';
 import { Search, Navigation } from 'lucide-react';
-import MapComponent from '../MapComponent';
 import { Venue } from '@/types';
 import { useIsMobile } from '@/hooks/use-mobile';
+import MapPlaceholder from '../MapPlaceholder';
 
 interface MapAreaProps {
   venues: Venue[];
@@ -22,7 +22,6 @@ const MapArea = ({
   selectedVenue,
   showSearchThisArea,
   onVenueSelect,
-  onMapMove,
   onSearchArea,
   onCenterToUserLocation
 }: MapAreaProps) => {
@@ -31,14 +30,30 @@ const MapArea = ({
   return (
     <div className="w-full md:w-1/2 lg:w-2/5 h-[250px] md:h-[400px] md:order-1 p-2 md:p-4 relative">
       <div className="h-full rounded-lg overflow-hidden border border-gray-200 shadow-md">
-        <MapComponent 
-          venues={venues} 
-          onVenueSelect={onVenueSelect}
-          userLocation={userLocation}
-          selectedVenue={selectedVenue}
-          onMapMove={onMapMove}
-          className="w-full h-full"
-        />
+        <MapPlaceholder className="rounded-lg" />
+        
+        {/* Simple venue list overlay */}
+        {venues.length > 0 && (
+          <div className="absolute bottom-14 left-2 right-2 bg-white/90 backdrop-blur-sm p-2 rounded-md max-h-28 overflow-y-auto shadow-md">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-xs font-medium">Places</h3>
+              <span className="text-xs text-gray-500">{venues.length} nearby</span>
+            </div>
+            <div>
+              {venues.slice(0, 5).map((venue) => (
+                <button
+                  key={venue.id}
+                  className={`text-xs text-left block w-full truncate px-2 py-1 rounded ${
+                    selectedVenue === venue.id ? 'bg-visitvibe-primary text-white' : 'hover:bg-gray-100'
+                  }`}
+                  onClick={() => onVenueSelect(venue.id)}
+                >
+                  {venue.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       
       {/* Search this area button */}
