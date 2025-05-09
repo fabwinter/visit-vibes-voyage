@@ -31,14 +31,11 @@ const MapView = () => {
     venues,
     userLocation,
     isLoading,
-    usingMockData,
-    nextPageToken,
     showSearchThisArea,
     setMapCenter,
     handleMapMove,
     handleSearchThisArea,
     handlePlaceSelect,
-    handleLoadMore,
     processCheckIn,
     centerToUserLocation
   } = useVenues();
@@ -155,11 +152,10 @@ const MapView = () => {
         <VenueList
           venues={filteredVenues}
           isLoading={isLoading}
-          usingMockData={usingMockData}
+          usingMockData={false}
           selectedVenue={selectedVenue}
-          nextPageToken={nextPageToken}
           onVenueSelect={handleVenueSelect}
-          onLoadMore={handleLoadMore}
+          onLoadMore={() => {}}
           onCheckInClick={(venue) => handleCheckIn(venue)}
         />
       </div>

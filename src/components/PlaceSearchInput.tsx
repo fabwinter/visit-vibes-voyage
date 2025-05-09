@@ -5,7 +5,6 @@ import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, Command
 import { PlacesService } from '@/services/PlacesService';
 import { Venue } from '@/types';
 import { cn } from '@/lib/utils';
-import { mockVenues } from '@/data/mockData';
 import { toast } from 'sonner';
 
 interface PlaceSearchInputProps {
@@ -52,26 +51,11 @@ const PlaceSearchInput = ({
       setIsLoading(true);
       try {
         const venues = await PlacesService.searchPlaces(query, userLocation);
-        if (venues && venues.length > 0) {
-          setResults(venues);
-        } else {
-          console.log("No venues found, falling back to mock data");
-          // Filter mock data based on query
-          const filteredMockVenues = mockVenues.filter(venue => 
-            venue.name.toLowerCase().includes(query.toLowerCase()) || 
-            venue.address.toLowerCase().includes(query.toLowerCase())
-          );
-          setResults(filteredMockVenues);
-        }
+        setResults(venues);
       } catch (error) {
         console.error('Error searching places:', error);
-        toast.error('Error searching places, using mock data');
-        // Filter mock data based on query
-        const filteredMockVenues = mockVenues.filter(venue => 
-          venue.name.toLowerCase().includes(query.toLowerCase()) || 
-          venue.address.toLowerCase().includes(query.toLowerCase())
-        );
-        setResults(filteredMockVenues);
+        toast.error('Error searching places');
+        setResults([]);
       } finally {
         setIsLoading(false);
       }

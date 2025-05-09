@@ -34,16 +34,6 @@ const VenueList = ({
         </span>
       </div>
       
-      {usingMockData && (
-        <div className="mb-4 p-2 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-700 flex items-center gap-2">
-          <AlertCircle className="h-4 w-4 flex-shrink-0" />
-          <div className="text-xs">
-            <p className="font-medium">Using mock data</p>
-            <p className="text-yellow-600">API connection issue or no results returned.</p>
-          </div>
-        </div>
-      )}
-      
       {isLoading && venues.length === 0 ? (
         <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-100">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-visitvibe-primary border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite] mb-2"></div>
@@ -75,7 +65,7 @@ const VenueList = ({
             ))}
           </div>
           
-          {nextPageToken && !usingMockData && (
+          {nextPageToken && (
             <div className="mt-4 text-center">
               <Button 
                 variant="outline" 

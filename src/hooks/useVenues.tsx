@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Venue } from '@/types';
 import { PlacesService } from '@/services/PlacesService';
@@ -17,7 +16,7 @@ export const useVenues = ({ initialLocation }: UseVenuesProps = {}) => {
   const { userLocation, setUserLocation } = useLocation(initialLocation);
   const { mapCenter, setMapCenter, showSearchThisArea, handleMapMove, setShowSearchThisArea } = useMapInteraction();
   const { visits, processCheckIn } = useVisitData();
-  const { venues, isLoading, usingMockData, nextPageToken, handleLoadMore, handleSearchThisArea, handlePlaceSelect: originalHandlePlaceSelect } = useVenueSearch({
+  const { venues, isLoading, handleSearchThisArea, handlePlaceSelect: originalHandlePlaceSelect } = useVenueSearch({
     userLocation,
     mapCenter,
     visits
@@ -32,7 +31,8 @@ export const useVenues = ({ initialLocation }: UseVenuesProps = {}) => {
       console.log("Using existing coordinates:", venue.coordinates);
       // Center map on the selected venue
       setMapCenter(venue.coordinates);
-      originalHandlePlaceSelect(venue);
+      await originalHandlePlaceSelect(venue);
+      return venue;
     } 
     // Otherwise fetch details to get coordinates
     else {
@@ -43,14 +43,17 @@ export const useVenues = ({ initialLocation }: UseVenuesProps = {}) => {
           console.log("Got venue details with coordinates:", details.coordinates);
           // Center map on the selected venue
           setMapCenter(details.coordinates);
-          originalHandlePlaceSelect(details);
+          await originalHandlePlaceSelect(details);
+          return details;
         } else {
           console.error("Could not get valid venue details");
           toast.error("Could not get details for this venue");
+          return venue;
         }
       } catch (error) {
         console.error("Error fetching venue details:", error);
         toast.error("Could not get details for this venue");
+        return venue;
       }
     }
   };
@@ -67,7 +70,7 @@ export const useVenues = ({ initialLocation }: UseVenuesProps = {}) => {
     toast.success("Map centered on your location");
     
     // If we don't have venues yet, search in this area
-    if (venues.length === 0 || usingMockData) {
+    if (venues.length === 0) {
       handleSearchThisArea();
     }
   };
@@ -76,14 +79,14 @@ export const useVenues = ({ initialLocation }: UseVenuesProps = {}) => {
     venues,
     userLocation,
     isLoading,
-    usingMockData,
-    nextPageToken,
+    usingMockData: false, // We're no longer using mock data
+    nextPageToken: undefined, // Foursquare doesn't use page tokens
     showSearchThisArea,
     setMapCenter,
     handleMapMove,
     handleSearchThisArea,
     handlePlaceSelect,
-    handleLoadMore,
+    handleLoadMore: () => {}, // Foursquare doesn't use page tokens for pagination
     processCheckIn,
     visits,
     centerToUserLocation

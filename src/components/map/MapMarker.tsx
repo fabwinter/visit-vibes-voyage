@@ -24,15 +24,23 @@ const MapMarker = ({
   useEffect(() => {
     if (!map) return;
     
-    // Determine marker color based on rating
-    let markerColor = '#555555'; // Default gray for unrated in grayscale theme
+    // Determine marker color based on rating or category
+    let markerColor = '#555555'; // Default gray
     
     if (venue.lastVisit?.rating?.overall) {
       const ratingLevel = getRatingLevel(venue.lastVisit.rating.overall);
       
-      if (ratingLevel === 'good') markerColor = '#8E9196'; // Light gray for good
-      else if (ratingLevel === 'mid') markerColor = '#555555'; // Medium gray for mid
-      else if (ratingLevel === 'bad') markerColor = '#222222'; // Dark gray for bad
+      if (ratingLevel === 'good') markerColor = '#22c55e'; // Green for good rating
+      else if (ratingLevel === 'mid') markerColor = '#f59e0b'; // Amber for mid rating
+      else if (ratingLevel === 'bad') markerColor = '#ef4444'; // Red for bad rating
+    } else {
+      // If no rating, color by category
+      const category = venue.category?.[0]?.toLowerCase() || '';
+      
+      if (category.includes('restaurant')) markerColor = '#8b5cf6'; // Purple for restaurants
+      else if (category.includes('café') || category.includes('cafe') || category.includes('coffee')) markerColor = '#6366f1'; // Indigo for cafes
+      else if (category.includes('bar') || category.includes('pub')) markerColor = '#f43f5e'; // Pink for bars
+      else if (category.includes('bakery')) markerColor = '#f97316'; // Orange for bakeries
     }
 
     // Create a marker element with pin icon
@@ -50,8 +58,9 @@ const MapMarker = ({
     // Create SVG icon - larger for selected venue
     markerElement.innerHTML = `
       <svg xmlns="http://www.w3.org/2000/svg" width="${isSelected ? '36' : '24'}" height="${isSelected ? '36' : '24'}" 
-        viewBox="0 0 24 24" fill="${markerColor}" stroke="${isSelected ? 'black' : 'white'}" 
-        stroke-width="${isSelected ? '3' : '2'}" stroke-linecap="round" stroke-linejoin="round">
+        viewBox="0 0 24 24" fill="${markerColor}" stroke="${isSelected ? '#fff' : '#fff'}" 
+        stroke-width="${isSelected ? '2' : '1'}" stroke-linecap="round" stroke-linejoin="round"
+        style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));">
         <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
         <circle cx="12" cy="10" r="3"></circle>
       </svg>
@@ -67,15 +76,23 @@ const MapMarker = ({
       onMarkerClick(venue.id);
     });
 
-    // Create a simplified popup with venue name only
+    // Create a more detailed popup
     const newPopup = new mapboxgl.Popup({ 
       offset: 25, 
       closeButton: false,
       className: isSelected ? 'venue-popup-selected' : 'venue-popup',
-      maxWidth: '200px'
+      maxWidth: '220px'
     }).setHTML(`
       <div class="p-2 max-w-xs">
         <h3 class="font-medium text-sm">${venue.name}</h3>
+        ${venue.category?.length ? `<p class="text-xs text-gray-500">${venue.category[0]}</p>` : ''}
+        ${venue.lastVisit?.rating?.overall ? 
+          `<div class="mt-1">
+             <span class="text-xs font-medium" style="color: ${markerColor}">
+               ${venue.lastVisit.rating.overall.toFixed(1)} ★
+             </span>
+           </div>` 
+         : ''}
       </div>
     `);
 
@@ -125,8 +142,7 @@ const MapMarker = ({
     if (svg) {
       svg.setAttribute('width', isSelected ? '36' : '24');
       svg.setAttribute('height', isSelected ? '36' : '24');
-      svg.setAttribute('stroke', isSelected ? 'black' : 'white');
-      svg.setAttribute('stroke-width', isSelected ? '3' : '2');
+      svg.setAttribute('stroke-width', isSelected ? '2' : '1');
     }
 
     // Show popup for selected venue
