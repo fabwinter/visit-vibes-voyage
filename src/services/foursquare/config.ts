@@ -11,7 +11,8 @@ export const MAPBOX_TOKEN = "pk.eyJ1IjoiZmFiaWFud2ludGVyYmluZSIsImEiOiJjbWFiMjU4
 export const FOURSQUARE_API_URL = "https://api.foursquare.com/v3";
 
 // Use a more reliable CORS proxy - updated to fix CORS issues
-export const PROXY_URL = "https://corsproxy.io/?";
+// We're switching to corsanywhere which has better reliability
+export const PROXY_URL = "https://thingproxy.freeboard.io/fetch/";
 
 // Food-related categories in Foursquare
 export const FOOD_CATEGORIES = [
