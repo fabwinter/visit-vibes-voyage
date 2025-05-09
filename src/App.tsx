@@ -3,8 +3,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/hooks/useAuth";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "@/hooks/useAuth";
 
 import Layout from "./components/Layout";
 import MapView from "./pages/MapView";
@@ -25,6 +25,18 @@ const queryClient = new QueryClient({
   },
 });
 
+// Protected route component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user } = useAuth();
+  
+  if (!user) {
+    // Redirect to home if not authenticated
+    return <Navigate to="/" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
@@ -37,10 +49,26 @@ const App = () => {
               <Routes>
                 <Route path="/" element={<MapView />} />
                 <Route path="/explore" element={<ExploreView />} />
-                <Route path="/visits" element={<VisitsView />} />
-                <Route path="/visit/:visitId" element={<VisitDetailsView />} />
-                <Route path="/wishlist" element={<WishlistView />} />
-                <Route path="/profile" element={<ProfileView />} />
+                <Route path="/visits" element={
+                  <ProtectedRoute>
+                    <VisitsView />
+                  </ProtectedRoute>
+                } />
+                <Route path="/visit/:visitId" element={
+                  <ProtectedRoute>
+                    <VisitDetailsView />
+                  </ProtectedRoute>
+                } />
+                <Route path="/wishlist" element={
+                  <ProtectedRoute>
+                    <WishlistView />
+                  </ProtectedRoute>
+                } />
+                <Route path="/profile" element={
+                  <ProtectedRoute>
+                    <ProfileView />
+                  </ProtectedRoute>
+                } />
                 <Route path="/map-settings" element={<MapSettingsView />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

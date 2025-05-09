@@ -10,8 +10,8 @@ export const MAPBOX_TOKEN = "pk.eyJ1IjoiZmFiaWFud2ludGVyYmluZSIsImEiOiJjbWFiMjU4
 // Foursquare API base URL
 export const FOURSQUARE_API_URL = "https://api.foursquare.com/v3";
 
-// Use a more reliable CORS proxy
-export const PROXY_URL = "https://api.allorigins.win/raw?url=";
+// Use a more reliable CORS proxy - updated to fix CORS issues
+export const PROXY_URL = "https://corsproxy.io/?";
 
 // Food-related categories in Foursquare
 export const FOOD_CATEGORIES = [

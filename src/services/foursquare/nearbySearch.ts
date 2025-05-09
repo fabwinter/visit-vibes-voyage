@@ -82,6 +82,7 @@ export const searchNearbyVenues = async (params: {
       description: error instanceof Error ? error.message : "Unknown error" 
     });
     
+    // Return empty array instead of failing completely
     return { venues: [] };
   }
 };

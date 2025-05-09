@@ -9,19 +9,22 @@ export interface Venue {
   id: string;
   name: string;
   address: string;
-  coordinates: Coordinates;
+  coordinates: {
+    lat: number;
+    lng: number;
+  };
   photos: string[];
+  lastVisit?: Visit; // Optional reference to last visit
+  category?: string[];
+  distance?: number; // Add distance property for Foursquare API
   website?: string;
   hours?: string;
   phoneNumber?: string;
-  priceLevel?: number; // 1-4 representing $ to $$$$
-  category?: string[];
-  lastVisit?: Visit; // Added lastVisit for quick access to latest visit data
-  googleRating?: number; // Added for Google rating
+  priceLevel?: number;
+  googleRating?: number;
   inWishlist?: boolean; // Track wishlist status
   wishlistTags?: string[]; // Tags specific to wishlist
   wishlistCategory?: string; // Category in wishlist
-  distance?: number; // Added distance property to fix TypeScript error
 }
 
 export interface DishRating {

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Venue } from '@/types';
 import { PlacesService } from '@/services/PlacesService';
@@ -6,6 +7,7 @@ import { useLocation } from './useLocation';
 import { useMapInteraction } from './useMapInteraction';
 import { useVenueSearch } from './useVenueSearch';
 import { useVisitData } from './useVisitData';
+import { useAuth } from './useAuth';
 
 interface UseVenuesProps {
   initialLocation?: { lat: number; lng: number };
@@ -21,6 +23,9 @@ export const useVenues = ({ initialLocation }: UseVenuesProps = {}) => {
     mapCenter,
     visits
   });
+  
+  // Get auth context
+  const { user } = useAuth();
 
   // Enhanced place selection handler that also centers the map
   const handlePlaceSelect = async (venue: Venue) => {
@@ -75,6 +80,22 @@ export const useVenues = ({ initialLocation }: UseVenuesProps = {}) => {
     }
   };
 
+  // Modified check-in handler that checks for user authentication
+  const handleCheckIn = async (visit: any) => {
+    if (!user && visit.userId) {
+      toast.error("You need to sign in to check in");
+      // Could redirect to sign in page here
+      return null;
+    }
+    
+    // If userId is required but not provided, add the current user's ID
+    if (user && !visit.userId) {
+      visit.userId = user.id;
+    }
+    
+    return processCheckIn(visit);
+  };
+
   return {
     venues,
     userLocation,
@@ -87,7 +108,7 @@ export const useVenues = ({ initialLocation }: UseVenuesProps = {}) => {
     handleSearchThisArea,
     handlePlaceSelect,
     handleLoadMore: () => {}, // Foursquare doesn't use page tokens for pagination
-    processCheckIn,
+    processCheckIn: handleCheckIn, // Use our enhanced check-in handler
     visits,
     centerToUserLocation
   };

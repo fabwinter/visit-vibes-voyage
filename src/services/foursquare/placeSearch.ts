@@ -40,6 +40,10 @@ export const searchPlaces = async (query: string, location: { lat: number; lng: 
     console.log("Autocomplete response received:", data);
     
     // Process autocomplete results
+    if (!data.results || data.results.length === 0) {
+      return [];
+    }
+    
     const venues: Venue[] = data.results
       .filter(result => result.fsq_id) // Filter out results without an ID
       .map((result) => ({
@@ -48,7 +52,8 @@ export const searchPlaces = async (query: string, location: { lat: number; lng: 
         address: result.text.secondary || '',
         coordinates: { lat: 0, lng: 0 }, // Will be populated after selection
         photos: [],
-        category: []
+        category: [],
+        distance: result.distance
       }));
     
     console.log("Processed venues:", venues);
