@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import StarRating from './StarRating';
-import { Venue } from '@/types';
+import { Venue, Visit } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from "sonner";
 import { useAuth } from '@/hooks/useAuth';
@@ -15,10 +15,11 @@ interface CheckInFormProps {
   venue: Venue;
   isOpen: boolean;
   onClose: () => void;
-  onCheckIn: (checkInData: any) => void;
+  onCheckIn: (checkInData: Visit) => void;
+  initialVisit?: Visit; // Add initialVisit as optional prop
 }
 
-const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) => {
+const CheckInForm = ({ venue, isOpen, onClose, onCheckIn, initialVisit }: CheckInFormProps) => {
   const { user } = useAuth();
   
   // Define the rating state
@@ -33,20 +34,28 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
   const [notes, setNotes] = useState('');
   const [dish, setDish] = useState('');
   
-  // Reset form when venue changes
+  // Reset form when venue changes or populate with initial values if editing
   useEffect(() => {
     if (isOpen) {
-      setRating({
-        overall: 0,
-        food: 0,
-        service: 0,
-        ambiance: 0,
-        value: 0
-      });
-      setNotes('');
-      setDish('');
+      if (initialVisit) {
+        // Populate form with initial values if editing
+        setRating(initialVisit.rating);
+        setNotes(initialVisit.notes || '');
+        setDish(initialVisit.dishes.length > 0 ? initialVisit.dishes[0].name : '');
+      } else {
+        // Reset form when creating new visit
+        setRating({
+          overall: 0,
+          food: 0,
+          service: 0,
+          ambiance: 0,
+          value: 0
+        });
+        setNotes('');
+        setDish('');
+      }
     }
-  }, [venue.id, isOpen]);
+  }, [venue.id, isOpen, initialVisit]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,19 +73,23 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
     }
     
     // Create the check-in object
-    const checkIn = {
-      id: uuidv4(),
+    const checkIn: Visit = {
+      id: initialVisit ? initialVisit.id : uuidv4(),
       venueId: venue.id,
-      venueName: venue.name,
-      venueAddress: venue.address,
-      venueCoordinates: venue.coordinates,
-      venueCategory: venue.category,
-      venuePhotos: venue.photos,
-      userId: user?.id, // Only add userId if user is signed in
-      timestamp: new Date().toISOString(),
+      timestamp: initialVisit ? initialVisit.timestamp : new Date().toISOString(),
+      dishes: [{
+        id: uuidv4(),
+        name: dish || 'Unspecified dish',
+        type: 'dish',
+        rating: rating.food,
+        tags: [],
+        photos: []
+      }],
       rating,
-      notes,
-      dish: dish ? { name: dish } : undefined
+      photos: initialVisit?.photos || [],
+      notes: notes,
+      tags: initialVisit?.tags || [],
+      wouldVisitAgain: rating.overall >= 3.5 // Automatically set based on rating
     };
     
     onCheckIn(checkIn);
@@ -86,7 +99,7 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Check-in to {venue.name}</DialogTitle>
+          <DialogTitle>{initialVisit ? 'Edit check-in for' : 'Check-in to'} {venue.name}</DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
@@ -96,10 +109,9 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
               Overall Rating <span className="text-red-500">*</span>
             </Label>
             <StarRating 
-              id="overall-rating"
               value={rating.overall}
               onChange={(value) => setRating({...rating, overall: value})}
-              required
+              required={true}
             />
           </div>
           
@@ -109,7 +121,6 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
               Food Rating
             </Label>
             <StarRating 
-              id="food-rating"
               value={rating.food}
               onChange={(value) => setRating({...rating, food: value})}
             />
@@ -121,7 +132,6 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
               Service Rating
             </Label>
             <StarRating 
-              id="service-rating"
               value={rating.service}
               onChange={(value) => setRating({...rating, service: value})}
             />
@@ -133,7 +143,6 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
               Ambiance Rating
             </Label>
             <StarRating 
-              id="ambiance-rating"
               value={rating.ambiance}
               onChange={(value) => setRating({...rating, ambiance: value})}
             />
@@ -145,7 +154,6 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
               Value for Money
             </Label>
             <StarRating 
-              id="value-rating"
               value={rating.value}
               onChange={(value) => setRating({...rating, value: value})}
             />
@@ -183,7 +191,7 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
               Cancel
             </Button>
             <Button type="submit">
-              Check-in
+              {initialVisit ? 'Update' : 'Check-in'}
             </Button>
           </DialogFooter>
         </form>

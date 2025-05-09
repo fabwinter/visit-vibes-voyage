@@ -8,9 +8,14 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   signIn: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>; // Alias for signIn
   signUp: (email: string, password: string, userData?: any) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>; // Alias for signUp with name
   signOut: () => Promise<void>;
+  logout: () => Promise<void>; // Alias for signOut
   loading: boolean;
+  isAuthenticated: boolean;
+  updateUserProfile: (data: any) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,6 +24,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     // Set up the auth state listener FIRST
@@ -29,6 +35,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Update auth state
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
+        setIsAuthenticated(!!currentSession?.user);
         
         // Show toast for certain events
         if (event === 'SIGNED_IN') {
@@ -45,6 +52,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
+      setIsAuthenticated(!!currentSession?.user);
       setLoading(false);
     });
 
@@ -71,6 +79,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(false);
     }
   };
+
+  // Alias for signIn
+  const login = signIn;
 
   const signUp = async (email: string, password: string, userData?: any) => {
     try {
@@ -101,6 +112,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Register function that combines name with signUp
+  const register = async (name: string, email: string, password: string) => {
+    return signUp(email, password, { name });
+  };
+
   const signOut = async () => {
     try {
       setLoading(true);
@@ -114,8 +130,60 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Alias for signOut
+  const logout = signOut;
+
+  // Add updateUserProfile function
+  const updateUserProfile = async (data: any) => {
+    try {
+      setLoading(true);
+      
+      // Update the user's metadata
+      const { error } = await supabase.auth.updateUser({
+        data: data
+      });
+      
+      if (error) {
+        toast.error('Profile update failed', {
+          description: error.message
+        });
+        throw error;
+      }
+      
+      // If we got here, the update was successful
+      return;
+    } catch (error) {
+      toast.error('Profile update failed', {
+        description: error instanceof Error ? error.message : 'Unknown error occurred'
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Extend the User type
+  if (user) {
+    // Add name and photo properties to user object
+    const userData = user.user_metadata || {};
+    (user as any).name = userData.name || userData.full_name || user.email?.split('@')[0] || 'User';
+    (user as any).photo = userData.avatar_url || userData.photo;
+  }
+
   return (
-    <AuthContext.Provider value={{ user, session, signIn, signUp, signOut, loading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      signIn, 
+      login,
+      signUp, 
+      register,
+      signOut, 
+      logout,
+      loading, 
+      isAuthenticated,
+      updateUserProfile
+    }}>
       {children}
     </AuthContext.Provider>
   );
