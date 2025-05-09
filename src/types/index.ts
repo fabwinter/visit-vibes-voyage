@@ -21,6 +21,7 @@ export interface Venue {
   inWishlist?: boolean; // Track wishlist status
   wishlistTags?: string[]; // Tags specific to wishlist
   wishlistCategory?: string; // Category in wishlist
+  distance?: number; // Added distance property to fix TypeScript error
 }
 
 export interface DishRating {
