@@ -7,7 +7,7 @@ import { Visit, Venue } from '@/types';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, ExtendedUser } from '@/hooks/useAuth';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -43,7 +43,7 @@ const ProfileView = () => {
     }
     
     // Initialize name from user
-    if (user) {
+    if (user && user.name) {
       setName(user.name);
     }
   }, [user]);
@@ -178,7 +178,7 @@ const ProfileView = () => {
               className="object-cover"
             />
             <AvatarFallback>
-              {user?.name.slice(0, 2).toUpperCase()}
+              {(user?.name || 'U').slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
           
@@ -213,7 +213,7 @@ const ProfileView = () => {
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold">{user?.name}</h1>
+              <h1 className="text-2xl font-bold">{user?.name || 'User'}</h1>
               <button 
                 onClick={toggleEditMode}
                 className="text-visitvibe-primary"

@@ -4,7 +4,7 @@ import NavigationBar from './NavigationBar';
 import { Button } from './ui/button';
 import { LogOut, User } from 'lucide-react';
 import AuthModal from './auth/AuthModal';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, ExtendedUser } from '@/hooks/useAuth';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import {
   DropdownMenu,
@@ -64,7 +64,7 @@ const Layout = ({ children }: LayoutProps) => {
                 <Button variant="ghost" size="icon" className="rounded-full" aria-label="User menu">
                   <Avatar className="h-8 w-8">
                     {user?.photo ? (
-                      <AvatarImage src={user.photo} alt={user.name} />
+                      <AvatarImage src={user.photo} alt={user.name || 'User'} />
                     ) : (
                       <AvatarFallback className="bg-visitvibe-primary text-white">
                         {getInitials(user?.name || 'User')}
