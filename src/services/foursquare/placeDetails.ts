@@ -13,6 +13,8 @@ export const getVenueDetails = async (placeId: string): Promise<Venue | null> =>
     // Build the URL for place details
     const url = `${PROXY_URL}${encodeURIComponent(`${FOURSQUARE_API_URL}/places/${placeId}?fields=fsq_id,name,categories,location,geocodes,website,tel,hours,rating,stats,price,photos,tips,tastes,features`)}`;
     
+    console.log("Fetching details from URL:", url);
+    
     // Make the API call
     const response = await fetch(url, {
       method: 'GET',
@@ -21,13 +23,18 @@ export const getVenueDetails = async (placeId: string): Promise<Venue | null> =>
     
     // Check if response is ok
     if (!response.ok) {
+      console.error("API request failed with status:", response.status);
+      console.error("Response text:", await response.text());
       throw new Error(`API request failed with status: ${response.status}`);
     }
     
     const details: FoursquareVenueDetailsResponse = await response.json();
+    console.log("Venue details received:", details);
     
     // Convert to our app's Venue type
-    return convertFoursquareDetailsToVenue(details);
+    const venue = convertFoursquareDetailsToVenue(details);
+    console.log("Converted venue:", venue);
+    return venue;
   } catch (error) {
     console.error("Error fetching venue details:", error);
     toast.error("Failed to fetch venue details", {

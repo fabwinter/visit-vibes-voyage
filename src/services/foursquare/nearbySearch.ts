@@ -45,6 +45,8 @@ export const searchNearbyVenues = async (params: {
     const queryString = new URLSearchParams(searchParams as any).toString();
     const url = `${PROXY_URL}${encodeURIComponent(`${FOURSQUARE_API_URL}/places/search?${queryString}`)}`;
     
+    console.log("Fetching venues from URL:", url);
+    
     // Make the API call
     const response = await fetch(url, {
       method: 'GET',
@@ -52,10 +54,13 @@ export const searchNearbyVenues = async (params: {
     });
     
     if (!response.ok) {
+      console.error("API request failed with status:", response.status);
+      console.error("Response text:", await response.text());
       throw new Error(`API request failed with status: ${response.status}`);
     }
     
     const data: FoursquareResponse = await response.json();
+    console.log("API response received:", data);
     
     // Check for no results
     if (!data.results || data.results.length === 0) {
@@ -68,8 +73,7 @@ export const searchNearbyVenues = async (params: {
     
     console.log(`Found ${venues.length} venues`);
     
-    // Foursquare doesn't support pagination tokens like Google Places,
-    // so we don't return a nextPageToken
+    // Foursquare doesn't support pagination tokens like Google Places
     return { venues };
   } catch (error) {
     console.error("Error searching nearby venues:", error);

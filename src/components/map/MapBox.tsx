@@ -3,9 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Venue } from '@/types';
+import { MAPBOX_TOKEN } from '@/services/foursquare/config';
 import MapMarker from './MapMarker';
-import MapTokenInput from './MapTokenInput';
-import { MAPBOX_TOKEN } from '@/services/places/config';
 
 interface MapBoxProps {
   venues: Venue[];
@@ -28,8 +27,7 @@ const MapBox = ({
 }: MapBoxProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  const [token, setToken] = useState<string>(mapboxToken || MAPBOX_TOKEN);
-  const [showTokenInput, setShowTokenInput] = useState<boolean>(false);
+  const token = mapboxToken || MAPBOX_TOKEN;
   const moveEndTimeout = useRef<number | null>(null);
 
   // Initialize map
@@ -126,43 +124,25 @@ const MapBox = ({
     });
   }, [selectedVenue, venues]);
 
-  const handleTokenChange = (newToken: string) => {
-    setToken(newToken);
-  };
-
-  const handleTokenSubmit = () => {
-    setShowTokenInput(false);
-  };
-
   return (
     <div className={`relative w-full h-full ${className}`}>
-      {showTokenInput ? (
-        <MapTokenInput 
-          token={token} 
-          onTokenChange={handleTokenChange} 
-          onTokenSubmit={handleTokenSubmit} 
-        />
-      ) : (
-        <>
-          <div ref={mapContainer} className="w-full h-full rounded-lg" />
-          {!map.current && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <p className="text-gray-500">Loading map...</p>
-            </div>
-          )}
-          
-          {/* Render markers for venues */}
-          {map.current && venues.map(venue => (
-            <MapMarker 
-              key={venue.id}
-              venue={venue}
-              map={map.current!}
-              isSelected={selectedVenue === venue.id}
-              onMarkerClick={onVenueSelect}
-            />
-          ))}
-        </>
+      <div ref={mapContainer} className="w-full h-full rounded-lg" />
+      {!map.current && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <p className="text-gray-500">Loading map...</p>
+        </div>
       )}
+      
+      {/* Render markers for venues */}
+      {map.current && venues.map(venue => (
+        <MapMarker 
+          key={venue.id}
+          venue={venue}
+          map={map.current!}
+          isSelected={selectedVenue === venue.id}
+          onMarkerClick={onVenueSelect}
+        />
+      ))}
     </div>
   );
 };

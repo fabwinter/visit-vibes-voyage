@@ -1,6 +1,6 @@
 
 import { toast } from "sonner";
-import { FOURSQUARE_API_URL, PROXY_URL, getDefaultHeaders, MAX_RESULTS } from "./config";
+import { FOURSQUARE_API_URL, PROXY_URL, getDefaultHeaders } from "./config";
 import { FoursquareAutocompleteParams, FoursquareAutocompleteResponse } from "./types";
 import { Venue } from "@/types";
 
@@ -22,6 +22,8 @@ export const searchPlaces = async (query: string, location: { lat: number; lng: 
     const queryString = new URLSearchParams(params as any).toString();
     const url = `${PROXY_URL}${encodeURIComponent(`${FOURSQUARE_API_URL}/autocomplete?${queryString}`)}`;
     
+    console.log("Fetching from URL:", url);
+    
     // Make the API call
     const response = await fetch(url, {
       method: 'GET',
@@ -29,21 +31,27 @@ export const searchPlaces = async (query: string, location: { lat: number; lng: 
     });
     
     if (!response.ok) {
+      console.error("API request failed with status:", response.status);
+      console.error("Response text:", await response.text());
       throw new Error(`API request failed with status: ${response.status}`);
     }
     
     const data: FoursquareAutocompleteResponse = await response.json();
+    console.log("Autocomplete response received:", data);
     
     // Process autocomplete results
-    const venues: Venue[] = data.results.map((result) => ({
-      id: result.fsq_id,
-      name: result.text.primary,
-      address: result.text.secondary || '',
-      coordinates: { lat: 0, lng: 0 }, // Will be populated after selection
-      photos: [],
-      category: []
-    }));
+    const venues: Venue[] = data.results
+      .filter(result => result.fsq_id) // Filter out results without an ID
+      .map((result) => ({
+        id: result.fsq_id,
+        name: result.text.primary,
+        address: result.text.secondary || '',
+        coordinates: { lat: 0, lng: 0 }, // Will be populated after selection
+        photos: [],
+        category: []
+      }));
     
+    console.log("Processed venues:", venues);
     return venues;
   } catch (error) {
     console.error("Error searching places:", error);

@@ -3,10 +3,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
-import { useState, useEffect } from "react";
-import MapboxTokenInput from "./components/MapboxTokenInput";
 
 import Layout from "./components/Layout";
 import MapView from "./pages/MapView";
@@ -28,27 +26,6 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
-  const [mapboxToken, setMapboxToken] = useState(localStorage.getItem('mapbox_token') || '');
-  const [showTokenInput, setShowTokenInput] = useState(false);
-
-  useEffect(() => {
-    // Check if we have a Mapbox token stored
-    const token = localStorage.getItem('mapbox_token');
-    if (!token) {
-      setShowTokenInput(true);
-    } else {
-      setMapboxToken(token);
-    }
-  }, []);
-
-  const handleTokenSaved = (token: string) => {
-    setMapboxToken(token);
-    setShowTokenInput(false);
-    
-    // Refresh the page to apply the new token
-    window.location.reload();
-  };
-
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -56,14 +33,7 @@ const App = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Layout>
-              {/* Show token input if no token is set */}
-              <MapboxTokenInput
-                isOpen={showTokenInput}
-                onClose={() => setShowTokenInput(false)}
-                onTokenSaved={handleTokenSaved}
-              />
-              
+            <Layout>              
               <Routes>
                 <Route path="/" element={<MapView />} />
                 <Route path="/explore" element={<ExploreView />} />
