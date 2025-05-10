@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Venue, Visit, VisitRating, DishRating } from '@/types';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { Camera, Plus, X, Trash, Edit, ShoppingBag, Building2, Sparkles, ArrowUpRight } from 'lucide-react';
+import { Camera, Plus, X, Trash, Edit, ShoppingBag, Building2, Sparkles } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { predefinedTags } from '@/data/mockData';
 import { toast } from 'sonner';
@@ -270,7 +271,104 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
     }
   };
 
-  // Dish component - fixed the input handling for dish name
+  // Handle check-in submission
+  const handleSubmit = () => {
+    // Make sure venue at least has a name
+    if (!venue || !venue.name) {
+      toast.error("Missing venue information");
+      return;
+    }
+    
+    // Filter out empty dishes
+    const validDishes = dishes.filter(dish => dish.name.trim() !== '');
+    
+    if (validDishes.length === 0) {
+      toast.error("Please add at least one dish or drink");
+      return;
+    }
+    
+    // Create the visit object
+    const visit: Visit = {
+      id: initialVisit?.id || uuidv4(),
+      venueId: venue.id,
+      timestamp: initialVisit?.timestamp || new Date().toISOString(),
+      dishes: validDishes,
+      rating,
+      tags: selectedTags,
+      notes: notes.trim() || undefined,
+      photos: photos,
+      wouldVisitAgain,
+      totalBill: totalBill ? parseFloat(totalBill) : undefined,
+      isTakeaway
+    };
+    
+    // Pass the visit object to the parent component
+    onCheckIn(visit);
+    
+    // Reset form state
+    resetForm();
+  };
+  
+  // Reset the form
+  const resetForm = () => {
+    setPhotos([]);
+    setNotes('');
+    setSelectedTags([]);
+    setCustomTag('');
+    setWouldVisitAgain(undefined);
+    setPartySize(1);
+    setOccasion('');
+    setIsTakeaway(false);
+    setTotalBill('');
+    setRating({
+      food: 3,
+      service: 3,
+      ambiance: 3,
+      value: 3,
+      overall: 3,
+      facilities: 3,
+      cleanliness: 3
+    });
+    setDishes([
+      {
+        id: uuidv4(),
+        name: '',
+        type: 'dish',
+        rating: 3,
+        tags: [],
+        price: undefined,
+        quantity: 1,
+        photos: []
+      }
+    ]);
+  };
+  
+  // Common rating slider component
+  const RatingSlider = ({ 
+    value, 
+    onChange, 
+    label 
+  }: { 
+    value: number; 
+    onChange: (value: number) => void; 
+    label: React.ReactNode; // Changed from string to ReactNode to accept JSX elements
+  }) => (
+    <div className="mb-6">
+      <div className="flex justify-between items-center mb-2">
+        <Label>{label}</Label>
+        <span className="font-medium">{value}/5</span>
+      </div>
+      <Slider 
+        value={[value]} 
+        onValueChange={(values) => onChange(values[0])}
+        min={1}
+        max={5}
+        step={0.5}
+      />
+    </div>
+  );
+
+  // Dish component
   const DishForm = ({ dish, index }: { dish: DishRating; index: number }) => {
     const [customDishTag, setCustomDishTag] = useState('');
     
@@ -319,16 +417,13 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
         </div>
         
         <div className="space-y-3">
-          {/* Dish name - fixed the value assignment */}
+          {/* Dish name */}
           <div>
             <Label htmlFor={`dish-name-${dish.id}`}>Name</Label>
             <Input
               id={`dish-name-${dish.id}`}
               value={dish.name}
-              onChange={(e) => {
-                // Direct value assignment - ensure this is working correctly
-                handleDishChange(dish.id, 'name', e.target.value);
-              }}
+              onChange={(e) => handleDishChange(dish.id, 'name', e.target.value)}
               placeholder="Dish name"
             />
           </div>
@@ -487,131 +582,21 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
     );
   };
 
-  // Handle check-in submission
-  const handleSubmit = () => {
-    // Make sure venue at least has a name
-    if (!venue || !venue.name) {
-      toast.error("Missing venue information");
-      return;
-    }
-    
-    // Filter out empty dishes
-    const validDishes = dishes.filter(dish => dish.name.trim() !== '');
-    
-    if (validDishes.length === 0) {
-      toast.error("Please add at least one dish or drink");
-      return;
-    }
-    
-    // Create the visit object - preserve ID when editing
-    const visit: Visit = {
-      id: initialVisit?.id || uuidv4(),
-      venueId: venue.id,
-      timestamp: initialVisit?.timestamp || new Date().toISOString(),
-      dishes: validDishes,
-      rating,
-      tags: selectedTags,
-      notes: notes.trim() || undefined,
-      photos: photos,
-      wouldVisitAgain,
-      totalBill: totalBill ? parseFloat(totalBill) : undefined,
-      isTakeaway
-    };
-    
-    // Pass the visit object to the parent component
-    onCheckIn(visit);
-    
-    // Reset form state
-    resetForm();
-  };
-  
-  // Reset the form
-  const resetForm = () => {
-    setPhotos([]);
-    setNotes('');
-    setSelectedTags([]);
-    setCustomTag('');
-    setWouldVisitAgain(undefined);
-    setPartySize(1);
-    setOccasion('');
-    setIsTakeaway(false);
-    setTotalBill('');
-    setRating({
-      food: 3,
-      service: 3,
-      ambiance: 3,
-      value: 3,
-      overall: 3,
-      facilities: 3,
-      cleanliness: 3
-    });
-    setDishes([
-      {
-        id: uuidv4(),
-        name: '',
-        type: 'dish',
-        rating: 3,
-        tags: [],
-        price: undefined,
-        quantity: 1,
-        photos: []
-      }
-    ]);
-  };
-  
-  // Common rating slider component
-  const RatingSlider = ({ 
-    value, 
-    onChange, 
-    label 
-  }: { 
-    value: number; 
-    onChange: (value: number) => void; 
-    label: React.ReactNode; // Changed from string to ReactNode to accept JSX elements
-  }) => (
-    <div className="mb-6">
-      <div className="flex justify-between items-center mb-2">
-        <Label>{label}</Label>
-        <span className="font-medium">{value}/5</span>
-      </div>
-      <Slider 
-        value={[value]} 
-        onValueChange={(values) => onChange(values[0])}
-        min={1}
-        max={5}
-        step={0.5}
-      />
-    </div>
-  );
-
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
       <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex justify-between items-center">
             <span>{isEditing ? "Edit Check-in at" : "Check In at"} {venue.name}</span>
-            <div className="flex items-center gap-2">
-              {venue.website && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-1"
-                  onClick={() => window.open(venue.website, '_blank')}
-                >
-                  <ArrowUpRight className="h-4 w-4" />
-                  Website
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-1"
-                onClick={() => setIsTakeaway(!isTakeaway)}
-              >
-                <ShoppingBag className="h-4 w-4" />
-                {isTakeaway ? "Take-away" : "Dine-in"}
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-1"
+              onClick={() => setIsTakeaway(!isTakeaway)}
+            >
+              <ShoppingBag className="h-4 w-4" />
+              {isTakeaway ? "Take-away" : "Dine-in"}
+            </Button>
           </DialogTitle>
         </DialogHeader>
         
