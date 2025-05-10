@@ -1,11 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Venue, Visit } from '@/types';
+import { Venue, Visit, DishRating } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import StarRating from './StarRating';
 
@@ -14,6 +14,7 @@ interface CheckInFormProps {
   isOpen: boolean;
   onClose: () => void;
   onCheckIn: (visit: Visit) => void;
+  initialVisit?: Visit; // Add initialVisit as an optional prop
 }
 
 const CheckInForm: React.FC<CheckInFormProps> = ({
@@ -21,6 +22,7 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
   isOpen,
   onClose,
   onCheckIn,
+  initialVisit
 }) => {
   const [note, setNote] = useState("");
   const [dishName, setDishName] = useState("");
@@ -32,6 +34,20 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
     value: 0,
     overall: 0,
   });
+
+  // Initialize form with initialVisit data if provided
+  useEffect(() => {
+    if (initialVisit) {
+      setNote(initialVisit.note || "");
+      setRatings(initialVisit.rating);
+      
+      // Set first dish info if available
+      if (initialVisit.dishes && initialVisit.dishes.length > 0) {
+        setDishName(initialVisit.dishes[0].name || "");
+        setPhoto(initialVisit.dishes[0].photos?.[0] || "");
+      }
+    }
+  }, [initialVisit]);
 
   const handleRatingChange = (type: keyof typeof ratings) => (value: number) => {
     setRatings(prev => {
@@ -60,14 +76,23 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
     }
 
     const visit: Visit = {
-      id: uuidv4(),
+      id: initialVisit?.id || uuidv4(),
       venueId: venue.id,
       venueName: venue.name,
       address: venue.address,
-      timestamp: new Date().toISOString(),
+      timestamp: initialVisit?.timestamp || new Date().toISOString(),
       note,
-      dishes: dishName ? [{ name: dishName, photo, rating: ratings.food }] : [],
+      dishes: dishName ? [{ 
+        id: uuidv4(),
+        name: dishName, 
+        photos: photo ? [photo] : [], 
+        rating: ratings.food,
+        tags: [],
+        type: 'dish'
+      }] : [],
       rating: ratings,
+      photos: [],
+      tags: [],
     };
 
     onCheckIn(visit);
@@ -177,7 +202,9 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">Check In</Button>
+            <Button type="submit">
+              {initialVisit ? 'Update' : 'Check In'}
+            </Button>
           </div>
         </form>
       </DialogContent>

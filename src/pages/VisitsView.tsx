@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Visit, Venue } from '@/types';
 import { useNavigate } from 'react-router-dom';
@@ -13,6 +12,7 @@ import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 const VisitsView = () => {
+  
   const [visits, setVisits] = useState<Visit[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
@@ -26,7 +26,7 @@ const VisitsView = () => {
   const isMobile = useIsMobile();
   const { processCheckIn } = useVenues();
   
-  // Load visits and venues from localStorage
+  
   useEffect(() => {
     const storedVisits = localStorage.getItem('visits');
     if (storedVisits) {
@@ -50,15 +50,15 @@ const VisitsView = () => {
     }
   }, []);
   
-  // Filter visits based on search term
+  
   const filteredVisits = visits.filter(visit => {
     if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
     
-    // Find the venue for this visit
+    
     const venue = venues.find(v => v.id === visit.venueId);
     
-    // Check if venue name, address, or visit tags match search
+    
     return (
       venue?.name?.toLowerCase().includes(searchLower) ||
       venue?.address?.toLowerCase().includes(searchLower) ||
@@ -70,17 +70,17 @@ const VisitsView = () => {
     );
   });
   
-  // Sort visits by date (newest first)
+  
   const sortedVisits = [...filteredVisits].sort((a, b) => {
     return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
   });
   
-  // Handle check-in form submission
+  
   const handleCheckIn = (visit: Visit) => {
     processCheckIn(visit);
     setIsCheckInOpen(false);
     
-    // Update local state
+    
     if (editingVisit) {
       setVisits(prev => prev.map(v => v.id === visit.id ? visit : v));
       setEditingVisit(null);
@@ -91,12 +91,12 @@ const VisitsView = () => {
     }
   };
   
-  // View visit details
+  
   const viewVisitDetails = (visitId: string) => {
     navigate(`/visit/${visitId}`);
   };
   
-  // Edit visit
+  
   const editVisit = (visit: Visit) => {
     const venue = venues.find(v => v.id === visit.venueId);
     if (venue) {
@@ -108,20 +108,20 @@ const VisitsView = () => {
     }
   };
   
-  // Confirm delete visit
+  
   const confirmDeleteVisit = (visitId: string) => {
     setVisitToDelete(visitId);
     setDeleteConfirmOpen(true);
   };
   
-  // Delete visit
+  
   const deleteVisit = () => {
     if (!visitToDelete) return;
     
     const updatedVisits = visits.filter(visit => visit.id !== visitToDelete);
     setVisits(updatedVisits);
     
-    // Update localStorage
+    
     localStorage.setItem('visits', JSON.stringify(updatedVisits));
     
     setDeleteConfirmOpen(false);
@@ -129,15 +129,15 @@ const VisitsView = () => {
     toast.success("Visit deleted successfully");
   };
   
-  // Open check-in form for a new visit
+  
   const openNewCheckIn = () => {
-    // This will be implemented once we have a venue search component
+    
     toast.info("Feature coming soon", {
       description: "You'll be able to add check-ins directly from here soon"
     });
   };
   
-  // Format date
+  
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('en-US', {
@@ -147,13 +147,13 @@ const VisitsView = () => {
     }).format(date);
   };
   
-  // Find venue name
+  
   const getVenueName = (venueId: string) => {
     const venue = venues.find(v => v.id === venueId);
     return venue?.name || 'Unknown Venue';
   };
   
-  // Group visits by month
+  
   const groupedVisits: Record<string, Visit[]> = {};
   
   sortedVisits.forEach(visit => {
@@ -168,6 +168,7 @@ const VisitsView = () => {
   });
   
   return (
+    
     <div className="container px-4 py-6 md:py-8">
       <header className="mb-6">
         <div className="flex justify-between items-center mb-4">
