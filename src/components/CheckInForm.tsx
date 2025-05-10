@@ -24,7 +24,7 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
   onCheckIn,
   initialVisit
 }) => {
-  const [note, setNote] = useState("");
+  const [notes, setNotes] = useState(""); // Changed from 'note' to 'notes' to match Visit type
   const [dishName, setDishName] = useState("");
   const [photo, setPhoto] = useState("");
   const [ratings, setRatings] = useState({
@@ -38,7 +38,7 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
   // Initialize form with initialVisit data if provided
   useEffect(() => {
     if (initialVisit) {
-      setNote(initialVisit.note || "");
+      setNotes(initialVisit.notes || ""); // Changed from 'note' to 'notes'
       setRatings(initialVisit.rating);
       
       // Set first dish info if available
@@ -78,10 +78,10 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
     const visit: Visit = {
       id: initialVisit?.id || uuidv4(),
       venueId: venue.id,
-      venueName: venue.name,
+      // Remove venueName property as it doesn't exist in Visit type
       address: venue.address,
       timestamp: initialVisit?.timestamp || new Date().toISOString(),
-      note,
+      notes, // Changed from 'note' to 'notes'
       dishes: dishName ? [{ 
         id: uuidv4(),
         name: dishName, 
@@ -182,8 +182,8 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
             <Textarea
               id="note"
               placeholder="Add any notes about your visit..."
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
               className="min-h-[100px]"
             />
           </div>
