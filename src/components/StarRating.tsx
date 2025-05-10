@@ -3,28 +3,19 @@ import { Star as StarIcon } from 'lucide-react';
 import { getRatingLevel } from '../types';
 
 interface StarRatingProps {
-  rating?: number;  // Changed from value to rating for backward compatibility
-  value?: number;   // Keep value as an alias to rating
+  rating: number;
   size?: 'sm' | 'md' | 'lg';
   showValue?: boolean;
   className?: string;
-  readOnly?: boolean;
-  onChange?: (value: number) => void;
 }
 
 const StarRating = ({ 
-  rating,
-  value, 
+  rating, 
   size = 'md', 
   showValue = true, 
-  className = '',
-  readOnly = false,
-  onChange
+  className = '' 
 }: StarRatingProps) => {
-  // Use rating if provided, otherwise fall back to value
-  const actualRating = rating !== undefined ? rating : (value !== undefined ? value : 0);
-  
-  const ratingLevel = getRatingLevel(actualRating);
+  const ratingLevel = getRatingLevel(rating);
   
   // Determine star size
   const starSize = {
@@ -39,12 +30,6 @@ const StarRating = ({
     md: 'text-sm',
     lg: 'text-base',
   }[size];
-
-  const handleStarClick = (starValue: number) => {
-    if (!readOnly && onChange) {
-      onChange(starValue);
-    }
-  };
   
   return (
     <div className={`flex items-center ${className}`}>
@@ -52,17 +37,16 @@ const StarRating = ({
         <StarIcon 
           key={star} 
           className={`${starSize} ${
-            star <= Math.round(actualRating) 
+            star <= Math.round(rating) 
               ? `rating-${ratingLevel} fill-current` 
               : 'text-gray-300'
-          } ${!readOnly ? 'cursor-pointer' : ''}`}
-          onClick={() => handleStarClick(star)}
+          }`}
         />
       ))}
       
       {showValue && (
         <span className={`ml-1 font-medium rating-${ratingLevel} ${textSize}`}>
-          {actualRating.toFixed(1)}
+          {rating.toFixed(1)}
         </span>
       )}
     </div>
@@ -70,5 +54,3 @@ const StarRating = ({
 };
 
 export default StarRating;
-
-export type { StarRatingProps };
