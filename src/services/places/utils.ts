@@ -1,88 +1,39 @@
 
-import { API_KEY, PROXY_URL } from "./config";
 import { Venue } from "@/types";
 
-// Build URL for different Places API endpoints
-export const buildPlacesApiUrl = (endpoint: string, params: Record<string, string>): string => {
-  let baseUrl: string;
-  
-  switch (endpoint) {
-    case 'nearbysearch':
-      baseUrl = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json';
-      break;
-    case 'details':
-      baseUrl = 'https://maps.googleapis.com/maps/api/place/details/json';
-      break;
-    case 'autocomplete':
-      baseUrl = 'https://maps.googleapis.com/maps/api/place/autocomplete/json';
-      break;
-    case 'textsearch':
-      baseUrl = 'https://maps.googleapis.com/maps/api/place/textsearch/json';
-      break;
-    default:
-      throw new Error(`Unknown Places API endpoint: ${endpoint}`);
-  }
-
-  // Add API key to params
-  const allParams = { ...params, key: API_KEY };
-  
-  // Build query string
-  const queryString = Object.entries(allParams)
-    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
-    .join('&');
-  
-  // Return full URL with proxy
-  return `${PROXY_URL}${encodeURIComponent(`${baseUrl}?${queryString}`)}`;
+// Generate photo URL from Foursquare photo prefix and suffix
+export const generatePhotoURL = (photoPrefix: string, photoSuffix: string, size: string = 'original'): string => {
+  return `${photoPrefix}${size}${photoSuffix}`;
 };
 
-// Generate photo URL from photo reference
-export const generatePhotoURL = (photoReference: string, maxWidth: number = 400): string => {
-  const photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxWidth}&photoreference=${photoReference}&key=${API_KEY}`;
-  return `${PROXY_URL}${encodeURIComponent(photoUrl)}`;
-};
-
-// Convert Google Places API place to our Venue format
+// Convert Foursquare venue to our app's Venue format
 export const convertPlaceToVenue = (place: any): Venue => {
   // Extract photos if available
-  const photos = place.photos
-    ? place.photos.map((photo: any) => generatePhotoURL(photo.photo_reference))
+  const photos = place.photos && place.photos.length > 0
+    ? place.photos.map((photo: any) => generatePhotoURL(photo.prefix, photo.suffix))
     : [];
-  
-  // Extract categories from types
-  const category = place.types
-    ? place.types
-        .filter((type: string) => type !== 'point_of_interest' && type !== 'establishment')
-        .map((type: string) => {
-          // Convert snake_case to Title Case
-          return type
-            .split('_')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ');
-        })
-    : [];
-  
-  // Extract opening hours
-  const hours = place.opening_hours
-    ? place.opening_hours.open_now
-      ? 'Currently open'
-      : 'Currently closed'
-    : undefined;
   
   // Build venue object
   return {
-    id: place.place_id,
+    id: place.fsq_id,
     name: place.name,
-    address: place.formatted_address || place.vicinity,
+    address: place.location.formatted_address,
     coordinates: {
-      lat: place.geometry.location.lat,
-      lng: place.geometry.location.lng,
+      lat: place.geocodes.main.latitude,
+      lng: place.geocodes.main.longitude,
     },
     photos,
-    hours,
-    phoneNumber: place.formatted_phone_number,
+    hours: place.hours?.display,
+    phoneNumber: place.tel,
     website: place.website,
-    priceLevel: place.price_level,
-    category,
+    priceLevel: place.price?.tier,
+    category: place.categories?.map((cat: any) => cat.name) || [],
     googleRating: place.rating,
   };
+};
+
+// Build API URL for Foursquare endpoints (not used in frontend, only in edge functions)
+export const buildPlacesApiUrl = (endpoint: string, params: Record<string, string>): string => {
+  // This is now handled by edge functions
+  return '';
 };

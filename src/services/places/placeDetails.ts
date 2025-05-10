@@ -1,6 +1,6 @@
 
 import { toast } from "sonner";
-import { buildPlacesApiUrl, convertPlaceToVenue } from "./utils";
+import { SUPABASE_URL } from "./config";
 import { Venue } from "@/types";
 import { mockVenues } from "@/data/mockData";
 
@@ -16,44 +16,24 @@ export const getVenueDetails = async (placeId: string): Promise<Venue | null> =>
       return mockVenue;
     }
     
-    // Create query parameters
-    const queryParams: Record<string, string> = {
-      place_id: placeId,
-      fields: "name,formatted_address,formatted_phone_number,website,opening_hours,photos,price_level,rating,types,geometry"
-    };
+    // Create query parameters for the edge function
+    const queryParams = new URLSearchParams({
+      id: placeId
+    });
     
-    const url = buildPlacesApiUrl('details', queryParams);
-    
-    const response = await fetch(url);
+    // Make request to our edge function
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/venue-details?${queryParams.toString()}`);
     
     // Check if response is ok
     if (!response.ok) {
-      throw new Error(`API request failed with status: ${response.status}`);
+      const errorText = await response.text();
+      console.error("Edge function error:", response.status, errorText);
+      throw new Error(`Failed to get venue details: ${response.status}`);
     }
     
-    const data = await response.json();
-
-    if (data.status !== "OK") {
-      if (data.status === "REQUEST_DENIED" || data.error_message) {
-        console.error("Google Places API error:", data.error_message || data.status);
-        throw new Error(`Google Places API error: ${data.error_message || data.status}`);
-      }
-      
-      // Generate a mock venue since API failed
-      const fallbackVenue: Venue = {
-        id: placeId,
-        name: "Venue " + placeId.substring(0, 5),
-        address: "API Error - Using Mock Data",
-        coordinates: { lat: -33.8688, lng: 151.2093 },
-        photos: [],
-        category: ["restaurant"]
-      };
-      
-      return fallbackVenue;
-    }
-
-    const place = data.result;
-    return convertPlaceToVenue(place);
+    // The edge function already transforms the venue data to our format
+    const venue = await response.json();
+    return venue;
   } catch (error) {
     console.error("Error fetching venue details:", error);
     toast("Failed to fetch venue details", {
