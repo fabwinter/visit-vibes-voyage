@@ -16,6 +16,7 @@ export const useVenueSearch = ({ userLocation, mapCenter, visits }: UseVenueSear
   const [isLoading, setIsLoading] = useState(true);
   const [nextPageToken, setNextPageToken] = useState<string | undefined>();
   const [usingMockData, setUsingMockData] = useState(false);
+  const [highlightedVenueId, setHighlightedVenueId] = useState<string | null>(null);
   
   // Fetch venues when user location or map center changes
   useEffect(() => {
@@ -129,18 +130,36 @@ export const useVenueSearch = ({ userLocation, mapCenter, visits }: UseVenueSear
     }
   };
   
-  // Handle place selection from autocomplete - enhanced to center map
+  // Handle place selection from autocomplete - enhanced to put selected venue at the top of the list
   const handlePlaceSelect = async (venue: Venue) => {
     console.log("Selected venue:", venue);
     
-    // Add this venue to our list if it's not there already
+    setHighlightedVenueId(venue.id);
+    
+    // Add this venue to our list if it's not there already, and place it at the top
     setVenues(prevVenues => {
       const exists = prevVenues.some(v => v.id === venue.id);
       if (!exists) {
+        // Put the selected venue at the top of the list
         return [venue, ...prevVenues];
+      } else {
+        // Reorder to put the existing venue at the top
+        const filteredVenues = prevVenues.filter(v => v.id !== venue.id);
+        const existingVenue = prevVenues.find(v => v.id === venue.id);
+        if (existingVenue) {
+          return [existingVenue, ...filteredVenues];
+        }
       }
       return prevVenues;
     });
+    
+    // Automatically highlight the venue after a short delay
+    setTimeout(() => {
+      const venueCard = document.getElementById(`venue-${venue.id}`);
+      if (venueCard) {
+        venueCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
   };
 
   return {
@@ -148,6 +167,7 @@ export const useVenueSearch = ({ userLocation, mapCenter, visits }: UseVenueSear
     isLoading,
     usingMockData,
     nextPageToken,
+    highlightedVenueId,
     handleLoadMore,
     handleSearchThisArea,
     handlePlaceSelect

@@ -57,6 +57,48 @@ const MapView = () => {
   // Apply additional filters
   const filteredVenues = filterVenues(venues, filterOptions);
 
+  // Sort venues by distance to user location
+  const sortedVenues = [...filteredVenues].sort((a, b) => {
+    if (!userLocation) return 0;
+    
+    // Calculate distance from user to venue A
+    const distA = calculateDistance(
+      userLocation.lat, 
+      userLocation.lng, 
+      a.coordinates.lat, 
+      a.coordinates.lng
+    );
+    
+    // Calculate distance from user to venue B
+    const distB = calculateDistance(
+      userLocation.lat, 
+      userLocation.lng, 
+      b.coordinates.lat, 
+      b.coordinates.lng
+    );
+    
+    // Sort by distance (ascending)
+    return distA - distB;
+  });
+
+  // Haversine formula to calculate distance between two points on Earth
+  function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371; // Radius of the earth in km
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2); 
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+    const d = R * c; // Distance in km
+    return d;
+  }
+  
+  function deg2rad(deg: number): number {
+    return deg * (Math.PI/180);
+  }
+
   // Handle venue selection from map or list
   const handleVenueSelect = async (venueId: string) => {
     setSelectedVenue(venueId);
@@ -118,10 +160,10 @@ const MapView = () => {
   };
 
   return (
-    <div className={`h-[calc(100vh-132px)] flex flex-col md:flex-row`}>
-      {/* Map Area - reduced height on mobile */}
+    <div className={`h-[calc(100vh-132px)] flex flex-col md:flex-row relative`}>
+      {/* Map Area - adjust height based on swipe gesture */}
       <MapArea
-        venues={filteredVenues}
+        venues={sortedVenues}
         userLocation={userLocation}
         selectedVenue={selectedVenue}
         showSearchThisArea={showSearchThisArea}
@@ -132,7 +174,7 @@ const MapView = () => {
       />
       
       {/* Right side - Search, Filters and Venue List */}
-      <div className="w-full md:w-1/2 lg:w-3/5 md:h-full md:overflow-y-auto p-3 md:p-4 md:order-2 flex-1">
+      <div className="w-full md:w-1/2 lg:w-3/5 md:h-full md:overflow-y-auto p-3 md:p-4 md:order-2 flex-1 relative">
         {/* Search with filters */}
         <SearchBar
           venues={venues}
@@ -151,9 +193,9 @@ const MapView = () => {
           />
         )}
         
-        {/* Venues list */}
+        {/* Venues list - now using sorted venues */}
         <VenueList
-          venues={filteredVenues}
+          venues={sortedVenues}
           isLoading={isLoading}
           usingMockData={usingMockData}
           selectedVenue={selectedVenue}

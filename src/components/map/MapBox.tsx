@@ -7,6 +7,17 @@ import MapMarker from './MapMarker';
 import MapTokenInput from './MapTokenInput';
 import { MAPBOX_TOKEN } from '@/services/places/config';
 
+// Define venue category colors
+const categoryColors = {
+  'cafe': '#4CAF50',       // Green for cafes
+  'restaurant': '#FF5722', // Orange for restaurants
+  'bar': '#9C27B0',        // Purple for bars
+  'fast_food': '#F44336',  // Red for fast food
+  'bakery': '#FFEB3B',     // Yellow for bakeries
+  'food': '#2196F3',       // Blue for general food
+  'default': '#555555'     // Default gray
+};
+
 interface MapBoxProps {
   venues: Venue[];
   onVenueSelect: (venueId: string) => void;
@@ -126,6 +137,27 @@ const MapBox = ({
     });
   }, [selectedVenue, venues]);
 
+  // Get marker color based on venue category
+  const getMarkerColorForVenue = (venue: Venue): string => {
+    if (!venue.category || venue.category.length === 0) {
+      return categoryColors.default;
+    }
+    
+    // Convert categories to lowercase for matching
+    const lowerCategories = venue.category.map(cat => cat.toLowerCase());
+    
+    // Check for specific categories
+    for (const cat of lowerCategories) {
+      for (const [key, color] of Object.entries(categoryColors)) {
+        if (cat.includes(key)) {
+          return color;
+        }
+      }
+    }
+    
+    return categoryColors.default;
+  };
+
   const handleTokenChange = (newToken: string) => {
     setToken(newToken);
     setShowTokenInput(false);
@@ -156,10 +188,38 @@ const MapBox = ({
               map={map.current!}
               isSelected={selectedVenue === venue.id}
               onMarkerClick={onVenueSelect}
+              customColor={getMarkerColorForVenue(venue)}
             />
           ))}
         </>
       )}
+
+      {/* Map category legend for mobile */}
+      <div className="absolute bottom-10 right-2 bg-white/90 backdrop-blur-sm p-2 rounded-md shadow-md text-xs hidden md:block">
+        <div className="text-xs font-semibold mb-1">Venue Types</div>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-1">
+            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: categoryColors.restaurant }}></span>
+            <span>Restaurant</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: categoryColors.cafe }}></span>
+            <span>Café</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: categoryColors.bar }}></span>
+            <span>Bar</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: categoryColors.fast_food }}></span>
+            <span>Fast Food</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: categoryColors.default }}></span>
+            <span>Other</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

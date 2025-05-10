@@ -17,7 +17,7 @@ export const useVenues = ({ initialLocation }: UseVenuesProps = {}) => {
   const { userLocation, setUserLocation } = useLocation(initialLocation);
   const { mapCenter, setMapCenter, showSearchThisArea, handleMapMove, setShowSearchThisArea } = useMapInteraction();
   const { visits, processCheckIn } = useVisitData();
-  const { venues, isLoading, usingMockData, nextPageToken, handleLoadMore, handleSearchThisArea, handlePlaceSelect: originalHandlePlaceSelect } = useVenueSearch({
+  const { venues, isLoading, usingMockData, nextPageToken, highlightedVenueId, handleLoadMore, handleSearchThisArea, handlePlaceSelect: originalHandlePlaceSelect } = useVenueSearch({
     userLocation,
     mapCenter,
     visits
@@ -78,6 +78,7 @@ export const useVenues = ({ initialLocation }: UseVenuesProps = {}) => {
     isLoading,
     usingMockData,
     nextPageToken,
+    highlightedVenueId,
     showSearchThisArea,
     setMapCenter,
     handleMapMove,

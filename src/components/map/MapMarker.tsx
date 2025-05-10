@@ -9,13 +9,15 @@ interface MapMarkerProps {
   map: mapboxgl.Map;
   isSelected: boolean;
   onMarkerClick: (venueId: string) => void;
+  customColor?: string;
 }
 
 const MapMarker = ({ 
   venue, 
   map, 
   isSelected, 
-  onMarkerClick 
+  onMarkerClick,
+  customColor
 }: MapMarkerProps) => {
   const [marker, setMarker] = useState<mapboxgl.Marker | null>(null);
   const [popup, setPopup] = useState<mapboxgl.Popup | null>(null);
@@ -24,10 +26,11 @@ const MapMarker = ({
   useEffect(() => {
     if (!map) return;
     
-    // Determine marker color based on rating
-    let markerColor = '#555555'; // Default gray for unrated in grayscale theme
+    // Determine marker color based on rating or custom color
+    let markerColor = customColor || '#555555'; // Use custom color if provided
     
-    if (venue.lastVisit?.rating?.overall) {
+    // If no custom color but we have rating, use rating-based color
+    if (!customColor && venue.lastVisit?.rating?.overall) {
       const ratingLevel = getRatingLevel(venue.lastVisit.rating.overall);
       
       if (ratingLevel === 'good') markerColor = '#8E9196'; // Light gray for good
@@ -67,7 +70,7 @@ const MapMarker = ({
       onMarkerClick(venue.id);
     });
 
-    // Create a simplified popup with venue name only
+    // Create a popup with venue details
     const newPopup = new mapboxgl.Popup({ 
       offset: 25, 
       closeButton: false,
@@ -76,6 +79,8 @@ const MapMarker = ({
     }).setHTML(`
       <div class="p-2 max-w-xs">
         <h3 class="font-medium text-sm">${venue.name}</h3>
+        ${venue.category?.length > 0 ? 
+          `<p class="text-xs text-gray-500">${venue.category[0]}</p>` : ''}
       </div>
     `);
 
@@ -107,7 +112,7 @@ const MapMarker = ({
       newMarker.remove();
       newPopup.remove();
     };
-  }, [map, venue, isSelected, onMarkerClick]);
+  }, [map, venue, isSelected, onMarkerClick, customColor]);
 
   // Update marker when selected state changes
   useEffect(() => {
