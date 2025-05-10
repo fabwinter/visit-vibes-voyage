@@ -1,5 +1,5 @@
 
-import { ReactNode, useState, useEffect } from 'react';
+import { ReactNode, useState } from 'react';
 import NavigationBar from './NavigationBar';
 import { Button } from './ui/button';
 import { LogOut, User } from 'lucide-react';
@@ -44,6 +44,13 @@ const Layout = ({ children }: LayoutProps) => {
     navigate('/profile');
   };
 
+  const getUserInitials = () => {
+    if (user?.name) {
+      return user.name.substring(0, 2).toUpperCase();
+    }
+    return 'US'; // Default: User
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <header className="bg-white p-3 shadow-sm fixed top-0 left-0 right-0 z-40 flex items-center justify-between">
@@ -57,17 +64,17 @@ const Layout = ({ children }: LayoutProps) => {
                 <Button variant="ghost" size="icon" className="rounded-full" aria-label="User menu">
                   <Avatar className="h-8 w-8">
                     {user?.photo ? (
-                      <AvatarImage src={user.photo} alt={user.name} />
+                      <AvatarImage src={user.photo} alt={user.name || 'User'} />
                     ) : (
                       <AvatarFallback className="bg-visitvibe-primary text-white">
-                        {user?.name.substring(0, 2).toUpperCase()}
+                        {getUserInitials()}
                       </AvatarFallback>
                     )}
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>{user?.name}</DropdownMenuLabel>
+                <DropdownMenuLabel>{user?.name || 'User'}</DropdownMenuLabel>
                 <DropdownMenuItem onClick={navigateToProfile}>
                   <User className="mr-2 h-4 w-4" />
                   Profile

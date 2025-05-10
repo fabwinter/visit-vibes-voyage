@@ -2,11 +2,12 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { User, Session } from '@supabase/supabase-js';
+import { Session } from '@supabase/supabase-js';
 import AuthModal from '@/components/auth/AuthModal';
+import { ExtendedUser, asExtendedUser } from '@/types/auth';
 
 type AuthContextType = {
-  user: User | null;
+  user: ExtendedUser | null;
   session: Session | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{
@@ -32,7 +33,7 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<ExtendedUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
@@ -43,7 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
-        setUser(session?.user ?? null);
+        setUser(asExtendedUser(session?.user ?? null));
         
         // If user signs in, redirect to map view
         if (event === 'SIGNED_IN' && window.location.pathname === '/') {
@@ -55,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Then check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setUser(session?.user ?? null);
+      setUser(asExtendedUser(session?.user ?? null));
       setIsLoading(false);
       
       // If user is already signed in and on the landing page, redirect to map view

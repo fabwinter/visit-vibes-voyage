@@ -43,7 +43,7 @@ const ProfileView = () => {
     }
     
     // Initialize name from user
-    if (user) {
+    if (user?.name) {
       setName(user.name);
     }
   }, [user]);
@@ -153,6 +153,13 @@ const ProfileView = () => {
     reader.readAsDataURL(file);
   };
 
+  const getUserInitials = () => {
+    if (user?.name) {
+      return user.name.substring(0, 2).toUpperCase();
+    }
+    return 'US'; // Default: User
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-132px)] p-4">
@@ -174,11 +181,11 @@ const ProfileView = () => {
           <Avatar className="w-20 h-20 border-2 border-visitvibe-primary">
             <AvatarImage 
               src={user?.photo || undefined}
-              alt={user?.name || ''} 
+              alt={user?.name || 'User'} 
               className="object-cover"
             />
             <AvatarFallback>
-              {user?.name.slice(0, 2).toUpperCase()}
+              {getUserInitials()}
             </AvatarFallback>
           </Avatar>
           
@@ -213,7 +220,7 @@ const ProfileView = () => {
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold">{user?.name}</h1>
+              <h1 className="text-2xl font-bold">{user?.name || 'User'}</h1>
               <button 
                 onClick={toggleEditMode}
                 className="text-visitvibe-primary"
