@@ -4,8 +4,8 @@
 // We'll use edge functions instead of direct API access
 export const API_KEY = ""; // Not used directly in frontend anymore
 
-// Add this for backward compatibility
-export const MAPBOX_TOKEN = "";
+// Add this for Mapbox integration
+export const MAPBOX_TOKEN = "pk.eyJ1IjoibXVuY2htYXBwZXIiLCJhIjoiY2x4YWs1N2lxMDBxaTJpczAzNHY1MzZpdyJ9.5MQqth_vYxW-xFJ1rhhwdg";
 
 // Use Supabase API URLs
 export const SUPABASE_URL = "https://ufoousnidesoulsaqdes.supabase.co";

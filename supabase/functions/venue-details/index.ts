@@ -59,7 +59,7 @@ Deno.serve(async (req: Request) => {
     // Get venue photos in a separate request if needed
     let photoUrls: string[] = [];
     if (place.photos && place.photos.length > 0) {
-      // Take up to 5 photos
+      // Process up to 5 photos to avoid too many requests
       const photosToFetch = place.photos.slice(0, 5);
       photoUrls = photosToFetch.map((photo: any) => {
         return `${photo.prefix}original${photo.suffix}`;

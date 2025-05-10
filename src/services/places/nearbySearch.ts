@@ -23,7 +23,7 @@ export const searchNearbyVenues = async (params: PlacesSearchParams): Promise<Pl
       categoryId: FOOD_CATEGORY_IDS.join(',')
     });
     
-    // Add page token if available for pagination
+    // Add page token if available for pagination (using as offset)
     if (params.pageToken) {
       queryParams.append('offset', params.pageToken);
     }

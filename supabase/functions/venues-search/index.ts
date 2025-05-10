@@ -31,6 +31,7 @@ Deno.serve(async (req: Request) => {
     const radius = url.searchParams.get('radius') || '2000'; // Default to 2km
     const limit = url.searchParams.get('limit') || '20';
     const categoryId = url.searchParams.get('categoryId') || '13000,13065'; // Default to food categories
+    const offset = url.searchParams.get('offset') || '0'; // For pagination
 
     // Validate location parameters
     if (!lat || !lng) {
@@ -55,6 +56,11 @@ Deno.serve(async (req: Request) => {
       searchParams.append('query', query);
     }
 
+    // Add pagination if provided
+    if (offset && parseInt(offset) > 0) {
+      searchParams.append('offset', offset);
+    }
+
     // Make request to Foursquare API
     console.log(`Making request to ${foursquareUrl}?${searchParams.toString()}`);
     const response = await fetch(`${foursquareUrl}?${searchParams.toString()}`, {
@@ -73,27 +79,41 @@ Deno.serve(async (req: Request) => {
 
     const data = await response.json();
     
-    // Transform the response to match our app's Venue format
-    const venues = data.results.map((place: any) => ({
-      id: place.fsq_id,
-      name: place.name,
-      address: place.location.formatted_address,
-      coordinates: {
-        lat: place.geocodes.main.latitude,
-        lng: place.geocodes.main.longitude
-      },
-      // Extract category names
-      category: place.categories ? place.categories.map((cat: any) => cat.name) : [],
-      // We'll handle photos in a separate request
-      photos: [],
-      // Add additional fields if available
-      hours: place.hours?.display,
-      priceLevel: place.price_level,
-      phoneNumber: place.contact?.phone,
-      website: place.website
-    }));
+    // Process each venue to include photo URLs
+    const venues = await Promise.all(
+      data.results.map(async (place: any) => {
+        // Gather photo URLs if available
+        let photos: string[] = [];
+        if (place.photos && place.photos.length > 0) {
+          photos = place.photos.map((photo: any) => 
+            `${photo.prefix}original${photo.suffix}`
+          );
+        }
 
-    return new Response(JSON.stringify({ venues }), {
+        // Transform the venue data
+        return {
+          id: place.fsq_id,
+          name: place.name,
+          address: place.location.formatted_address,
+          coordinates: {
+            lat: place.geocodes.main.latitude,
+            lng: place.geocodes.main.longitude
+          },
+          category: place.categories ? place.categories.map((cat: any) => cat.name) : [],
+          photos: photos,
+          hours: place.hours?.display,
+          priceLevel: place.price?.tier,
+          phoneNumber: place.tel,
+          website: place.website
+        };
+      })
+    );
+
+    // Calculate next page token for pagination
+    const nextPageToken = data.results.length === parseInt(limit) ? 
+      (parseInt(offset) + parseInt(limit)).toString() : undefined;
+
+    return new Response(JSON.stringify({ venues, nextPageToken }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   } catch (error) {
