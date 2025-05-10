@@ -29,7 +29,7 @@ const MapComponent = ({
 
   // Load Google Maps API
   useEffect(() => {
-    if (window.google) {
+    if (window.google?.maps) {
       setIsLoaded(true);
       return;
     }
@@ -61,12 +61,12 @@ const MapComponent = ({
 
   // Initialize map when API is loaded and mapRef is available
   useEffect(() => {
-    if (!isLoaded || !mapRef.current || loadError) return;
+    if (!isLoaded || !mapRef.current || loadError || !window.google?.maps) return;
 
     try {
       const initialLocation = userLocation || { lat: -33.8688, lng: 151.2093 }; // Default to Sydney
       
-      const mapInstance = new google.maps.Map(mapRef.current, {
+      const mapInstance = new window.google.maps.Map(mapRef.current, {
         center: initialLocation,
         zoom: 14,
         mapTypeControl: false,
@@ -104,7 +104,7 @@ const MapComponent = ({
 
   // Add markers for venues
   useEffect(() => {
-    if (!map || !venues.length) return;
+    if (!map || !venues.length || !window.google?.maps) return;
     
     // Clear existing markers
     markers.forEach(marker => marker.setMap(null));
@@ -124,13 +124,13 @@ const MapComponent = ({
       const isSelected = selectedVenue === venue.id;
       
       // Create marker
-      const marker = new google.maps.Marker({
+      const marker = new window.google.maps.Marker({
         position: { lat: venue.coordinates.lat, lng: venue.coordinates.lng },
         map: map,
         title: venue.name,
-        animation: isSelected ? google.maps.Animation.BOUNCE : null,
+        animation: isSelected ? window.google.maps.Animation.BOUNCE : null,
         icon: {
-          path: google.maps.SymbolPath.CIRCLE,
+          path: window.google.maps.SymbolPath.CIRCLE,
           fillColor: markerColor,
           fillOpacity: 0.9,
           strokeColor: isSelected ? '#000' : '#fff',
@@ -145,7 +145,7 @@ const MapComponent = ({
       });
       
       // Add simple InfoWindow
-      const infoWindow = new google.maps.InfoWindow({
+      const infoWindow = new window.google.maps.InfoWindow({
         content: `<div class="p-2"><strong>${venue.name}</strong></div>`
       });
       
@@ -180,14 +180,14 @@ const MapComponent = ({
   
   // Add user location marker if available
   useEffect(() => {
-    if (!map || !userLocation) return;
+    if (!map || !userLocation || !window.google?.maps) return;
     
-    new google.maps.Marker({
+    new window.google.maps.Marker({
       position: { lat: userLocation.lat, lng: userLocation.lng },
       map: map,
       title: 'Your location',
       icon: {
-        path: google.maps.SymbolPath.CIRCLE,
+        path: window.google.maps.SymbolPath.CIRCLE,
         fillColor: '#4285F4',
         fillOpacity: 0.9,
         strokeColor: '#ffffff',
