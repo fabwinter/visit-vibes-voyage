@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Session } from '@supabase/supabase-js';
 import AuthModal from '@/components/auth/AuthModal';
 import { ExtendedUser, asExtendedUser } from '@/types/auth';
+import { toast } from 'sonner';
 
 type AuthContextType = {
   user: ExtendedUser | null;
@@ -43,18 +44,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('Auth state change event:', event);
         setSession(session);
         setUser(asExtendedUser(session?.user ?? null));
         
         // If user signs in, redirect to map view
-        if (event === 'SIGNED_IN' && window.location.pathname === '/') {
+        if (event === 'SIGNED_IN') {
+          toast.success('Successfully signed in');
           setTimeout(() => navigate('/map'), 0);
+        } else if (event === 'SIGNED_OUT') {
+          toast.info('You have been signed out');
+          navigate('/');
         }
       }
     );
 
     // Then check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Current session:', session ? 'exists' : 'none');
       setSession(session);
       setUser(asExtendedUser(session?.user ?? null));
       setIsLoading(false);
@@ -63,6 +70,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session && window.location.pathname === '/') {
         navigate('/map');
       }
+    }).catch(error => {
+      console.error('Error checking session:', error);
+      setIsLoading(false);
     });
 
     return () => {
@@ -72,16 +82,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log('Signing in with email:', email);
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
-      if (!error) {
-        navigate('/map');
+      if (error) {
+        console.error('Sign in error:', error);
+        toast.error(error.message);
+        return { error };
       }
       
-      return { error };
+      console.log('Sign in successful:', data);
+      return { error: null };
     } catch (error) {
       console.error('Error during sign in:', error);
       return { error };
@@ -90,7 +104,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string, metadata = {}) => {
     try {
-      const { error } = await supabase.auth.signUp({
+      console.log('Signing up with email:', email);
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -98,11 +113,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
       });
       
-      if (!error) {
-        navigate('/map');
+      if (error) {
+        console.error('Sign up error:', error);
+        toast.error(error.message);
+        return { error };
       }
       
-      return { error };
+      toast.success('Account created! Please check your email for verification.');
+      console.log('Sign up successful:', data);
+      return { error: null };
     } catch (error) {
       console.error('Error during sign up:', error);
       return { error };
@@ -111,7 +130,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    navigate('/');
   };
 
   const updateUserProfile = async (data: any) => {
@@ -121,8 +139,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) throw error;
+      toast.success('Profile updated successfully');
     } catch (error) {
       console.error('Error updating user profile:', error);
+      toast.error('Failed to update profile');
       throw error;
     }
   };

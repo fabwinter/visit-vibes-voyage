@@ -1,210 +1,338 @@
-import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Venue, Visit, DishRating } from '@/types';
-import { v4 as uuidv4 } from 'uuid';
+
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
 import StarRating from './StarRating';
+import { Label } from './ui/label';
+import { Venue, Visit } from '@/types';
+import { Camera, ArrowRight, Smile, Utensils, DollarSign, Users, Music } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { v4 as uuidv4 } from 'uuid';
+import { toast } from 'sonner';
+import { Checkbox } from './ui/checkbox';
 
 interface CheckInFormProps {
   venue: Venue;
   isOpen: boolean;
   onClose: () => void;
   onCheckIn: (visit: Visit) => void;
-  initialVisit?: Visit; // Add initialVisit as an optional prop
 }
 
-const CheckInForm: React.FC<CheckInFormProps> = ({
-  venue,
-  isOpen,
-  onClose,
-  onCheckIn,
-  initialVisit
-}) => {
-  const [notes, setNotes] = useState(""); // Changed from 'note' to 'notes' to match Visit type
+const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) => {
+  const [activeTab, setActiveTab] = useState("basic");
+  const [notes, setNotes] = useState("");
   const [dishName, setDishName] = useState("");
-  const [photo, setPhoto] = useState("");
-  const [ratings, setRatings] = useState({
-    food: 0,
-    service: 0,
-    ambiance: 0,
-    value: 0,
-    overall: 0,
-  });
-
-  // Initialize form with initialVisit data if provided
-  useEffect(() => {
-    if (initialVisit) {
-      setNotes(initialVisit.notes || ""); // Changed from 'note' to 'notes'
-      setRatings(initialVisit.rating);
-      
-      // Set first dish info if available
-      if (initialVisit.dishes && initialVisit.dishes.length > 0) {
-        setDishName(initialVisit.dishes[0].name || "");
-        setPhoto(initialVisit.dishes[0].photos?.[0] || "");
-      }
+  const [dishPrice, setDishPrice] = useState("");
+  const [dishRating, setDishRating] = useState(0);
+  const [dishPhoto, setDishPhoto] = useState<string | null>(null);
+  const [dishNotes, setDishNotes] = useState("");
+  const { user } = useAuth();
+  
+  // Ratings
+  const [foodRating, setFoodRating] = useState(0);
+  const [serviceRating, setServiceRating] = useState(0);
+  const [ambianceRating, setAmbianceRating] = useState(0);
+  const [valueRating, setValueRating] = useState(0);
+  
+  // Tags
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  
+  const availableTags = [
+    { id: "date-night", label: "Date Night", icon: <Smile className="h-4 w-4" /> },
+    { id: "family-friendly", label: "Family Friendly", icon: <Users className="h-4 w-4" /> },
+    { id: "great-food", label: "Great Food", icon: <Utensils className="h-4 w-4" /> },
+    { id: "value", label: "Good Value", icon: <DollarSign className="h-4 w-4" /> },
+    { id: "good-vibes", label: "Good Vibes", icon: <Music className="h-4 w-4" /> },
+  ];
+  
+  const toggleTag = (tagId: string) => {
+    if (selectedTags.includes(tagId)) {
+      setSelectedTags(selectedTags.filter(id => id !== tagId));
+    } else {
+      setSelectedTags([...selectedTags, tagId]);
     }
-  }, [initialVisit]);
-
-  const handleRatingChange = (type: keyof typeof ratings) => (value: number) => {
-    setRatings(prev => {
-      const newRatings = { ...prev, [type]: value };
-      // Calculate the overall rating as an average of the other ratings
-      const { overall, ...rest } = newRatings;
-      const values = Object.values(rest);
-      const validRatings = values.filter(val => val > 0);
-      const newOverall = validRatings.length > 0 
-        ? validRatings.reduce((a, b) => a + b, 0) / validRatings.length
-        : 0;
-      
-      return { 
-        ...newRatings, 
-        overall: parseFloat(newOverall.toFixed(1)) 
-      };
-    });
   };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  
+  // Overall rating calculation
+  const calculateOverallRating = () => {
+    let sum = 0;
+    let count = 0;
     
-    if (ratings.overall === 0) {
-      alert("Please add at least one rating");
+    if (foodRating > 0) { sum += foodRating; count++; }
+    if (serviceRating > 0) { sum += serviceRating; count++; }
+    if (ambianceRating > 0) { sum += ambianceRating; count++; }
+    if (valueRating > 0) { sum += valueRating; count++; }
+    
+    return count > 0 ? Math.round((sum / count) * 10) / 10 : 0;
+  };
+  
+  // Handle image upload
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setDishPhoto(event.target.result.toString());
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
+  // Handle check-in submission
+  const handleSubmit = () => {
+    if (!user) {
+      toast.error("You must be signed in to check in");
       return;
     }
-
+    
+    // Create dishes array if dish info provided
+    const dishes = [];
+    if (dishName) {
+      dishes.push({
+        name: dishName,
+        price: dishPrice ? parseFloat(dishPrice) : undefined,
+        rating: dishRating,
+        photo: dishPhoto,
+        notes: dishNotes
+      });
+    }
+    
+    // Create visit object
     const visit: Visit = {
-      id: initialVisit?.id || uuidv4(),
+      id: uuidv4(),
+      userId: user.id,
       venueId: venue.id,
-      // Removed address property as it doesn't exist in Visit type
-      timestamp: initialVisit?.timestamp || new Date().toISOString(),
-      notes, // Changed from 'note' to 'notes'
-      dishes: dishName ? [{ 
-        id: uuidv4(),
-        name: dishName, 
-        photos: photo ? [photo] : [], 
-        rating: ratings.food,
-        tags: [],
-        type: 'dish'
-      }] : [],
-      rating: ratings,
-      photos: [],
-      tags: [],
+      venueName: venue.name,
+      venueAddress: venue.address,
+      timestamp: new Date().toISOString(),
+      notes: notes,
+      dishes: dishes,
+      photos: dishPhoto ? [dishPhoto] : [],
+      tags: selectedTags,
+      rating: {
+        food: foodRating,
+        service: serviceRating,
+        ambiance: ambianceRating,
+        value: valueRating,
+        overall: calculateOverallRating()
+      }
     };
-
+    
     onCheckIn(visit);
   };
-
+  
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold">Check in at {venue.name}</DialogTitle>
+          <DialogTitle className="text-xl">Check in at {venue.name}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-5 pt-3">
-          {/* Ratings Section */}
-          <div className="space-y-4 bg-slate-50 p-4 rounded-lg">
-            <h3 className="font-medium text-base text-slate-700">Rate your experience</h3>
+        
+        <Tabs defaultValue="basic" value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="basic">Basic</TabsTrigger>
+            <TabsTrigger value="rating">Rating</TabsTrigger>
+            <TabsTrigger value="dish">Add Dish</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="basic" className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="notes">Visit Notes</Label>
+                <span className="text-xs text-gray-500">{notes.length}/280</span>
+              </div>
+              <Textarea 
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="How was your visit?"
+                maxLength={280}
+                rows={4}
+              />
+            </div>
             
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <Label className="font-medium">Food Quality</Label>
+            <div className="space-y-2">
+              <Label>Tags</Label>
+              <div className="flex flex-wrap gap-2">
+                {availableTags.map(tag => (
+                  <Button
+                    key={tag.id}
+                    type="button"
+                    variant={selectedTags.includes(tag.id) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => toggleTag(tag.id)}
+                    className="flex items-center gap-1"
+                  >
+                    {tag.icon}
+                    <span>{tag.label}</span>
+                  </Button>
+                ))}
+              </div>
+            </div>
+            
+            <div className="flex justify-between pt-4">
+              <Button variant="outline" onClick={onClose}>Cancel</Button>
+              <Button onClick={() => setActiveTab("rating")}>
+                Next
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="rating" className="space-y-4 pt-4">
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <Label htmlFor="food-rating">Food & Drink Quality</Label>
                 <StarRating 
-                  rating={ratings.food} 
-                  editable 
-                  onChange={handleRatingChange('food')} 
-                  size="md"
-                  showValue={false}
+                  id="food-rating"
+                  value={foodRating}
+                  onChange={setFoodRating}
+                  size="large"
                 />
               </div>
               
-              <div className="flex justify-between items-center">
-                <Label className="font-medium">Service</Label>
+              <div className="space-y-1">
+                <Label htmlFor="service-rating">Service</Label>
                 <StarRating 
-                  rating={ratings.service} 
-                  editable 
-                  onChange={handleRatingChange('service')} 
-                  size="md"
-                  showValue={false}
+                  id="service-rating"
+                  value={serviceRating}
+                  onChange={setServiceRating}
+                  size="large"
                 />
               </div>
               
-              <div className="flex justify-between items-center">
-                <Label className="font-medium">Ambiance</Label>
+              <div className="space-y-1">
+                <Label htmlFor="ambiance-rating">Ambiance & Atmosphere</Label>
                 <StarRating 
-                  rating={ratings.ambiance} 
-                  editable 
-                  onChange={handleRatingChange('ambiance')} 
-                  size="md"
-                  showValue={false}
+                  id="ambiance-rating"
+                  value={ambianceRating}
+                  onChange={setAmbianceRating}
+                  size="large"
                 />
               </div>
               
-              <div className="flex justify-between items-center">
-                <Label className="font-medium">Value for Money</Label>
+              <div className="space-y-1">
+                <Label htmlFor="value-rating">Value for Money</Label>
                 <StarRating 
-                  rating={ratings.value} 
-                  editable 
-                  onChange={handleRatingChange('value')} 
-                  size="md"
-                  showValue={false}
+                  id="value-rating"
+                  value={valueRating}
+                  onChange={setValueRating}
+                  size="large"
                 />
               </div>
               
-              <div className="flex justify-between items-center pt-2 border-t border-slate-200">
-                <Label className="font-bold">Overall Rating</Label>
-                <div className="flex items-center gap-2">
-                  <StarRating 
-                    rating={ratings.overall} 
-                    size="md" 
-                  />
+              <div className="pt-2 border-t">
+                <div className="flex justify-between items-center">
+                  <Label>Overall Rating</Label>
+                  <span className="text-lg font-semibold">
+                    {calculateOverallRating() > 0 ? calculateOverallRating() : '-'}
+                  </span>
                 </div>
               </div>
             </div>
-          </div>
+            
+            <div className="flex justify-between pt-4">
+              <Button variant="outline" onClick={() => setActiveTab("basic")}>Back</Button>
+              <Button onClick={() => setActiveTab("dish")}>
+                Next
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </TabsContent>
           
-          {/* What did you have section */}
-          <div className="space-y-2">
-            <Label htmlFor="dish">What did you have?</Label>
-            <Input
-              id="dish"
-              placeholder="E.g., Chicken Parmesan, Matcha Latte"
-              value={dishName}
-              onChange={(e) => setDishName(e.target.value)}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="note">Notes (optional)</Label>
-            <Textarea
-              id="note"
-              placeholder="Add any notes about your visit..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="min-h-[100px]"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="photo">Photo URL (optional)</Label>
-            <Input
-              id="photo"
-              placeholder="https://example.com/food-photo.jpg"
-              value={photo}
-              onChange={(e) => setPhoto(e.target.value)}
-            />
-          </div>
-
-          <div className="flex justify-end gap-2 pt-3">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit">
-              {initialVisit ? 'Update' : 'Check In'}
-            </Button>
-          </div>
-        </form>
+          <TabsContent value="dish" className="space-y-4 pt-4">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="dish-name">Dish Name</Label>
+                <Input
+                  id="dish-name"
+                  value={dishName}
+                  onChange={(e) => setDishName(e.target.value)}
+                  placeholder="What did you have?"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="dish-price">Price</Label>
+                <Input
+                  id="dish-price"
+                  type="number"
+                  value={dishPrice}
+                  onChange={(e) => setDishPrice(e.target.value)}
+                  placeholder="0.00"
+                  step="0.01"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="dish-rating">Dish Rating</Label>
+                <StarRating
+                  id="dish-rating"
+                  value={dishRating}
+                  onChange={setDishRating}
+                  size="large"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="dish-photo">Add Photo</Label>
+                <div className="flex flex-col items-center p-4 border-2 border-dashed rounded-md">
+                  {dishPhoto ? (
+                    <div className="relative w-full">
+                      <img 
+                        src={dishPhoto} 
+                        alt="Dish preview" 
+                        className="w-full h-auto rounded-md object-cover max-h-48"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-2 right-2"
+                        onClick={() => setDishPhoto(null)}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ) : (
+                    <label htmlFor="dish-photo-input" className="cursor-pointer flex flex-col items-center">
+                      <Camera className="h-8 w-8 mb-2 text-gray-400" />
+                      <span className="text-sm text-gray-500">Click to add photo</span>
+                      <input
+                        id="dish-photo-input"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageUpload}
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="dish-notes">Dish Notes</Label>
+                <Textarea
+                  id="dish-notes"
+                  value={dishNotes}
+                  onChange={(e) => setDishNotes(e.target.value)}
+                  placeholder="Thoughts about this dish..."
+                  rows={2}
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-between pt-4">
+              <Button variant="outline" onClick={() => setActiveTab("rating")}>Back</Button>
+              <Button onClick={handleSubmit}>Check In</Button>
+            </div>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

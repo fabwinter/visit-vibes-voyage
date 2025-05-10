@@ -21,22 +21,24 @@ const AuthModal = ({ isOpen, onClose, initialView }: AuthModalProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] p-6 rounded-xl">
         <DialogHeader>
-          <DialogTitle className="text-center text-xl">Welcome to VisitVibe</DialogTitle>
+          <DialogTitle className="text-center text-2xl font-bold text-visitvibe-primary">
+            Welcome to VisitVibe
+          </DialogTitle>
         </DialogHeader>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="signin">Sign In</TabsTrigger>
-            <TabsTrigger value="signup">Sign Up</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="signin" className="text-sm md:text-base py-2">Sign In</TabsTrigger>
+            <TabsTrigger value="signup" className="text-sm md:text-base py-2">Sign Up</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="signin" className="mt-4">
+          <TabsContent value="signin" className="mt-4 animate-fade-in">
             <SignInForm onSuccess={onClose} />
           </TabsContent>
           
-          <TabsContent value="signup" className="mt-4">
+          <TabsContent value="signup" className="mt-4 animate-fade-in">
             <SignUpForm onSuccess={onClose} />
           </TabsContent>
         </Tabs>

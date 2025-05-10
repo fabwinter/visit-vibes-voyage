@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 
 interface SignInFormProps {
   onSuccess: () => void;
@@ -22,11 +23,20 @@ const SignInForm = ({ onSuccess }: SignInFormProps) => {
     setIsLoading(true);
     
     try {
-      await login(email, password);
-      toast.success('Signed in successfully');
-      onSuccess();
+      const { error } = await login(email, password);
+      
+      if (error) {
+        toast.error('Sign in failed', {
+          description: error.message || 'Please check your credentials and try again'
+        });
+        console.error('Sign in error:', error);
+      } else {
+        onSuccess();
+      }
     } catch (error) {
-      toast.error('Invalid email or password');
+      toast.error('Something went wrong', {
+        description: 'Please try again later'
+      });
       console.error('Sign in error:', error);
     } finally {
       setIsLoading(false);
@@ -34,9 +44,9 @@ const SignInForm = ({ onSuccess }: SignInFormProps) => {
   };
   
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email" className="text-sm font-medium">Email</Label>
         <Input
           id="email"
           type="email"
@@ -44,13 +54,15 @@ const SignInForm = ({ onSuccess }: SignInFormProps) => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          className="h-11"
+          autoComplete="email"
         />
       </div>
       
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label htmlFor="password">Password</Label>
-          <Button type="button" variant="link" size="sm" className="px-0">
+          <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+          <Button type="button" variant="link" size="sm" className="px-0 text-xs text-visitvibe-primary h-auto">
             Forgot password?
           </Button>
         </div>
@@ -61,11 +73,22 @@ const SignInForm = ({ onSuccess }: SignInFormProps) => {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
+          className="h-11"
+          autoComplete="current-password"
         />
       </div>
       
-      <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? 'Signing in...' : 'Sign In'}
+      <Button 
+        type="submit" 
+        className="w-full h-11 font-medium bg-visitvibe-primary hover:bg-visitvibe-primary/90" 
+        disabled={isLoading}
+      >
+        {isLoading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Signing in...
+          </>
+        ) : 'Sign In'}
       </Button>
     </form>
   );

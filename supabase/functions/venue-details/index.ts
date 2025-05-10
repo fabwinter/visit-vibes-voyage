@@ -91,22 +91,31 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // Try a third approach for photos if still no photos
+    if (photos.length === 0 && place.categories && place.categories.length > 0) {
+      // Use category icon as a fallback
+      const category = place.categories[0];
+      if (category.icon && category.icon.prefix && category.icon.suffix) {
+        photos = [`${category.icon.prefix}bg_64${category.icon.suffix}`];
+      }
+    }
+
     // Transform the venue data
     const venue = {
       id: place.fsq_id,
       name: place.name,
-      address: place.location.formatted_address,
+      address: place.location?.formatted_address || '',
       coordinates: {
-        lat: place.geocodes.main.latitude,
-        lng: place.geocodes.main.longitude
+        lat: place.geocodes?.main?.latitude || 0,
+        lng: place.geocodes?.main?.longitude || 0
       },
       category: place.categories ? place.categories.map((cat: any) => cat.name) : [],
       photos: photos,
-      hours: place.hours?.display,
-      priceLevel: place.price?.tier,
-      phoneNumber: place.tel,
-      website: place.website,
-      rating: place.rating
+      hours: place.hours?.display || '',
+      priceLevel: place.price?.tier || 0,
+      phoneNumber: place.tel || '',
+      website: place.website || '',
+      rating: place.rating || 0
     };
 
     return new Response(JSON.stringify(venue), {

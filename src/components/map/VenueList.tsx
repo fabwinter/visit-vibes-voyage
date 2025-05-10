@@ -2,7 +2,7 @@
 import { Button } from '@/components/ui/button';
 import VenueCard from '../VenueCard';
 import { Venue } from '@/types';
-import { MapPin, AlertCircle } from 'lucide-react';
+import { MapPin, AlertCircle, Loader2 } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 
 interface VenueListProps {
@@ -51,63 +51,64 @@ const VenueList = ({
       </div>
       
       {usingMockData && (
-        <div className="mb-4 p-2 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-700 flex items-center gap-2">
+        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-700 flex items-center gap-2">
           <AlertCircle className="h-4 w-4 flex-shrink-0" />
           <div className="text-xs">
-            <p className="font-medium">Using mock data</p>
+            <p className="font-medium">Using sample data</p>
             <p className="text-yellow-600">API connection issue or no results returned.</p>
           </div>
         </div>
       )}
       
       {isLoading && venues.length === 0 ? (
-        <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-100">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-visitvibe-primary border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite] mb-2"></div>
+        <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-100">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-visitvibe-primary mb-3" />
           <p className="text-sm text-gray-600">Finding food venues near you...</p>
           <p className="text-xs text-gray-500 mt-1">Showing venues within 2km of your location</p>
         </div>
       ) : venues.length === 0 ? (
-        <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-100">
-          <MapPin className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+        <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-100">
+          <MapPin className="h-8 w-8 mx-auto text-gray-400 mb-3" />
           <p className="text-sm text-gray-600 font-medium">No food venues found nearby</p>
           <p className="text-xs text-gray-500 mt-1">Try changing your location or search terms</p>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {venues.map((venue) => (
               <div 
                 key={venue.id} 
                 id={`venue-${venue.id}`}
                 ref={selectedVenue === venue.id ? selectedVenueRef : null}
-                className={`transition-all duration-200 ${
+                className={`transition-all duration-300 ${
                   selectedVenue === venue.id 
-                    ? 'ring-2 ring-visitvibe-primary ring-offset-2 scale-[1.02]' 
-                    : 'hover:scale-[1.01]'
+                    ? 'ring-2 ring-visitvibe-primary ring-offset-2 scale-[1.02] shadow-md' 
+                    : 'hover:scale-[1.01] hover:shadow-sm'
                 }`}
               >
                 <VenueCard
                   venue={venue}
                   lastVisit={venue.lastVisit}
                   onClick={() => onVenueSelect(venue.id)}
-                  onCheckInClick={onCheckInClick}
+                  onCheckInClick={onCheckInClick ? () => onCheckInClick(venue) : undefined}
+                  isSelected={selectedVenue === venue.id}
                 />
               </div>
             ))}
           </div>
           
           {nextPageToken && !usingMockData && (
-            <div className="mt-4 text-center">
+            <div className="mt-6 text-center">
               <Button 
                 variant="outline" 
                 onClick={onLoadMore}
                 disabled={isLoading}
-                className="w-full"
+                className="w-full md:w-auto"
                 size="sm"
               >
                 {isLoading ? (
                   <>
-                    <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-solid border-visitvibe-primary border-r-transparent align-[-0.125em] mr-2"></span>
+                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
                     Loading...
                   </>
                 ) : 'Load More Venues'}
