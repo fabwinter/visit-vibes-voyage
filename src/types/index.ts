@@ -9,19 +9,15 @@ export interface Venue {
   id: string;
   name: string;
   address: string;
-  coordinates: {
-    lat: number;
-    lng: number;
-  };
+  coordinates: Coordinates;
   photos: string[];
-  lastVisit?: Visit; // Optional reference to last visit
-  category?: string[];
-  distance?: number; // Add distance property for Foursquare API
   website?: string;
   hours?: string;
   phoneNumber?: string;
-  priceLevel?: number;
-  googleRating?: number;
+  priceLevel?: number; // 1-4 representing $ to $$$$
+  category?: string[];
+  lastVisit?: Visit; // Added lastVisit for quick access to latest visit data
+  googleRating?: number; // Added for Google rating
   inWishlist?: boolean; // Track wishlist status
   wishlistTags?: string[]; // Tags specific to wishlist
   wishlistCategory?: string; // Category in wishlist

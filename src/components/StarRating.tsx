@@ -3,29 +3,28 @@ import { Star as StarIcon } from 'lucide-react';
 import { getRatingLevel } from '../types';
 
 interface StarRatingProps {
-  rating?: number;
+  rating?: number;  // Changed from value to rating for backward compatibility
+  value?: number;   // Keep value as an alias to rating
   size?: 'sm' | 'md' | 'lg';
   showValue?: boolean;
   className?: string;
-  id?: string;
-  value?: number;
+  readOnly?: boolean;
   onChange?: (value: number) => void;
-  required?: boolean;
 }
 
 const StarRating = ({ 
-  rating = 0, 
+  rating,
+  value, 
   size = 'md', 
   showValue = true, 
   className = '',
-  id,
-  value,
-  onChange,
-  required
+  readOnly = false,
+  onChange
 }: StarRatingProps) => {
-  // Use value if provided, otherwise use rating
-  const displayValue = value !== undefined ? value : rating;
-  const ratingLevel = getRatingLevel(displayValue);
+  // Use rating if provided, otherwise fall back to value
+  const actualRating = rating !== undefined ? rating : (value !== undefined ? value : 0);
+  
+  const ratingLevel = getRatingLevel(actualRating);
   
   // Determine star size
   const starSize = {
@@ -40,36 +39,36 @@ const StarRating = ({
     md: 'text-sm',
     lg: 'text-base',
   }[size];
-  
-  // Handle star click when onChange is provided
+
   const handleStarClick = (starValue: number) => {
-    if (onChange) {
+    if (!readOnly && onChange) {
       onChange(starValue);
     }
   };
   
   return (
-    <div className={`flex items-center ${className}`} id={id}>
+    <div className={`flex items-center ${className}`}>
       {[1, 2, 3, 4, 5].map((star) => (
         <StarIcon 
           key={star} 
           className={`${starSize} ${
-            star <= Math.round(displayValue) 
+            star <= Math.round(actualRating) 
               ? `rating-${ratingLevel} fill-current` 
               : 'text-gray-300'
-          } ${onChange ? 'cursor-pointer' : ''}`}
-          onClick={() => onChange && handleStarClick(star)}
+          } ${!readOnly ? 'cursor-pointer' : ''}`}
+          onClick={() => handleStarClick(star)}
         />
       ))}
       
       {showValue && (
         <span className={`ml-1 font-medium rating-${ratingLevel} ${textSize}`}>
-          {displayValue.toFixed(1)}
+          {actualRating.toFixed(1)}
         </span>
       )}
-      {required && <span className="text-red-500 ml-1">*</span>}
     </div>
   );
 };
 
 export default StarRating;
+
+export type { StarRatingProps };

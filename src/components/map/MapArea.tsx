@@ -1,9 +1,9 @@
 
 import { Button } from '@/components/ui/button';
-import { Search, Navigation } from 'lucide-react';
+import { Search, Navigation, MapPin } from 'lucide-react';
+import MapComponent from '../MapComponent';
 import { Venue } from '@/types';
 import { useIsMobile } from '@/hooks/use-mobile';
-import MapPlaceholder from '../MapPlaceholder';
 
 interface MapAreaProps {
   venues: Venue[];
@@ -22,62 +22,93 @@ const MapArea = ({
   selectedVenue,
   showSearchThisArea,
   onVenueSelect,
+  onMapMove,
   onSearchArea,
   onCenterToUserLocation
 }: MapAreaProps) => {
   const isMobile = useIsMobile();
 
   return (
-    <div className="w-full md:w-1/2 lg:w-2/5 h-[250px] md:h-[400px] md:order-1 p-2 md:p-4 relative">
-      <div className="h-full rounded-lg overflow-hidden border border-gray-200 shadow-md">
-        <MapPlaceholder className="rounded-lg" />
-        
-        {/* Simple venue list overlay */}
-        {venues.length > 0 && (
-          <div className="absolute bottom-14 left-2 right-2 bg-white/90 backdrop-blur-sm p-2 rounded-md max-h-28 overflow-y-auto shadow-md">
-            <div className="flex items-center justify-between mb-1">
-              <h3 className="text-xs font-medium">Places</h3>
-              <span className="text-xs text-gray-500">{venues.length} nearby</span>
-            </div>
-            <div>
-              {venues.slice(0, 5).map((venue) => (
-                <button
-                  key={venue.id}
-                  className={`text-xs text-left block w-full truncate px-2 py-1 rounded ${
-                    selectedVenue === venue.id ? 'bg-visitvibe-primary text-white' : 'hover:bg-gray-100'
-                  }`}
-                  onClick={() => onVenueSelect(venue.id)}
-                >
-                  {venue.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+    <div className="w-full md:w-1/2 lg:w-2/5 h-[300px] md:h-[500px] md:order-1 p-2 md:p-4 relative">
+      <div className="h-full rounded-xl overflow-hidden border border-gray-200 shadow-lg">
+        <MapComponent 
+          venues={venues} 
+          onVenueSelect={onVenueSelect}
+          userLocation={userLocation}
+          selectedVenue={selectedVenue}
+          onMapMove={onMapMove}
+          className="w-full h-full"
+        />
       </div>
       
-      {/* Search this area button */}
+      {/* Map overlay header with logo */}
+      <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-10 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full border border-gray-200 shadow-md">
+        <div className="flex items-center gap-2">
+          <img 
+            src="/lovable-uploads/facf83df-7352-4bf9-a188-0c877403dcc1.png" 
+            alt="MunchMapper" 
+            className="w-6 h-6"
+          />
+          <span className="font-semibold text-sm text-gray-800">Food Spots {venues.length > 0 ? `(${venues.length})` : ''}</span>
+        </div>
+      </div>
+      
+      {/* Search this area button with visual enhancement */}
       {showSearchThisArea && (
         <Button 
           onClick={onSearchArea}
-          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 bg-visitvibe-primary text-white shadow-lg flex items-center gap-1 py-1 px-3 h-9"
+          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 bg-white text-gray-800 border border-gray-200 shadow-lg hover:bg-gray-50 flex items-center gap-1 py-1 px-3 h-9 transition-all duration-300 animate-pulse"
           size={isMobile ? "sm" : "default"}
         >
-          <Search className="h-4 w-4" />
-          {!isMobile && "Search this area"}
-          {isMobile && "Search here"}
+          <Search className="h-4 w-4 text-rose-500" />
+          <span className="text-sm font-medium" style={{ color: '#ff4d94' }}>
+            {!isMobile ? "Search this area" : "Search here"}
+          </span>
         </Button>
       )}
 
-      {/* Center on my location button */}
-      <Button
-        onClick={onCenterToUserLocation}
-        className="absolute bottom-4 right-4 z-10 bg-white text-visitvibe-primary border border-gray-200 shadow-lg hover:bg-gray-100"
-        size="icon"
-        title="Center on my location"
-      >
-        <Navigation className="h-4 w-4" />
-      </Button>
+      {/* Bottom control panel */}
+      <div className="absolute bottom-8 right-6 z-10 flex flex-col gap-2">
+        {/* Center on my location button */}
+        <Button
+          onClick={onCenterToUserLocation}
+          className="bg-white text-gray-800 border border-gray-200 shadow-lg hover:bg-gray-50 transition-all"
+          size="icon"
+          title="Center on my location"
+        >
+          <Navigation className="h-4 w-4 text-blue-500" />
+        </Button>
+        
+        {/* Toggle 3D buildings button */}
+        <Button
+          className="bg-white text-gray-800 border border-gray-200 shadow-lg hover:bg-gray-50 transition-all"
+          size="icon"
+          title="Toggle map view"
+        >
+          <MapPin className="h-4 w-4 text-rose-500" />
+        </Button>
+      </div>
+      
+      {/* Legend */}
+      <div className="absolute bottom-8 left-6 z-10 bg-white/90 backdrop-blur-sm p-2 rounded-lg shadow-md border border-gray-200 hidden md:block">
+        <div className="text-xs font-medium mb-1">Map Legend</div>
+        <div className="flex items-center gap-1 text-xs text-gray-600">
+          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#ff4d94' }}></div>
+          <span>Unrated</span>
+        </div>
+        <div className="flex items-center gap-1 text-xs text-gray-600">
+          <div className="w-3 h-3 rounded-full bg-green-500"></div>
+          <span>Good Rating</span>
+        </div>
+        <div className="flex items-center gap-1 text-xs text-gray-600">
+          <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+          <span>Average Rating</span>
+        </div>
+        <div className="flex items-center gap-1 text-xs text-gray-600">
+          <div className="w-3 h-3 rounded-full bg-red-500"></div>
+          <span>Poor Rating</span>
+        </div>
+      </div>
     </div>
   );
 };

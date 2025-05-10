@@ -1,8 +1,8 @@
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, Loader2 } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
-import { PlacesService } from '@/services/PlacesService';
+import { MapboxService } from '@/services/mapbox';
 import { Venue } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -50,8 +50,8 @@ const PlaceSearchInput = ({
       
       setIsLoading(true);
       try {
-        const venues = await PlacesService.searchPlaces(query, userLocation);
-        console.log("Search results:", venues);
+        // Using Mapbox search
+        const venues = await MapboxService.searchPlacesByQuery(query, userLocation);
         setResults(venues);
       } catch (error) {
         console.error('Error searching places:', error);
@@ -79,10 +79,7 @@ const PlaceSearchInput = ({
     
     // Get full details when a place is selected
     try {
-      setIsLoading(true);
-      const details = await PlacesService.getVenueDetails(venue.id);
-      setIsLoading(false);
-      
+      const details = await MapboxService.getPlaceDetails(venue.id);
       if (details) {
         console.log("Got venue details:", details);
         onSelect(details);
@@ -91,7 +88,6 @@ const PlaceSearchInput = ({
         onSelect(venue);
       }
     } catch (error) {
-      setIsLoading(false);
       console.error('Error fetching venue details:', error);
       toast.error('Error fetching venue details');
       onSelect(venue);
@@ -107,17 +103,15 @@ const PlaceSearchInput = ({
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
-            if (e.target.value.length > 1) {
-              setIsOpen(true);
-            }
+            setIsOpen(true);
           }}
-          onFocus={() => query.length > 1 && setIsOpen(true)}
+          onFocus={() => setIsOpen(true)}
           placeholder={placeholder}
-          className="w-full pl-10 pr-4 py-2 h-12 rounded-full border border-input bg-background"
+          className="w-full pl-10 pr-4 py-6 rounded-full border border-input bg-background"
         />
         {isLoading && (
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-            <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+            <div className="h-5 w-5 border-2 border-visitvibe-primary border-t-transparent animate-spin rounded-full"></div>
           </div>
         )}
       </div>

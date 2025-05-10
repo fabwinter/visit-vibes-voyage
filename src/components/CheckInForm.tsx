@@ -1,200 +1,360 @@
 
-import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import StarRating from './StarRating';
-import { Venue, Visit } from '@/types';
-import { v4 as uuidv4 } from 'uuid';
-import { toast } from "sonner";
-import { useAuth } from '@/hooks/useAuth';
+import { useState, useEffect } from "react";
+import { XCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import StarRating from "@/components/StarRating";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { predefinedTags } from "@/data/mockData";
+import { Venue, Visit, VisitRating, DishRating } from "@/types";
+import { v4 as uuidv4 } from "uuid";
 
 interface CheckInFormProps {
   venue: Venue;
   isOpen: boolean;
   onClose: () => void;
-  onCheckIn: (checkInData: Visit) => void;
-  initialVisit?: Visit; // Add initialVisit as optional prop
+  onCheckIn: (visit: Visit) => void;
+  initialVisit?: Visit;
 }
 
-const CheckInForm = ({ venue, isOpen, onClose, onCheckIn, initialVisit }: CheckInFormProps) => {
-  const { user } = useAuth();
-  
-  // Define the rating state
-  const [rating, setRating] = useState({
-    overall: 0,
+const CheckInForm = ({
+  venue,
+  isOpen,
+  onClose,
+  onCheckIn,
+  initialVisit,
+}: CheckInFormProps) => {
+  const [rating, setRating] = useState<VisitRating>({
     food: 0,
-    service: 0,
     ambiance: 0,
-    value: 0
+    service: 0,
+    value: 0,
+    overall: 0,
   });
-  
-  const [notes, setNotes] = useState('');
-  const [dish, setDish] = useState('');
-  
-  // Reset form when venue changes or populate with initial values if editing
-  useEffect(() => {
-    if (isOpen) {
-      if (initialVisit) {
-        // Populate form with initial values if editing
-        setRating(initialVisit.rating);
-        setNotes(initialVisit.notes || '');
-        setDish(initialVisit.dishes.length > 0 ? initialVisit.dishes[0].name : '');
-      } else {
-        // Reset form when creating new visit
-        setRating({
-          overall: 0,
-          food: 0,
-          service: 0,
-          ambiance: 0,
-          value: 0
-        });
-        setNotes('');
-        setDish('');
-      }
-    }
-  }, [venue.id, isOpen, initialVisit]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [notes, setNotes] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (rating.overall === 0) {
-      toast.error('Please provide an overall rating');
-      return;
+  const [dishItems, setDishItems] = useState<DishRating[]>([]);
+  const [newItemName, setNewItemName] = useState("");
+  const [newItemRating, setNewItemRating] = useState(0);
+  const [newItemPrice, setNewItemPrice] = useState("");
+  const [newItemType, setNewItemType] = useState<"dish" | "drink">("dish");
+  const [newItemTags, setNewItemTags] = useState<string[]>([]);
+
+  // Calculate overall rating based on sub-ratings
+  useEffect(() => {
+    if (rating.food || rating.ambiance || rating.service || rating.value) {
+      // Count non-zero ratings
+      let count = 0;
+      let sum = 0;
+
+      if (rating.food > 0) {
+        sum += rating.food;
+        count++;
+      }
+      if (rating.ambiance > 0) {
+        sum += rating.ambiance;
+        count++;
+      }
+      if (rating.service > 0) {
+        sum += rating.service;
+        count++;
+      }
+      if (rating.value > 0) {
+        sum += rating.value;
+        count++;
+      }
+
+      const overall = count > 0 ? parseFloat((sum / count).toFixed(1)) : 0;
+      setRating((prev) => ({ ...prev, overall }));
     }
-    
-    // If user is not signed in, show a warning
-    if (!user) {
-      toast.warning('You are not signed in', { 
-        description: 'Your check-in will be stored locally but not synced to your account' 
+  }, [rating.food, rating.ambiance, rating.service, rating.value]);
+
+  // Initialize form with existing visit data if available
+  useEffect(() => {
+    if (initialVisit) {
+      setRating(initialVisit.rating || {
+        food: 0,
+        ambiance: 0,
+        service: 0,
+        value: 0,
+        overall: 0,
       });
+      setSelectedTags(initialVisit.tags || []);
+      setNotes(initialVisit.notes || "");
+      setDishItems(initialVisit.dishes || []);
+    } else {
+      // Reset form for new visit
+      setRating({
+        food: 0,
+        ambiance: 0,
+        service: 0,
+        value: 0,
+        overall: 0,
+      });
+      setSelectedTags([]);
+      setNotes("");
+      setDishItems([]);
     }
-    
-    // Create the check-in object
-    const checkIn: Visit = {
+  }, [initialVisit, isOpen]);
+
+  const handleRatingChange = (type: keyof VisitRating, value: number) => {
+    setRating((prev) => ({ ...prev, [type]: value }));
+  };
+
+  const toggleTag = (tag: string) => {
+    if (selectedTags.includes(tag)) {
+      setSelectedTags(selectedTags.filter((t) => t !== tag));
+    } else {
+      setSelectedTags([...selectedTags, tag]);
+    }
+  };
+
+  const toggleItemTag = (tag: string) => {
+    if (newItemTags.includes(tag)) {
+      setNewItemTags(newItemTags.filter((t) => t !== tag));
+    } else {
+      setNewItemTags([...newItemTags, tag]);
+    }
+  };
+
+  const addDishItem = () => {
+    if (newItemName.trim()) {
+      const newItem: DishRating = {
+        id: uuidv4(),
+        name: newItemName,
+        rating: newItemRating,
+        price: newItemPrice ? parseFloat(newItemPrice) : undefined,
+        tags: newItemTags,
+        type: newItemType,
+        photos: [],
+      };
+      setDishItems([...dishItems, newItem]);
+      setNewItemName("");
+      setNewItemRating(0);
+      setNewItemPrice("");
+      setNewItemTags([]);
+    }
+  };
+
+  const removeDishItem = (id: string) => {
+    setDishItems(dishItems.filter((item) => item.id !== id));
+  };
+
+  const handleSubmit = () => {
+    // Create a visit object
+    const visit: Visit = {
       id: initialVisit ? initialVisit.id : uuidv4(),
       venueId: venue.id,
       timestamp: initialVisit ? initialVisit.timestamp : new Date().toISOString(),
-      dishes: [{
-        id: uuidv4(),
-        name: dish || 'Unspecified dish',
-        type: 'dish',
-        rating: rating.food,
-        tags: [],
-        photos: []
-      }],
       rating,
-      photos: initialVisit?.photos || [],
-      notes: notes,
-      tags: initialVisit?.tags || [],
-      wouldVisitAgain: rating.overall >= 3.5 // Automatically set based on rating
+      tags: selectedTags,
+      notes,
+      dishes: dishItems,
+      photos: venue.photos || [],
     };
-    
-    onCheckIn(checkIn);
+    onCheckIn(visit);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>{initialVisit ? 'Edit check-in for' : 'Check-in to'} {venue.name}</DialogTitle>
-        </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-          {/* Overall Rating */}
-          <div className="space-y-1">
-            <Label htmlFor="overall-rating" className="text-sm font-medium">
-              Overall Rating <span className="text-red-500">*</span>
-            </Label>
-            <StarRating 
-              value={rating.overall}
-              onChange={(value) => setRating({...rating, overall: value})}
-              required={true}
-            />
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-md p-6">
+        <div className="flex justify-between items-center mb-4">
+          <DialogTitle className="text-lg font-medium leading-6 text-gray-900">
+            {initialVisit ? "Edit Visit" : "Check-in to"} {venue.name}
+          </DialogTitle>
+          <button
+            type="button"
+            className="text-gray-400 hover:text-gray-500"
+            onClick={onClose}
+          >
+            <XCircle className="h-6 w-6" />
+          </button>
+        </div>
+
+        <div className="mt-2 space-y-4">
+          <div>
+            <h4 className="text-sm font-medium mb-2">Rate your experience</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs text-gray-500">Food</label>
+                <StarRating
+                  value={rating.food}
+                  onChange={(value) => handleRatingChange("food", value)}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500">Ambiance</label>
+                <StarRating
+                  value={rating.ambiance}
+                  onChange={(value) => handleRatingChange("ambiance", value)}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500">Service</label>
+                <StarRating
+                  value={rating.service}
+                  onChange={(value) => handleRatingChange("service", value)}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500">Value</label>
+                <StarRating
+                  value={rating.value}
+                  onChange={(value) => handleRatingChange("value", value)}
+                />
+              </div>
+            </div>
+            <div className="mt-2 bg-gray-50 p-2 rounded-md">
+              <label className="text-xs text-gray-500">Overall Rating</label>
+              <div className="flex items-center">
+                <StarRating
+                  value={rating.overall}
+                  onChange={(value) => handleRatingChange("overall", value)}
+                />
+                <span className="ml-2 text-lg font-semibold text-gray-700">
+                  {rating.overall.toFixed(1)}
+                </span>
+              </div>
+            </div>
           </div>
-          
-          {/* Food Rating */}
-          <div className="space-y-1">
-            <Label htmlFor="food-rating" className="text-sm font-medium">
-              Food Rating
-            </Label>
-            <StarRating 
-              value={rating.food}
-              onChange={(value) => setRating({...rating, food: value})}
-            />
+
+          <div>
+            <h4 className="text-sm font-medium mb-2">What did you have?</h4>
+            <div className="space-y-3">
+              {dishItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-gray-50 p-2 rounded flex justify-between items-center"
+                >
+                  <div>
+                    <span className="font-medium">{item.name}</span>
+                    {item.price && (
+                      <span className="text-sm ml-2 text-gray-500">
+                        ${item.price.toFixed(2)}
+                      </span>
+                    )}
+                    <div className="flex mt-1">
+                      <StarRating value={item.rating} readOnly size="sm" />
+                      <span className="ml-1 text-xs">
+                        {item.type === "drink" ? "🥤" : "🍽️"}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="text-red-500 hover:text-red-700"
+                    onClick={() => removeDishItem(item.id)}
+                  >
+                    <XCircle className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+
+              <div className="space-y-2 border border-gray-200 rounded-md p-2">
+                <div className="flex space-x-2">
+                  <div className="flex-1">
+                    <Input
+                      type="text"
+                      placeholder="Item name"
+                      value={newItemName}
+                      onChange={(e) => setNewItemName(e.target.value)}
+                      className="w-full text-sm"
+                    />
+                  </div>
+                  <div className="w-20">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="Price"
+                      value={newItemPrice}
+                      onChange={(e) => setNewItemPrice(e.target.value)}
+                      className="w-full text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <div className="flex space-x-2">
+                    <button
+                      type="button"
+                      className={`px-2 py-1 text-xs rounded ${
+                        newItemType === "dish"
+                          ? "bg-rose-100 text-rose-700"
+                          : "bg-gray-100 text-gray-700"
+                      }`}
+                      onClick={() => setNewItemType("dish")}
+                    >
+                      🍽️ Dish
+                    </button>
+                    <button
+                      type="button"
+                      className={`px-2 py-1 text-xs rounded ${
+                        newItemType === "drink"
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-gray-100 text-gray-700"
+                      }`}
+                      onClick={() => setNewItemType("drink")}
+                    >
+                      🥤 Drink
+                    </button>
+                  </div>
+                  <StarRating
+                    value={newItemRating}
+                    onChange={setNewItemRating}
+                    size="sm"
+                  />
+                </div>
+
+                <div className="flex">
+                  <Button size="sm" onClick={addDishItem} className="w-full text-xs">
+                    Add Item
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
-          
-          {/* Service Rating */}
-          <div className="space-y-1">
-            <Label htmlFor="service-rating" className="text-sm font-medium">
-              Service Rating
-            </Label>
-            <StarRating 
-              value={rating.service}
-              onChange={(value) => setRating({...rating, service: value})}
-            />
+
+          <div>
+            <h4 className="text-sm font-medium mb-2">Tags</h4>
+            <div className="flex flex-wrap gap-1">
+              {predefinedTags.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => toggleTag(tag)}
+                  className={`text-xs px-2 py-1 rounded-full ${
+                    selectedTags.includes(tag)
+                      ? "bg-purple-100 text-purple-700 border border-purple-300"
+                      : "bg-gray-100 text-gray-700 border border-gray-200"
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
           </div>
-          
-          {/* Ambiance Rating */}
-          <div className="space-y-1">
-            <Label htmlFor="ambiance-rating" className="text-sm font-medium">
-              Ambiance Rating
-            </Label>
-            <StarRating 
-              value={rating.ambiance}
-              onChange={(value) => setRating({...rating, ambiance: value})}
-            />
-          </div>
-          
-          {/* Value Rating */}
-          <div className="space-y-1">
-            <Label htmlFor="value-rating" className="text-sm font-medium">
-              Value for Money
-            </Label>
-            <StarRating 
-              value={rating.value}
-              onChange={(value) => setRating({...rating, value: value})}
-            />
-          </div>
-          
-          {/* Dish */}
-          <div className="space-y-1">
-            <Label htmlFor="dish" className="text-sm font-medium">
-              What did you have?
-            </Label>
-            <Input
-              id="dish"
-              placeholder="Ex: Pasta Carbonara, Flat White, etc."
-              value={dish}
-              onChange={(e) => setDish(e.target.value)}
-            />
-          </div>
-          
-          {/* Notes */}
-          <div className="space-y-1">
-            <Label htmlFor="notes" className="text-sm font-medium">
-              Notes
-            </Label>
+
+          <div>
+            <h4 className="text-sm font-medium mb-2">Notes</h4>
             <Textarea
-              id="notes"
-              placeholder="Any thoughts about your visit?"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              rows={3}
+              placeholder="Any thoughts about your visit?"
+              className="w-full h-20"
             />
           </div>
-          
-          <DialogFooter className="flex flex-row justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit">
-              {initialVisit ? 'Update' : 'Check-in'}
-            </Button>
-          </DialogFooter>
-        </form>
+        </div>
+
+        <div className="mt-6 flex justify-end space-x-2">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit}>
+            {initialVisit ? "Update Visit" : "Check In"}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

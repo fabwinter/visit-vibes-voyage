@@ -31,11 +31,14 @@ const MapView = () => {
     venues,
     userLocation,
     isLoading,
+    usingMockData,
+    nextPageToken,
     showSearchThisArea,
     setMapCenter,
     handleMapMove,
     handleSearchThisArea,
     handlePlaceSelect,
+    handleLoadMore,
     processCheckIn,
     centerToUserLocation
   } = useVenues();
@@ -65,9 +68,7 @@ const MapView = () => {
       if (venue) {
         setSelectedVenueDetails(venue);
         // Center map on selected venue
-        if (venue.coordinates) {
-          setMapCenter(venue.coordinates);
-        }
+        setMapCenter(venue.coordinates);
       } else {
         // Fetch details if not in our current list
         try {
@@ -76,9 +77,7 @@ const MapView = () => {
           if (details) {
             setSelectedVenueDetails(details);
             // Center map on selected venue
-            if (details.coordinates) {
-              setMapCenter(details.coordinates);
-            }
+            setMapCenter(details.coordinates);
           }
         } catch (error) {
           console.error("Error fetching venue details:", error);
@@ -156,10 +155,11 @@ const MapView = () => {
         <VenueList
           venues={filteredVenues}
           isLoading={isLoading}
-          usingMockData={false}
+          usingMockData={usingMockData}
           selectedVenue={selectedVenue}
+          nextPageToken={nextPageToken}
           onVenueSelect={handleVenueSelect}
-          onLoadMore={() => {}}
+          onLoadMore={handleLoadMore}
           onCheckInClick={(venue) => handleCheckIn(venue)}
         />
       </div>

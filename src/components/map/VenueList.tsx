@@ -2,7 +2,7 @@
 import { Button } from '@/components/ui/button';
 import VenueCard from '../VenueCard';
 import { Venue } from '@/types';
-import { MapPin, AlertCircle, WifiOff, RefreshCw } from 'lucide-react';
+import { MapPin, AlertCircle } from 'lucide-react';
 
 interface VenueListProps {
   venues: Venue[];
@@ -29,18 +29,20 @@ const VenueList = ({
     <div className="mt-4">
       <div className="flex justify-between items-center mb-3">
         <h2 className="text-lg font-bold">Food Venues</h2>
-        <div className="flex items-center">
-          {usingMockData && (
-            <span className="text-xs text-amber-600 mr-2 flex items-center">
-              <AlertCircle size={12} className="mr-1" />
-              Using local data
-            </span>
-          )}
-          <span className="text-xs text-gray-500">
-            {isLoading ? 'Loading...' : `${venues.length} results within 5km`}
-          </span>
-        </div>
+        <span className="text-xs text-gray-500">
+          {isLoading ? 'Loading...' : `${venues.length} results within 5km`}
+        </span>
       </div>
+      
+      {usingMockData && (
+        <div className="mb-4 p-2 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-700 flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+          <div className="text-xs">
+            <p className="font-medium">Using mock data</p>
+            <p className="text-yellow-600">API connection issue or no results returned.</p>
+          </div>
+        </div>
+      )}
       
       {isLoading && venues.length === 0 ? (
         <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-100">
@@ -50,27 +52,9 @@ const VenueList = ({
         </div>
       ) : venues.length === 0 ? (
         <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-100">
-          {!navigator.onLine ? (
-            <>
-              <WifiOff className="h-8 w-8 mx-auto text-amber-500 mb-2" />
-              <p className="text-sm text-gray-600 font-medium">You're offline</p>
-              <p className="text-xs text-gray-500 mt-1">Connect to the internet to search for venues</p>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="mt-3"
-                onClick={() => window.location.reload()}
-              >
-                <RefreshCw className="w-4 h-4 mr-1" /> Try Again
-              </Button>
-            </>
-          ) : (
-            <>
-              <MapPin className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-              <p className="text-sm text-gray-600 font-medium">No food venues found</p>
-              <p className="text-xs text-gray-500 mt-1">Try changing your location or search terms</p>
-            </>
-          )}
+          <MapPin className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+          <p className="text-sm text-gray-600 font-medium">No food venues found</p>
+          <p className="text-xs text-gray-500 mt-1">Try changing your location or search terms</p>
         </div>
       ) : (
         <>
@@ -91,7 +75,7 @@ const VenueList = ({
             ))}
           </div>
           
-          {nextPageToken && (
+          {nextPageToken && !usingMockData && (
             <div className="mt-4 text-center">
               <Button 
                 variant="outline" 
@@ -110,15 +94,6 @@ const VenueList = ({
             </div>
           )}
         </>
-      )}
-      
-      {usingMockData && venues.length > 0 && (
-        <div className="mt-3 p-2 bg-amber-50 rounded-md text-sm text-amber-800 flex items-center">
-          <AlertCircle size={16} className="mr-2 flex-shrink-0" />
-          <p>
-            Showing suggested venues. Some features may be limited.
-          </p>
-        </div>
       )}
     </div>
   );
