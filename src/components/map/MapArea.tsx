@@ -1,6 +1,4 @@
 
-import { Button } from '@/components/ui/button';
-import { Search, Navigation } from 'lucide-react';
 import MapComponent from '../MapComponent';
 import { Venue } from '@/types';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -43,26 +41,14 @@ const MapArea = ({
       
       {/* Search this area button */}
       {showSearchThisArea && (
-        <Button 
+        <button 
           onClick={onSearchArea}
-          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 bg-visitvibe-primary text-white shadow-lg flex items-center gap-1 py-1 px-3 h-9"
-          size={isMobile ? "sm" : "default"}
+          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 bg-visitvibe-primary text-white shadow-lg flex items-center gap-1 py-1 px-3 h-9 rounded-md"
         >
-          <Search className="h-4 w-4" />
           {!isMobile && "Search this area"}
           {isMobile && "Search here"}
-        </Button>
+        </button>
       )}
-
-      {/* Center on my location button */}
-      <Button
-        onClick={onCenterToUserLocation}
-        className="absolute bottom-4 right-4 z-10 bg-white text-visitvibe-primary border border-gray-200 shadow-lg hover:bg-gray-100"
-        size="icon"
-        title="Center on my location"
-      >
-        <Navigation className="h-4 w-4" />
-      </Button>
     </div>
   );
 };

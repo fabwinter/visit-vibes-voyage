@@ -14,6 +14,7 @@ import WishlistView from "./pages/WishlistView";
 import ProfileView from "./pages/ProfileView";
 import VisitDetailsView from "./pages/VisitDetailsView";
 import NotFound from "./pages/NotFound";
+import LandingPage from "./pages/LandingPage";
 
 const queryClient = new QueryClient();
 
@@ -26,7 +27,8 @@ const App = () => (
         <BrowserRouter>
           <Layout>
             <Routes>
-              <Route path="/" element={<MapView />} />
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/map" element={<MapView />} />
               <Route path="/explore" element={<ExploreView />} />
               <Route path="/visits" element={<VisitsView />} />
               <Route path="/visit/:visitId" element={<VisitDetailsView />} />

@@ -68,11 +68,11 @@ const MapComponent = ({
       
       const mapInstance = new window.google.maps.Map(mapRef.current, {
         center: initialLocation,
-        zoom: 14,
+        zoom: 15,
         mapTypeControl: false,
         streetViewControl: false,
-        fullscreenControl: true,
-        zoomControl: true,
+        fullscreenControl: false, // Removed fullscreen control
+        zoomControl: false, // Removed zoom control
         styles: [
           {
             "stylers": [

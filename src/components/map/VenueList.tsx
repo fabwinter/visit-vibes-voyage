@@ -28,9 +28,9 @@ const VenueList = ({
   return (
     <div className="mt-4">
       <div className="flex justify-between items-center mb-3">
-        <h2 className="text-lg font-bold">Food Venues</h2>
+        <h2 className="text-lg font-bold">Food Venues Nearby</h2>
         <span className="text-xs text-gray-500">
-          {isLoading ? 'Loading...' : `${venues.length} results within 5km`}
+          {isLoading ? 'Loading...' : `${venues.length} results within 2km`}
         </span>
       </div>
       
@@ -47,13 +47,13 @@ const VenueList = ({
       {isLoading && venues.length === 0 ? (
         <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-100">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-visitvibe-primary border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite] mb-2"></div>
-          <p className="text-sm text-gray-600">Loading food venues...</p>
-          <p className="text-xs text-gray-500 mt-1">Finding the best nearby options for you</p>
+          <p className="text-sm text-gray-600">Finding food venues near you...</p>
+          <p className="text-xs text-gray-500 mt-1">Showing venues within 2km of your location</p>
         </div>
       ) : venues.length === 0 ? (
         <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-100">
           <MapPin className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-          <p className="text-sm text-gray-600 font-medium">No food venues found</p>
+          <p className="text-sm text-gray-600 font-medium">No food venues found nearby</p>
           <p className="text-xs text-gray-500 mt-1">Try changing your location or search terms</p>
         </div>
       ) : (

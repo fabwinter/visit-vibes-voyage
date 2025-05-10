@@ -35,7 +35,7 @@ export const useVenueSearch = ({ userLocation, mapCenter, visits }: UseVenueSear
       console.log("Attempting to fetch venues from API...");
       const result = await PlacesService.searchNearbyVenues({
         location: searchLocation || userLocation,
-        radius: 5000, // 5km radius
+        radius: 2000, // Changed to 2km radius
         type: "restaurant", // Default to food venues
         pageToken: pageToken
       });
