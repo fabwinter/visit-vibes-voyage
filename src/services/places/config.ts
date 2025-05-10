@@ -1,14 +1,10 @@
 
 // API configuration for Google Places API
 
-// Using the provided Google Places API key - NOTE: This is being deprecated in favor of Mapbox
-export const API_KEY = "AIzaSyAoqbocwE83Z3REe60z7dhN3Z2_aKnSJxc"; 
-
-// Mapbox API key - updated to the latest key
-export const MAPBOX_TOKEN = "pk.eyJ1IjoiZmFiaWFud2ludGVyYmluZSIsImEiOiJjbWFiMjU4NWgyNmhiMmxwdzFndzZpaWtsIn0.qip66iHah8qFMj1lrp2cpQ";
+// Get the API key from Supabase secrets
+export const API_KEY = "AIzaSyCm9Nv09xVWUXMjgkqy5vk_hwTS25OPt4Q"; 
 
 // Use a proper CORS proxy
-// Note: For production, you should use your own proxy or Google Maps JavaScript API directly
 export const PROXY_URL = "https://corsproxy.io/?";
 
 // Strictly food-related place types

@@ -13,7 +13,6 @@ import VisitsView from "./pages/VisitsView";
 import WishlistView from "./pages/WishlistView";
 import ProfileView from "./pages/ProfileView";
 import VisitDetailsView from "./pages/VisitDetailsView";
-import MapSettingsView from "./pages/MapSettingsView";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,7 +32,6 @@ const App = () => (
               <Route path="/visit/:visitId" element={<VisitDetailsView />} />
               <Route path="/wishlist" element={<WishlistView />} />
               <Route path="/profile" element={<ProfileView />} />
-              <Route path="/map-settings" element={<MapSettingsView />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Layout>

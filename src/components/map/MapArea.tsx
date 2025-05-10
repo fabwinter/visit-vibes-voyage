@@ -36,7 +36,6 @@ const MapArea = ({
           onVenueSelect={onVenueSelect}
           userLocation={userLocation}
           selectedVenue={selectedVenue}
-          onMapMove={onMapMove}
           className="w-full h-full"
         />
       </div>

@@ -46,9 +46,14 @@ export const searchNearbyVenues = async (params: PlacesSearchParams): Promise<Pl
     }
 
     // Check if we have valid results
-    if (data.status !== "OK" || data.results.length === 0) {
-      console.log("No results or non-OK status:", data.status);
+    if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
+      console.log("Non-OK status:", data.status);
       throw new Error(`API returned status: ${data.status}`);
+    }
+    
+    // If no results, return empty array
+    if (data.results.length === 0) {
+      return { venues: [], nextPageToken: undefined };
     }
     
     // Transform results to our Venue format
