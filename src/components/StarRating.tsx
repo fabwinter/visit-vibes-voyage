@@ -4,24 +4,31 @@ import { getRatingLevel } from '../types';
 import { useState } from 'react';
 
 interface StarRatingProps {
-  rating: number;
+  rating?: number;
   size?: 'sm' | 'md' | 'lg';
   showValue?: boolean;
   className?: string;
   editable?: boolean;
   onChange?: (rating: number) => void;
+  id?: string; // Adding id prop to fix TypeScript error
+  value?: number; // Adding value prop as an alternative to rating
 }
 
 const StarRating = ({ 
   rating, 
+  value, // Adding value prop
   size = 'md', 
   showValue = true,
   className = '',
   editable = false,
-  onChange
+  onChange,
+  id // Adding id prop
 }: StarRatingProps) => {
-  const ratingLevel = getRatingLevel(rating);
+  const ratingLevel = getRatingLevel(value ?? rating ?? 0);
   const [hoverRating, setHoverRating] = useState(0);
+  
+  // Use either value or rating, with value taking precedence
+  const displayRating = value !== undefined ? value : (rating ?? 0);
   
   // Determine star size
   const starSize = {
@@ -44,9 +51,9 @@ const StarRating = ({
   };
   
   return (
-    <div className={`flex items-center ${className}`}>
+    <div className={`flex items-center ${className}`} id={id}>
       {[1, 2, 3, 4, 5].map((star) => {
-        const isActive = star <= (hoverRating || Math.round(rating));
+        const isActive = star <= (hoverRating || Math.round(displayRating));
         return (
           <StarIcon 
             key={star} 
@@ -64,7 +71,7 @@ const StarRating = ({
       
       {showValue && (
         <span className={`ml-1 font-medium rating-${ratingLevel} ${textSize}`}>
-          {rating.toFixed(1)}
+          {displayRating.toFixed(1)}
         </span>
       )}
     </div>

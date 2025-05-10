@@ -19,7 +19,7 @@ interface CheckInFormProps {
   isOpen: boolean;
   onClose: () => void;
   onCheckIn: (visit: Visit) => void;
-  initialVisit?: Visit;
+  initialVisit?: Visit | null;
 }
 
 const CheckInForm = ({ venue, isOpen, onClose, onCheckIn, initialVisit }: CheckInFormProps) => {
@@ -204,7 +204,6 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn, initialVisit }: CheckI
               <div className="space-y-1">
                 <Label htmlFor="food-rating">Food & Drink Quality</Label>
                 <StarRating 
-                  id="food-rating"
                   value={foodRating}
                   onChange={setFoodRating}
                   size="md"
@@ -214,7 +213,6 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn, initialVisit }: CheckI
               <div className="space-y-1">
                 <Label htmlFor="service-rating">Service</Label>
                 <StarRating 
-                  id="service-rating"
                   value={serviceRating}
                   onChange={setServiceRating}
                   size="md"
@@ -224,7 +222,6 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn, initialVisit }: CheckI
               <div className="space-y-1">
                 <Label htmlFor="ambiance-rating">Ambiance & Atmosphere</Label>
                 <StarRating 
-                  id="ambiance-rating"
                   value={ambianceRating}
                   onChange={setAmbianceRating}
                   size="md"
@@ -234,7 +231,6 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn, initialVisit }: CheckI
               <div className="space-y-1">
                 <Label htmlFor="value-rating">Value for Money</Label>
                 <StarRating 
-                  id="value-rating"
                   value={valueRating}
                   onChange={setValueRating}
                   size="md"
@@ -287,7 +283,6 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn, initialVisit }: CheckI
               <div className="space-y-2">
                 <Label htmlFor="dish-rating">Dish Rating</Label>
                 <StarRating
-                  id="dish-rating"
                   value={dishRating}
                   onChange={setDishRating}
                   size="md"
