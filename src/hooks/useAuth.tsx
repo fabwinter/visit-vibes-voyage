@@ -18,6 +18,15 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   openAuthModal: () => void;
   closeAuthModal: () => void;
+  isAuthenticated: boolean;
+  login: (email: string, password: string) => Promise<{
+    error: any | null;
+  }>;
+  register: (name: string, email: string, password: string) => Promise<{
+    error: any | null;
+  }>;
+  logout: () => Promise<void>;
+  updateUserProfile: (data: any) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -104,8 +113,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     navigate('/');
   };
 
+  const updateUserProfile = async (data: any) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: data
+      });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      throw error;
+    }
+  };
+
   const openAuthModal = () => setShowAuthModal(true);
   const closeAuthModal = () => setShowAuthModal(false);
+
+  // Add these aliases for backward compatibility
+  const login = signIn;
+  const register = (name: string, email: string, password: string) => {
+    return signUp(email, password, { name });
+  };
+  const logout = signOut;
+  const isAuthenticated = !!user;
 
   const value = {
     user,
@@ -116,12 +146,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signOut,
     openAuthModal,
     closeAuthModal,
+    isAuthenticated,
+    login,
+    register,
+    logout,
+    updateUserProfile,
   };
 
   return (
     <AuthContext.Provider value={value}>
       {children}
-      <AuthModal isOpen={showAuthModal} onClose={closeAuthModal} />
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={closeAuthModal}
+        initialView="signin"
+      />
     </AuthContext.Provider>
   );
 };
