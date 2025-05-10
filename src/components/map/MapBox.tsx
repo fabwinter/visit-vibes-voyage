@@ -128,9 +128,6 @@ const MapBox = ({
 
   const handleTokenChange = (newToken: string) => {
     setToken(newToken);
-  };
-
-  const handleTokenSubmit = () => {
     setShowTokenInput(false);
   };
 
@@ -138,9 +135,9 @@ const MapBox = ({
     <div className={`relative w-full h-full ${className}`}>
       {showTokenInput ? (
         <MapTokenInput 
-          token={token} 
-          onTokenChange={handleTokenChange} 
-          onTokenSubmit={handleTokenSubmit} 
+          isOpen={showTokenInput}
+          onClose={() => setShowTokenInput(false)}
+          onTokenSaved={handleTokenChange}
         />
       ) : (
         <>

@@ -4,6 +4,9 @@
 // Get the API key from Supabase secrets
 export const API_KEY = "AIzaSyCm9Nv09xVWUXMjgkqy5vk_hwTS25OPt4Q"; 
 
+// Add this for backward compatibility
+export const MAPBOX_TOKEN = "";
+
 // Use a proper CORS proxy
 export const PROXY_URL = "https://corsproxy.io/?";
 

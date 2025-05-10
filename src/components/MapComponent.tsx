@@ -21,7 +21,7 @@ const MapComponent = ({
   return (
     <MapPlaceholder 
       className={className}
-      message="Interactive map coming soon!"
+      message="Interactive map will be loaded here using Google Maps Places API"
     />
   );
 };

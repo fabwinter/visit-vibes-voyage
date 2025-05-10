@@ -72,7 +72,7 @@ export async function searchNearbyVenues(params: PlacesSearchParams): Promise<Pl
         coordinates: { lat, lng },
         photos: [], // Mapbox doesn't provide photos in this API
         category: categories.length > 0 ? categories : ["restaurant"],
-        mapboxId: feature.id
+        // Remove mapboxId
       };
     });
     
@@ -126,7 +126,7 @@ export async function searchPlaces(query: string, location: { lat: number; lng: 
         coordinates: { lat, lng },
         photos: [],
         category: categories.length > 0 ? categories : ["restaurant"],
-        mapboxId: feature.id
+        // Remove mapboxId
       };
     });
     
@@ -191,7 +191,7 @@ export async function getVenueDetails(placeId: string): Promise<Venue | null> {
         coordinates: { lat, lng },
         photos: [],
         category: feature.properties?.category?.split(',') || ["restaurant"],
-        mapboxId: feature.id
+        // Remove mapboxId
       };
       
       return venue;
