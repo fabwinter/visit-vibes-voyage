@@ -19,26 +19,28 @@ interface CheckInFormProps {
   isOpen: boolean;
   onClose: () => void;
   onCheckIn: (visit: Visit) => void;
+  initialVisit?: Visit;
 }
 
-const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) => {
+const CheckInForm = ({ venue, isOpen, onClose, onCheckIn, initialVisit }: CheckInFormProps) => {
   const [activeTab, setActiveTab] = useState("basic");
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState(initialVisit?.notes || "");
   const [dishName, setDishName] = useState("");
   const [dishPrice, setDishPrice] = useState("");
   const [dishRating, setDishRating] = useState(0);
   const [dishPhoto, setDishPhoto] = useState<string | null>(null);
   const [dishNotes, setDishNotes] = useState("");
   const { user } = useAuth();
+  const [wouldVisitAgain, setWouldVisitAgain] = useState<boolean>(initialVisit?.wouldVisitAgain || false);
   
   // Ratings
-  const [foodRating, setFoodRating] = useState(0);
-  const [serviceRating, setServiceRating] = useState(0);
-  const [ambianceRating, setAmbianceRating] = useState(0);
-  const [valueRating, setValueRating] = useState(0);
+  const [foodRating, setFoodRating] = useState(initialVisit?.rating.food || 0);
+  const [serviceRating, setServiceRating] = useState(initialVisit?.rating.service || 0);
+  const [ambianceRating, setAmbianceRating] = useState(initialVisit?.rating.ambiance || 0);
+  const [valueRating, setValueRating] = useState(initialVisit?.rating.value || 0);
   
   // Tags
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>(initialVisit?.tags || []);
   
   const availableTags = [
     { id: "date-night", label: "Date Night", icon: <Smile className="h-4 w-4" /> },
@@ -94,26 +96,28 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
     const dishes = [];
     if (dishName) {
       dishes.push({
+        id: uuidv4(),
         name: dishName,
         price: dishPrice ? parseFloat(dishPrice) : undefined,
         rating: dishRating,
-        photo: dishPhoto,
-        notes: dishNotes
+        photos: dishPhoto ? [dishPhoto] : [],
+        tags: [],
+        type: 'dish'
       });
     }
     
     // Create visit object
     const visit: Visit = {
-      id: uuidv4(),
-      userId: user.id,
+      id: initialVisit?.id || uuidv4(),
       venueId: venue.id,
       venueName: venue.name,
       venueAddress: venue.address,
-      timestamp: new Date().toISOString(),
+      timestamp: initialVisit?.timestamp || new Date().toISOString(),
       notes: notes,
-      dishes: dishes,
-      photos: dishPhoto ? [dishPhoto] : [],
+      dishes: initialVisit?.dishes || dishes,
+      photos: dishPhoto ? [dishPhoto] : (initialVisit?.photos || []),
       tags: selectedTags,
+      wouldVisitAgain,
       rating: {
         food: foodRating,
         service: serviceRating,
@@ -175,6 +179,17 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
               </div>
             </div>
             
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Checkbox 
+                  id="would-visit-again" 
+                  checked={wouldVisitAgain} 
+                  onCheckedChange={(checked) => setWouldVisitAgain(checked as boolean)}
+                />
+                <Label htmlFor="would-visit-again">I would visit again</Label>
+              </div>
+            </div>
+            
             <div className="flex justify-between pt-4">
               <Button variant="outline" onClick={onClose}>Cancel</Button>
               <Button onClick={() => setActiveTab("rating")}>
@@ -192,7 +207,7 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
                   id="food-rating"
                   value={foodRating}
                   onChange={setFoodRating}
-                  size="large"
+                  size="md"
                 />
               </div>
               
@@ -202,7 +217,7 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
                   id="service-rating"
                   value={serviceRating}
                   onChange={setServiceRating}
-                  size="large"
+                  size="md"
                 />
               </div>
               
@@ -212,7 +227,7 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
                   id="ambiance-rating"
                   value={ambianceRating}
                   onChange={setAmbianceRating}
-                  size="large"
+                  size="md"
                 />
               </div>
               
@@ -222,7 +237,7 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
                   id="value-rating"
                   value={valueRating}
                   onChange={setValueRating}
-                  size="large"
+                  size="md"
                 />
               </div>
               
@@ -275,7 +290,7 @@ const CheckInForm = ({ venue, isOpen, onClose, onCheckIn }: CheckInFormProps) =>
                   id="dish-rating"
                   value={dishRating}
                   onChange={setDishRating}
-                  size="large"
+                  size="md"
                 />
               </div>
               

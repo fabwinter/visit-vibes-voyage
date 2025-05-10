@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Visit, Venue } from '@/types';
 import { useNavigate } from 'react-router-dom';
@@ -317,7 +318,7 @@ const VisitsView = () => {
             setEditingVisit(null);
           }}
           onCheckIn={handleCheckIn}
-          initialVisit={editingVisit || undefined}
+          initialVisit={editingVisit}
         />
       )}
       
