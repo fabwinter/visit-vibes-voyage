@@ -1,11 +1,12 @@
 
 import { Link } from 'react-router-dom';
-import { Check, MapPin, Utensils, Coffee, Share2, Heart } from 'lucide-react';
+import { Check, MapPin, Utensils, Coffee, Share2, Heart, ImageOff } from 'lucide-react';
 import StarRating from './StarRating';
 import { Venue, Visit } from '../types';
 import { toast } from "sonner";
 import { Button } from '@/components/ui/button';
 import { useWishlist } from '@/hooks/useWishlist';
+import { useState } from 'react';
 
 interface VenueCardProps {
   venue: Venue;
@@ -18,6 +19,7 @@ interface VenueCardProps {
 const VenueCard = ({ venue, lastVisit, className = '', onClick, onCheckInClick }: VenueCardProps) => {
   const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
   const venueInWishlist = isInWishlist(venue.id);
+  const [imageError, setImageError] = useState(false);
   
   // Function to determine venue icon based on categories
   const getVenueIcon = () => {
@@ -83,19 +85,32 @@ const VenueCard = ({ venue, lastVisit, className = '', onClick, onCheckInClick }
     }
   };
 
+  // Get main photo URL or fallback
+  const getPhotoUrl = () => {
+    if (imageError || !venue.photos || venue.photos.length === 0) {
+      return 'https://placehold.co/600x400?text=No+Image';
+    }
+    return venue.photos[0];
+  };
+
   return (
-    <div onClick={onClick} className={`cursor-pointer transition-transform hover:scale-[1.01] ${className}`}>
+    <div onClick={onClick} className={`cursor-pointer transition-transform ${className}`}>
       <div className="block rounded-lg overflow-hidden shadow-sm bg-white border border-gray-100">
         {/* Card header with image */}
         <div className="relative h-36 sm:h-40">
-          <img
-            src={venue.photos?.[0] || 'https://placehold.co/600x400?text=No+Image'}
-            alt={venue.name}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=No+Image';
-            }}
-          />
+          {imageError || !venue.photos || venue.photos.length === 0 ? (
+            <div className="w-full h-full flex items-center justify-center bg-gray-100">
+              <ImageOff className="h-8 w-8 text-gray-400" />
+            </div>
+          ) : (
+            <img
+              src={getPhotoUrl()}
+              alt={venue.name}
+              className="w-full h-full object-cover"
+              onError={() => setImageError(true)}
+              loading="lazy"
+            />
+          )}
           
           {venue.priceLevel !== undefined && (
             <div className="absolute top-3 right-3 bg-black/50 text-white px-2 py-1 rounded text-xs">

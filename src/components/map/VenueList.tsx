@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import VenueCard from '../VenueCard';
 import { Venue } from '@/types';
 import { MapPin, AlertCircle } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 
 interface VenueListProps {
   venues: Venue[];
@@ -25,6 +26,21 @@ const VenueList = ({
   onLoadMore,
   onCheckInClick
 }: VenueListProps) => {
+  // Ref for auto-scrolling to selected venue
+  const selectedVenueRef = useRef<HTMLDivElement>(null);
+  
+  // Effect to scroll to selected venue when it changes
+  useEffect(() => {
+    if (selectedVenue && selectedVenueRef.current) {
+      setTimeout(() => {
+        selectedVenueRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+      }, 100);
+    }
+  }, [selectedVenue]);
+
   return (
     <div className="mt-4">
       <div className="flex justify-between items-center mb-3">
@@ -63,7 +79,12 @@ const VenueList = ({
               <div 
                 key={venue.id} 
                 id={`venue-${venue.id}`}
-                className={`transition-all duration-200 ${selectedVenue === venue.id ? 'ring-2 ring-visitvibe-primary ring-offset-2' : ''}`}
+                ref={selectedVenue === venue.id ? selectedVenueRef : null}
+                className={`transition-all duration-200 ${
+                  selectedVenue === venue.id 
+                    ? 'ring-2 ring-visitvibe-primary ring-offset-2 scale-[1.02]' 
+                    : 'hover:scale-[1.01]'
+                }`}
               >
                 <VenueCard
                   venue={venue}

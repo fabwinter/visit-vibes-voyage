@@ -30,7 +30,7 @@ Deno.serve(async (req: Request) => {
     const lng = url.searchParams.get('lng');
     const radius = url.searchParams.get('radius') || '2000'; // Default to 2km
     const limit = url.searchParams.get('limit') || '20';
-    const categoryId = url.searchParams.get('categoryId') || '13000,13065'; // Default to food categories
+    const categoryId = url.searchParams.get('categoryId') || '13000,13065,13032,13003,13034,13035,13040,13046,13145'; // Default to food categories
     const offset = url.searchParams.get('offset') || '0'; // For pagination
 
     // Validate location parameters
@@ -48,7 +48,8 @@ Deno.serve(async (req: Request) => {
       radius,
       limit,
       sort: 'DISTANCE',
-      categories: categoryId
+      categories: categoryId,
+      fields: 'fsq_id,name,geocodes,location,categories,photos,description,tel,website,hours,price,rating'
     });
 
     // Add query if provided
@@ -88,6 +89,32 @@ Deno.serve(async (req: Request) => {
           photos = place.photos.map((photo: any) => 
             `${photo.prefix}original${photo.suffix}`
           );
+        } 
+        
+        // If no photos from initial search, try to fetch venue details for photos
+        if (photos.length === 0) {
+          try {
+            // Fetch venue details
+            const detailsResponse = await fetch(`https://api.foursquare.com/v3/places/${place.fsq_id}?fields=photos`, {
+              method: 'GET',
+              headers: {
+                'Accept': 'application/json',
+                'Authorization': apiKey
+              }
+            });
+            
+            if (detailsResponse.ok) {
+              const details = await detailsResponse.json();
+              if (details.photos && details.photos.length > 0) {
+                photos = details.photos.map((photo: any) => 
+                  `${photo.prefix}original${photo.suffix}`
+                );
+              }
+            }
+          } catch (photoError) {
+            console.error(`Error fetching photos for venue ${place.fsq_id}: ${photoError}`);
+            // Continue with empty photos array
+          }
         }
 
         // Transform the venue data
@@ -104,7 +131,8 @@ Deno.serve(async (req: Request) => {
           hours: place.hours?.display,
           priceLevel: place.price?.tier,
           phoneNumber: place.tel,
-          website: place.website
+          website: place.website,
+          rating: place.rating
         };
       })
     );

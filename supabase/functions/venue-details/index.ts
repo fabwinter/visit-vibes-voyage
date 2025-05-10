@@ -1,4 +1,5 @@
 
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0';
 import { corsHeaders } from '../_shared/cors.ts';
 
 // Handle CORS preflight requests
@@ -9,7 +10,7 @@ const handleCorsAndOptions = (req: Request) => {
   return null;
 };
 
-// Get venue details using Foursquare's Places API
+// Function to fetch venue details from Foursquare
 Deno.serve(async (req: Request) => {
   // Handle CORS
   const corsResponse = handleCorsAndOptions(req);
@@ -22,7 +23,7 @@ Deno.serve(async (req: Request) => {
       throw new Error('Foursquare API key is not configured');
     }
 
-    // Parse the venue ID from the request
+    // Parse the query parameters from the request
     const url = new URL(req.url);
     const venueId = url.searchParams.get('id');
 
@@ -36,10 +37,9 @@ Deno.serve(async (req: Request) => {
 
     // Build Foursquare API request for venue details
     const foursquareUrl = `https://api.foursquare.com/v3/places/${venueId}`;
-    const fields = 'fsq_id,name,geocodes,location,description,tel,website,hours,rating,photos,categories,tastes,stats,price';
-
+    const fields = 'fsq_id,name,geocodes,location,categories,photos,description,tel,website,hours,price,rating';
+    
     // Make request to Foursquare API for venue details
-    console.log(`Making request to ${foursquareUrl}?fields=${fields}`);
     const response = await fetch(`${foursquareUrl}?fields=${fields}`, {
       method: 'GET',
       headers: {
@@ -56,17 +56,42 @@ Deno.serve(async (req: Request) => {
 
     const place = await response.json();
     
-    // Get venue photos in a separate request if needed
-    let photoUrls: string[] = [];
+    // Gather photo URLs
+    let photos: string[] = [];
+    
+    // First try to get photos from the details
     if (place.photos && place.photos.length > 0) {
-      // Process up to 5 photos to avoid too many requests
-      const photosToFetch = place.photos.slice(0, 5);
-      photoUrls = photosToFetch.map((photo: any) => {
-        return `${photo.prefix}original${photo.suffix}`;
-      });
+      photos = place.photos.map((photo: any) => 
+        `${photo.prefix}original${photo.suffix}`
+      );
+    }
+    
+    // If we still don't have photos, try a dedicated photos endpoint
+    if (photos.length === 0) {
+      try {
+        const photosResponse = await fetch(`https://api.foursquare.com/v3/places/${venueId}/photos?limit=5&sort=popular`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': apiKey
+          }
+        });
+        
+        if (photosResponse.ok) {
+          const photosData = await photosResponse.json();
+          if (photosData && photosData.length > 0) {
+            photos = photosData.map((photo: any) => 
+              `${photo.prefix}original${photo.suffix}`
+            );
+          }
+        }
+      } catch (photoError) {
+        console.error(`Error fetching photos for venue ${venueId}: ${photoError}`);
+        // Continue with existing photos array
+      }
     }
 
-    // Transform the response to match our app's Venue format
+    // Transform the venue data
     const venue = {
       id: place.fsq_id,
       name: place.name,
@@ -75,13 +100,13 @@ Deno.serve(async (req: Request) => {
         lat: place.geocodes.main.latitude,
         lng: place.geocodes.main.longitude
       },
-      photos: photoUrls,
-      hours: place.hours?.display,
-      priceLevel: place.price ? place.price.tier : undefined,
       category: place.categories ? place.categories.map((cat: any) => cat.name) : [],
+      photos: photos,
+      hours: place.hours?.display,
+      priceLevel: place.price?.tier,
       phoneNumber: place.tel,
       website: place.website,
-      googleRating: place.rating
+      rating: place.rating
     };
 
     return new Response(JSON.stringify(venue), {

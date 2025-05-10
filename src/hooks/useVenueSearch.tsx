@@ -82,7 +82,7 @@ export const useVenueSearch = ({ userLocation, mapCenter, visits }: UseVenueSear
       }
     } catch (error) {
       console.error("Error fetching venues:", error);
-      toast("Error fetching venues. Using mock data instead.", {
+      toast.error("Error fetching venues. Using mock data instead.", {
         description: error instanceof Error ? error.message : undefined
       });
       prepareMockData();
@@ -130,7 +130,7 @@ export const useVenueSearch = ({ userLocation, mapCenter, visits }: UseVenueSear
     }
   };
   
-  // Handle place selection from autocomplete - enhanced to put selected venue at the top of the list
+  // Enhanced handlePlaceSelect to put selected venue at the top of the list and ensure visibility
   const handlePlaceSelect = async (venue: Venue) => {
     console.log("Selected venue:", venue);
     
@@ -153,13 +153,13 @@ export const useVenueSearch = ({ userLocation, mapCenter, visits }: UseVenueSear
       return prevVenues;
     });
     
-    // Automatically highlight the venue after a short delay
+    // Ensure the venue card scrolls into view
     setTimeout(() => {
       const venueCard = document.getElementById(`venue-${venue.id}`);
       if (venueCard) {
         venueCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
-    }, 100);
+    }, 300); // Longer timeout to ensure DOM updates first
   };
 
   return {
