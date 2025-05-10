@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -78,8 +77,7 @@ const CheckInForm: React.FC<CheckInFormProps> = ({
     const visit: Visit = {
       id: initialVisit?.id || uuidv4(),
       venueId: venue.id,
-      // Remove venueName property as it doesn't exist in Visit type
-      address: venue.address,
+      // Removed address property as it doesn't exist in Visit type
       timestamp: initialVisit?.timestamp || new Date().toISOString(),
       notes, // Changed from 'note' to 'notes'
       dishes: dishName ? [{ 
