@@ -1,3 +1,4 @@
+
 import { Venue, Visit, VisitRating, DishRating } from "../types";
 
 export const mockVenues: Venue[] = [
@@ -137,6 +138,8 @@ export const mockVisits: Visit[] = [
   {
     id: "visit1",
     venueId: "v1",
+    venueName: "The Grounds of Alexandria", // Added venueName
+    venueAddress: "7A, 2 Huntley St, Alexandria NSW 2015", // Added venueAddress
     timestamp: new Date(2023, 3, 15, 9, 30).toISOString(),
     dishes: mockDishRatings.v1,
     rating: mockVisitRatings.v1,
@@ -149,6 +152,8 @@ export const mockVisits: Visit[] = [
   {
     id: "visit2",
     venueId: "v2",
+    venueName: "Quay Restaurant", // Added venueName
+    venueAddress: "Upper Level, Overseas Passenger Terminal, The Rocks NSW 2000", // Added venueAddress
     timestamp: new Date(2023, 3, 20, 19, 0).toISOString(),
     dishes: mockDishRatings.v2,
     rating: mockVisitRatings.v2,
@@ -161,6 +166,8 @@ export const mockVisits: Visit[] = [
   {
     id: "visit3",
     venueId: "v3",
+    venueName: "Bourke Street Bakery", // Added venueName
+    venueAddress: "633 Bourke St, Surry Hills NSW 2010", // Added venueAddress
     timestamp: new Date(2023, 3, 25, 12, 30).toISOString(),
     dishes: [],
     rating: mockVisitRatings.v3,
@@ -173,6 +180,8 @@ export const mockVisits: Visit[] = [
   {
     id: "visit4",
     venueId: "v4",
+    venueName: "Tetsuya's", // Added venueName
+    venueAddress: "529 Kent St, Sydney NSW 2000", // Added venueAddress
     timestamp: new Date(2023, 4, 5, 20, 0).toISOString(),
     dishes: [],
     rating: mockVisitRatings.v4,
